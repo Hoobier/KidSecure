@@ -1,13 +1,6 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #F5F7FA;
+  --foreground: #1B2A4A;
 }
 
 html {
@@ -25,11 +18,166 @@ body {
   display: flex;
   flex-direction: column;
   color: var(--foreground);
-  background: var(--background);
+  background: #F5F7FA; /* fixed light background for the app */
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Shared admin shell and sidebar (moved here so it's consistent across pages) */
+.main-content-wrapper {
+  width: 100%;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - 40px);
+  gap: 24px;
+  padding: 20px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #1B2A4A;
+  color: white;
+  border-radius: 24px;
+  padding: 28px 22px;
+  min-height: calc(100vh - 40px);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.sidebar-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: white;
+  padding: 6px;
+}
+
+.brand-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.brand-subtitle {
+  display: block;
+  font-size: 13px;
+  color: #B0C3E0;
+  margin-top: 4px;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar-link {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: #E7EDF8;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-link-active {
+  background: #273A62;
+  color: white;
+  box-shadow: inset 4px 0 0 #E4A93F;
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+}
+
+.sidebar-divider {
+  border: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-bottom: 18px;
+}
+
+.sidebar-logout {
+  color: #D9E2F8;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    min-height: auto;
+    border-radius: 0 0 20px 20px;
+    padding: 18px 16px;
+  }
+
+  .app-shell {
+    padding: 0;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sidebar-link,
+  .sidebar-logout {
+    flex: 1 1 calc(50% - 10px);
+    padding: 12px 14px;
+    border-radius: 14px;
+    text-align: center;
+  }
+
+  .sidebar-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .sidebar-link,
+  .sidebar-logout {
+    flex: 1 1 100%;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Ensure any page-root child inside the content area uses full width */
+.content-area > * {
+  width: 100%;
+}
+
 
 * {
   box-sizing: border-box;

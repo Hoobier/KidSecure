@@ -1,0 +1,389 @@
+/* src/app/(admin)/enrollment/enrollment.css */
+
+.enrollment-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.enrollment-page h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin-bottom: 2rem;
+}
+
+/* ---------- Progress Steps ---------- */
+
+.enrollment-progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.enrollment-progress::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0e4ea;
+  z-index: 0;
+}
+
+.enrollment-progress-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.enrollment-progress-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #e0e4ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #8a94a6;
+  transition: all 0.15s ease;
+}
+
+.enrollment-progress-label {
+  font-size: 0.8rem;
+  color: #8a94a6;
+  text-align: center;
+  max-width: 100px;
+}
+
+.enrollment-progress-item.active .enrollment-progress-number {
+  background: #1b2a4a;
+  border-color: #1b2a4a;
+  color: #ffffff;
+}
+
+.enrollment-progress-item.active .enrollment-progress-label {
+  color: #1b2a4a;
+  font-weight: 600;
+}
+
+.enrollment-progress-item.completed .enrollment-progress-number {
+  background: #c9a227;
+  border-color: #c9a227;
+  color: #ffffff;
+}
+
+.enrollment-progress-item.completed .enrollment-progress-label {
+  color: #1b2a4a;
+}
+
+/* ---------- Step Content Card ---------- */
+
+.enrollment-step-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.enrollment-step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1b2a4a;
+  margin-bottom: 1.5rem;
+}
+
+/* ---------- Form Fields ---------- */
+
+.enrollment-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.enrollment-form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.enrollment-form-row .enrollment-form-group {
+  flex: 1;
+}
+
+.enrollment-form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #33415c;
+  margin-bottom: 0.4rem;
+}
+
+.enrollment-form-group label .required {
+  color: #c0392b;
+  margin-left: 2px;
+}
+
+.enrollment-form-group input,
+.enrollment-form-group select {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1b2a4a;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.enrollment-form-group input:focus,
+.enrollment-form-group select:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.enrollment-form-group input.input-invalid {
+  border-color: #c0392b;
+}
+
+.enrollment-field-error {
+  font-size: 0.8rem;
+  color: #c0392b;
+  margin-top: 0.35rem;
+}
+
+.enrollment-help-text {
+  font-size: 0.8rem;
+  color: #8a94a6;
+  margin-top: 0.35rem;
+}
+
+/* ---------- Step Actions ---------- */
+
+.enrollment-step-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eef0f4;
+}
+
+.enrollment-btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s ease;
+}
+
+.enrollment-btn:hover {
+  opacity: 0.9;
+}
+
+.enrollment-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.enrollment-btn-primary {
+  background: #1b2a4a;
+  color: #ffffff;
+  margin-left: auto;
+}
+
+.enrollment-btn-secondary {
+  background: #ffffff;
+  color: #33415c;
+  border: 1px solid #d5dae2;
+}
+
+.enrollment-btn-success {
+  background: #1e824c;
+  color: #ffffff;
+  margin-left: auto;
+}
+
+/* ---------- Review Step ---------- */
+
+.enrollment-review-section {
+  margin-bottom: 1.75rem;
+}
+
+.enrollment-review-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1b2a4a;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.enrollment-review-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+}
+
+.enrollment-review-row span:first-child {
+  color: #8a94a6;
+}
+
+.enrollment-review-row span:last-child {
+  color: #1b2a4a;
+  font-weight: 500;
+}
+
+/* ---------- Parent Mode Toggle ---------- */
+
+.enrollment-mode-toggle {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.enrollment-mode-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #d5dae2;
+  background: #ffffff;
+  color: #33415c;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.enrollment-mode-btn.active {
+  border-color: #1b2a4a;
+  background: #1b2a4a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ---------- Existing Parent Search ---------- */
+
+.enrollment-search-results {
+  margin-top: 0.5rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.enrollment-search-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: #ffffff;
+  border: none;
+  border-bottom: 1px solid #eef0f4;
+  cursor: pointer;
+  text-align: left;
+}
+
+.enrollment-search-result-item:last-child {
+  border-bottom: none;
+}
+
+.enrollment-search-result-item:hover {
+  background: #f5f7fa;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #1b2a4a;
+  font-size: 0.9rem;
+}
+
+.result-email {
+  font-size: 0.8rem;
+  color: #8a94a6;
+}
+
+.enrollment-selected-parent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border: 1px solid #1b2a4a;
+  border-radius: 8px;
+  background: #f5f7fa;
+}
+
+.enrollment-selected-parent span {
+  font-weight: 600;
+  color: #1b2a4a;
+}
+
+.enrollment-selected-parent button {
+  background: none;
+  border: none;
+  color: #1b2a4a;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+/* ---------- Success Screen ---------- */
+
+.enrollment-success {
+  text-align: center;
+  padding: 1rem 0 0.5rem;
+}
+
+.enrollment-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1e824c;
+  color: #ffffff;
+  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.enrollment-success h2 {
+  font-size: 1.35rem;
+  color: #1b2a4a;
+  margin-bottom: 0.5rem;
+}
+
+.enrollment-success p {
+  color: #33415c;
+  margin-bottom: 0.5rem;
+}
+
+.enrollment-success-id {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  margin: 1rem 0;
+}
+
+.enrollment-success-id span {
+  font-size: 0.8rem;
+  color: #8a94a6;
+}
+
+.enrollment-success-id strong {
+  font-size: 1.5rem;
+  color: #1b2a4a;
+  letter-spacing: 0.5px;
+}

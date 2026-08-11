@@ -1,0 +1,255 @@
+/* Admin page-specific styles (no global or body selectors) */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.page-header h1 {
+  font-size: 30px;
+  font-weight: 700;
+  color: #1B2A4A;
+}
+
+.page-title-note {
+  color: #4A5568;
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+.dashboard-top,
+.attendance-section,
+.attention-section {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  padding: 28px;
+  box-shadow: 0 18px 40px rgba(16, 24, 40, 0.05);
+}
+
+.dashboard-top {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 420px);
+  gap: 24px;
+  align-items: center;
+}
+
+.dashboard-greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.greeting-pretitle {
+  color: #4A5568;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.dashboard-greeting h2 {
+  font-size: 40px;
+  line-height: 1.05;
+  color: #1B2A4A;
+}
+
+.greeting-note {
+  color: #4A5568;
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 520px;
+}
+
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.overview-card {
+  background: #F8FAFC;
+  border-radius: 18px;
+  border: 1px solid #E2E8F0;
+  padding: 22px;
+}
+
+.overview-label {
+  display: block;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.overview-value {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1B2A4A;
+}
+
+.attendance-section .section-header {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.attendance-section h2 {
+  font-size: 22px;
+  color: #1B2A4A;
+}
+
+.section-subtitle,
+.panel-subtitle {
+  color: #4A5568;
+  font-size: 15px;
+  margin-top: 8px;
+  max-width: 560px;
+}
+
+.attendance-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+}
+
+.status-icon {
+  font-size: 28px;
+}
+
+.status-count {
+  font-size: 34px;
+  font-weight: 800;
+  color: #1B2A4A;
+}
+
+.status-label {
+  color: #4A5568;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.status-present {
+  border-color: #9AE6B4;
+}
+
+.status-late {
+  border-color: #F6AD55;
+}
+
+.status-absent {
+  border-color: #FEB2B2;
+}
+
+.attention-section {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+}
+
+.attention-panel {
+  border-left: 4px solid #E4A93F;
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-header h2 {
+  font-size: 22px;
+  color: #1B2A4A;
+}
+
+.attention-list {
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+
+.attention-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 16px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+}
+
+.attention-icon {
+  font-size: 24px;
+  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attention-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1B2A4A;
+}
+
+.attention-detail {
+  color: #4A5568;
+  margin-top: 6px;
+  line-height: 1.6;
+}
+
+.secondary-card {
+  background: #F8FAFC;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+}
+
+.secondary-card h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  color: #1B2A4A;
+}
+
+.secondary-card p {
+  color: #4A5568;
+  line-height: 1.8;
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .content-area {
+    width: 100%;
+  }
+
+  .attention-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .dashboard-top,
+  .attendance-section,
+  .attention-section {
+    padding: 22px;
+  }
+
+  .overview-cards,
+  .attendance-breakdown {
+    grid-template-columns: 1fr;
+  }
+}
