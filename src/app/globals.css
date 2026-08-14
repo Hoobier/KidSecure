@@ -33,6 +33,7 @@ body {
   display: grid;
   grid-template-columns: 260px 1fr;
   min-height: calc(100vh - 40px);
+  align-items: start;  /* ADD THIS — stops sidebar from stretching to content height */
   gap: 24px;
   padding: 20px;
 }
@@ -45,7 +46,9 @@ body {
   color: white;
   border-radius: 24px;
   padding: 28px 22px;
-  min-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);   /* CHANGE from min-height to height */
+  position: sticky;              /* ADD — keeps it pinned while content scrolls */
+  top: 20px;                     /* ADD — matches your page padding */
 }
 
 .sidebar-brand {
