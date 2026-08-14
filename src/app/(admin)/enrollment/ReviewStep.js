@@ -5,24 +5,38 @@ import { useRouter } from "next/navigation";
 
 const GRADE_LEVELS_LABEL = (grade) => grade || "—";
 
-export default function ReviewStep({ formData, onBack }) {
+export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successInfo, setSuccessInfo] = useState(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(null); // { message, existingStudent }
+  const [confirmText, setConfirmText] = useState("");
 
-  async function handleSubmit() {
+  async function submitEnrollment(confirmDuplicate = false) {
     setSubmitting(true);
     setSubmitError("");
 
     try {
+      const payload = confirmDuplicate ? { ...formData, confirmDuplicate: true } : formData;
+
       const res = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
+
+      if (res.status === 409 && data.duplicate) {
+        setDuplicateWarning({
+          message: data.message,
+          existingStudent: data.existingStudent,
+          sameParent: data.sameParent,
+        });
+        setConfirmText("");
+        return;
+      }
 
       if (!res.ok) {
         setSubmitError(data.message || "Unable to complete enrollment. Please try again.");
@@ -32,12 +46,28 @@ export default function ReviewStep({ formData, onBack }) {
       setSuccessInfo({
         studentId: data.studentId,
         studentName: `${formData.student.firstName} ${formData.student.lastName}`,
+        parentLinkedExisting: data.parentLinkedExisting || false,
       });
+      if (onSubmitSuccess) onSubmitSuccess();
     } catch (error) {
       setSubmitError("Unable to reach the server. Please check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit() {
+    submitEnrollment(false);
+  }
+
+  function handleEnrollAnyway() {
+    setDuplicateWarning(null);
+    submitEnrollment(true);
+  }
+
+  function handleCancelDuplicate() {
+    setDuplicateWarning(null);
+    setConfirmText("");
   }
 
   // ---- Success confirmation screen ----
@@ -53,7 +83,13 @@ export default function ReviewStep({ formData, onBack }) {
           <span>Student ID</span>
           <strong>{successInfo.studentId}</strong>
         </div>
-        {formData.parent.mode === "new" && (
+        {formData.parent.mode === "new" && successInfo.parentLinkedExisting && (
+          <p className="enrollment-help-text">
+            An account with this parent&apos;s email already existed — the student has been linked
+            to that existing account instead of creating a new one.
+          </p>
+        )}
+        {formData.parent.mode === "new" && !successInfo.parentLinkedExisting && (
           <p className="enrollment-help-text">
             Login details for the parent mobile app have been sent to {formData.parent.email}.
           </p>
@@ -162,6 +198,74 @@ export default function ReviewStep({ formData, onBack }) {
           {submitting ? "Saving..." : "Complete Enrollment"}
         </button>
       </div>
+
+      {duplicateWarning && (
+        <div className="enrollment-modal-overlay">
+          <div className="enrollment-modal">
+            <h3>{duplicateWarning.sameParent ? "⚠️ Likely Duplicate Student" : "Possible Duplicate Student"}</h3>
+            <p>{duplicateWarning.message}</p>
+            <div className="enrollment-modal-existing">
+              <div className="enrollment-review-row">
+                <span>Existing Student</span>
+                <span>{duplicateWarning.existingStudent.fullName}</span>
+              </div>
+              <div className="enrollment-review-row">
+                <span>Student ID</span>
+                <span>{duplicateWarning.existingStudent.studentId}</span>
+              </div>
+              <div className="enrollment-review-row">
+                <span>Grade &amp; Section</span>
+                <span>
+                  {duplicateWarning.existingStudent.gradeLevel} - {duplicateWarning.existingStudent.section}
+                </span>
+              </div>
+              <div className="enrollment-review-row">
+                <span>Status</span>
+                <span>{duplicateWarning.existingStudent.status}</span>
+              </div>
+            </div>
+
+            {duplicateWarning.sameParent ? (
+              <>
+                <p className="enrollment-help-text">
+                  To proceed anyway, type <strong>ENROLL</strong> below to confirm this is intentional.
+                </p>
+                <input
+                  type="text"
+                  className="enrollment-confirm-input"
+                  placeholder="Type ENROLL to confirm"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                />
+              </>
+            ) : (
+              <p className="enrollment-help-text">
+                If this is a different student who happens to share the same name and birthdate,
+                you can continue enrolling. Otherwise, go back and double-check the details.
+              </p>
+            )}
+
+            <div className="enrollment-modal-actions">
+              <button
+                type="button"
+                className="enrollment-btn enrollment-btn-secondary"
+                onClick={handleCancelDuplicate}
+                disabled={submitting}
+              >
+                Cancel &amp; Review
+              </button>
+              <button
+                type="button"
+                className="enrollment-btn enrollment-btn-success"
+                onClick={handleEnrollAnyway}
+                disabled={submitting || (duplicateWarning.sameParent && confirmText.trim().toUpperCase() !== "ENROLL")}
+              >
+                {submitting ? "Saving..." : "Enroll Anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

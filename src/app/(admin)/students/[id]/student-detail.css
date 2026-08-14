@@ -1,0 +1,354 @@
+/* src/app/(admin)/students/[id]/student-detail.css */
+
+.detail-page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.detail-back-link {
+  font-size: 0.85rem;
+  color: #8a94a6;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.detail-back-link:hover {
+  color: #33415c;
+}
+
+/* ---------- Header ---------- */
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.detail-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+
+.detail-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: #8a94a6;
+}
+
+.detail-btn-primary {
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #1b2a4a;
+  color: #ffffff;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.detail-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.detail-btn-secondary {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #d5dae2;
+  background: #ffffff;
+  color: #33415c;
+}
+
+.detail-btn-secondary:hover:not(:disabled) {
+  background: #f5f7fa;
+}
+
+.detail-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.detail-btn-danger-outline {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e8b4ab;
+  background: #ffffff;
+  color: #c0392b;
+}
+
+.detail-btn-danger-outline:hover {
+  background: #fdf1ef;
+}
+
+/* ---------- Badges ---------- */
+
+.detail-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.detail-badge-active {
+  background: rgba(30, 130, 76, 0.1);
+  color: #1e824c;
+}
+
+.detail-badge-inactive {
+  background: #eef0f4;
+  color: #8a94a6;
+}
+
+/* ---------- Feedback Banner ---------- */
+
+.detail-feedback {
+  padding: 0.85rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-feedback-success {
+  background: rgba(30, 130, 76, 0.08);
+  color: #1e824c;
+}
+
+.detail-feedback-error {
+  background: rgba(192, 57, 43, 0.08);
+  color: #c0392b;
+}
+
+/* ---------- Section Cards ---------- */
+
+.detail-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.25rem;
+}
+
+.detail-section h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.1rem;
+}
+
+.detail-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+}
+
+.detail-field dt {
+  font-size: 0.75rem;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.detail-field dd {
+  font-size: 0.9rem;
+  color: #1b2a4a;
+  font-weight: 500;
+}
+
+.detail-empty-note {
+  font-size: 0.9rem;
+  color: #8a94a6;
+}
+
+.detail-login-block {
+  border-top: 1px solid #eef0f4;
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+}
+
+.detail-login-label {
+  font-size: 0.75rem;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.detail-login-email {
+  font-size: 0.9rem;
+  color: #1b2a4a;
+  margin-bottom: 0.75rem;
+}
+
+.detail-rfid-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-rfid-assigned {
+  font-size: 0.9rem;
+  color: #1b2a4a;
+}
+
+.detail-rfid-empty {
+  font-size: 0.9rem;
+  color: #8a94a6;
+}
+
+/* ---------- Danger Zone ---------- */
+
+.detail-danger-zone {
+  background: #fdf6f5;
+  border: 1px solid #f3d9d5;
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+}
+
+.detail-danger-zone h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #c0392b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.detail-danger-zone p {
+  font-size: 0.85rem;
+  color: #7a6a68;
+  margin-bottom: 0.9rem;
+}
+
+/* ---------- Confirmation Modal ---------- */
+
+.detail-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 42, 74, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.detail-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.75rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.detail-modal h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin-bottom: 0.5rem;
+}
+
+.detail-modal p {
+  font-size: 0.88rem;
+  color: #33415c;
+  margin-bottom: 1.4rem;
+}
+
+.detail-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.detail-modal-btn-cancel {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: #8a94a6;
+  cursor: pointer;
+}
+
+.detail-modal-btn-cancel:hover {
+  background: #f5f7fa;
+}
+
+.detail-modal-btn-confirm {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  background: #1b2a4a;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.detail-modal-btn-confirm:hover {
+  opacity: 0.9;
+}
+
+/* ---------- Loading / Not Found ---------- */
+
+.detail-skeleton-title {
+  height: 1.75rem;
+  width: 240px;
+  background: #eef0f4;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  animation: detail-pulse 1.4s ease-in-out infinite;
+}
+
+.detail-skeleton-block {
+  height: 160px;
+  background: #eef0f4;
+  border-radius: 12px;
+  animation: detail-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes detail-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.detail-not-found {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #33415c;
+}
+
+.detail-not-found p {
+  margin-bottom: 1rem;
+}
+
+.detail-rfid-edit-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #1b2a4a;
+  font-weight: 600;
+  text-decoration: none;
+}
+.detail-rfid-edit-link:hover {
+  text-decoration: underline;
+}

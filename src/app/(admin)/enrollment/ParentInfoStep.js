@@ -2,6 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 
+const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
+
+function calculateAge(dobString) {
+  const dob = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,20 +91,30 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
         newErrors.existingParent = "Please search for and select a parent/guardian.";
       }
     } else {
-      if (!data.firstName.trim()) newErrors.firstName = "First name is required.";
-      if (!data.lastName.trim()) newErrors.lastName = "Last name is required.";
-      if (!data.email.trim()) {
-        newErrors.email = "Email is required.";
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-        newErrors.email = "Please enter a valid email address.";
-      }
-      const phoneDigits = data.phone.replace(/\D/g, ""); // strip any non-digits just in case
-        if (!phoneDigits) {
-            newErrors.phone = "Phone number is required.";
-        } else if (!/^09\d{9}$/.test(phoneDigits)) {
-            newErrors.phone = "Please enter a valid 11-digit Philippine mobile number (e.g. 09171234567).";
+        if (!data.firstName.trim()) {
+          newErrors.firstName = "First name is required.";
+        } else if (!NAME_REGEX.test(data.firstName.trim())) {
+          newErrors.firstName = "First name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
         }
-    }
+
+        if (!data.lastName.trim()) {
+          newErrors.lastName = "Last name is required.";
+        } else if (!NAME_REGEX.test(data.lastName.trim())) {
+          newErrors.lastName = "Last name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
+        }
+
+        if (!data.email.trim()) {
+          newErrors.email = "Email is required.";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+          newErrors.email = "Please enter a valid email address.";
+        }
+        const phoneDigits = data.phone.replace(/\D/g, "");
+        if (!phoneDigits) {
+          newErrors.phone = "Phone number is required.";
+        } else if (!/^09\d{9}$/.test(phoneDigits)) {
+          newErrors.phone = "Please enter a valid 11-digit Philippine mobile number (e.g. 09171234567).";
+        }
+      }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import "./login.css";
 
 export default function LoginPage() {
@@ -26,7 +27,6 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // This will call your future Laravel API instead of Firestore directly
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,7 +46,7 @@ export default function LoginPage() {
         localStorage.removeItem("rememberedAdminEmail");
       }
 
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (error) {
       setFormMessage("Unable to sign in right now.");
     } finally {
@@ -57,54 +57,71 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-container">
-      <div className="login-header">
-        <div className="logo-title">
+        <div className="login-header">
+          <div className="logo-title">
+            <Image
+              src="/pictures/rcac.png"
+              alt="KidSecure logo"
+              width={56}
+              height={56}
+              className="rcac-logo"
+              priority
+            />
+            <div className="brand-text">
+              <span className="brand-name">KidSecure</span>
+              <span className="brand-sub">RCAC Admin</span>
+            </div>
+          </div>
           <div className="title-text">
-            <h1>Welcome</h1>
-            <p>Please sign in to continue</p>
+            <h1>Welcome back</h1>
+            <p>Sign in to manage your school dashboard.</p>
           </div>
         </div>
-      </div>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={emailError ? "input-invalid" : ""}
-          />
-          <p className="input-error">{emailError}</p>
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={passwordError ? "input-invalid" : ""}
-          />
-          <p className="input-error">{passwordError}</p>
-        </div>
-        <div className="form-options">
-          <label className="remember-me">
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
             <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
+              type="email"
+              id="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={emailError ? "input-invalid" : ""}
             />
-            Remember me
-          </label>
-        </div>
-        <p className="form-message">{formMessage}</p>
-        <button type="submit" className="login-btn" disabled={loading}>
-          {loading ? "Signing In..." : "Sign In"}
-        </button>
-      </form>
+            <p className="input-error">{emailError}</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={passwordError ? "input-invalid" : ""}
+            />
+            <p className="input-error">{passwordError}</p>
+          </div>
+
+          <div className="form-options">
+            <label className="remember-me">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              Remember me
+            </label>
+          </div>
+
+          <p className="form-message">{formMessage}</p>
+
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? "Signing In..." : "Sign In"}
+          </button>
+        </form>
       </div>
     </div>
   );

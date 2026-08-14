@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname() || "/";
@@ -14,8 +15,32 @@ export default function AdminLayout({ children }) {
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });
-    router.push("/login");
+    window.location.href = "/login";
   }
+
+  useEffect(() => {
+    function handlePageShow(event) {
+      if (event.persisted) {
+        // Page was restored from bfcache (e.g. browser Back button after logout).
+        // Re-verify the session is actually still valid before letting the
+        // stale cached DOM sit there looking logged-in.
+        fetch("/api/auth/check", { credentials: "include" })
+          .then((res) => {
+            if (!res.ok) {
+              router.replace("/login");
+            }
+          })
+          .catch(() => {
+            // If the check itself fails to reach the server, fail safe and
+            // redirect rather than silently trusting the stale page.
+            router.replace("/login");
+          });
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [router]);
 
   return (
     <main className="main-content-wrapper">
@@ -43,7 +68,7 @@ export default function AdminLayout({ children }) {
               Attendance Logs
             </Link>
             <Link className={linkClass("/account")} href="/account">
-              Create Account
+              Parent Directory
             </Link>
           </nav>
 

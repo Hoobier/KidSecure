@@ -14,6 +14,19 @@ const GRADE_LEVELS = [
 
 const SECTIONS = ["A", "B", "C"];
 
+const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
+
+function calculateAge(dobString) {
+  const dob = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export default function StudentInfoStep({ data, onChange, onNext }) {
   const [errors, setErrors] = useState({});
 
@@ -28,9 +41,37 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
   function validate() {
     const newErrors = {};
 
-    if (!data.firstName.trim()) newErrors.firstName = "First name is required.";
-    if (!data.lastName.trim()) newErrors.lastName = "Last name is required.";
-    if (!data.dateOfBirth) newErrors.dateOfBirth = "Date of birth is required.";
+    if (!data.firstName.trim()) {
+      newErrors.firstName = "First name is required.";
+    } else if (!NAME_REGEX.test(data.firstName.trim())) {
+      newErrors.firstName = "First name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
+    }
+
+    if (data.middleName && data.middleName.trim() && !NAME_REGEX.test(data.middleName.trim())) {
+      newErrors.middleName = "Middle name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
+    }
+
+    if (!data.lastName.trim()) {
+      newErrors.lastName = "Last name is required.";
+    } else if (!NAME_REGEX.test(data.lastName.trim())) {
+      newErrors.lastName = "Last name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
+    }
+
+    if (!data.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required.";
+    } else {
+      const dob = new Date(data.dateOfBirth);
+      const today = new Date();
+      if (dob > today) {
+        newErrors.dateOfBirth = "Date of birth cannot be in the future.";
+      } else {
+        const age = calculateAge(data.dateOfBirth);
+        if (age < 3 || age > 15) {
+          newErrors.dateOfBirth = "Student age must be between 3 and 15 years old.";
+        }
+      }
+    }
+
     if (!data.gradeLevel) newErrors.gradeLevel = "Please select a grade level.";
     if (!data.section) newErrors.section = "Please select a section.";
 
@@ -72,7 +113,9 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
             placeholder="Optional"
             value={data.middleName}
             onChange={(e) => handleFieldChange("middleName", e.target.value)}
+            className={errors.middleName ? "input-invalid" : ""}
           />
+          {errors.middleName && <p className="enrollment-field-error">{errors.middleName}</p>}
         </div>
       </div>
 
@@ -101,6 +144,7 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
           value={data.dateOfBirth}
           onChange={(e) => handleFieldChange("dateOfBirth", e.target.value)}
           className={errors.dateOfBirth ? "input-invalid" : ""}
+          max={new Date().toISOString().split("T")[0]}
         />
         {errors.dateOfBirth && <p className="enrollment-field-error">{errors.dateOfBirth}</p>}
       </div>

@@ -1,0 +1,165 @@
+/* src/app/(admin)/students/[id]/edit/edit-student.css */
+
+.edit-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.edit-back-link {
+  font-size: 0.85rem;
+  color: #8a94a6;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.edit-back-link:hover {
+  color: #33415c;
+}
+
+.edit-page h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin-bottom: 1.75rem;
+}
+
+.edit-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.edit-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.edit-form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.edit-form-row .edit-form-group {
+  flex: 1;
+}
+
+.edit-form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #33415c;
+  margin-bottom: 0.4rem;
+}
+
+.edit-form-group label .required {
+  color: #c0392b;
+  margin-left: 2px;
+}
+
+.edit-form-group input,
+.edit-form-group select {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1b2a4a;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.edit-form-group input:focus,
+.edit-form-group select:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.edit-form-group input.input-invalid {
+  border-color: #c0392b;
+}
+
+.edit-field-error {
+  font-size: 0.8rem;
+  color: #c0392b;
+  margin-top: 0.35rem;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eef0f4;
+}
+
+.edit-btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s ease;
+}
+
+.edit-btn:hover {
+  opacity: 0.9;
+}
+
+.edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-btn-primary {
+  background: #1b2a4a;
+  color: #ffffff;
+  margin-left: auto;
+}
+
+.edit-btn-secondary {
+  background: #ffffff;
+  color: #33415c;
+  border: 1px solid #d5dae2;
+}
+
+.edit-feedback {
+  padding: 0.85rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.edit-feedback-success {
+  background: rgba(30, 130, 76, 0.08);
+  color: #1e824c;
+}
+
+.edit-feedback-error {
+  background: rgba(192, 57, 43, 0.08);
+  color: #c0392b;
+}
+
+.edit-skeleton-title {
+  height: 1.75rem;
+  width: 240px;
+  background: #eef0f4;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  animation: edit-pulse 1.4s ease-in-out infinite;
+}
+
+.edit-skeleton-block {
+  height: 300px;
+  background: #eef0f4;
+  border-radius: 12px;
+  animation: edit-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes edit-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

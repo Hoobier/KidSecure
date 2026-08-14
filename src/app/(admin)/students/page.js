@@ -1,38 +1,44 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import './students.css';
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import "./students.css";
 
-const GRADE_OPTIONS = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-const SECTION_OPTIONS = ['A', 'B', 'C'];
+const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
+const SECTION_OPTIONS = ["A", "B", "C"];
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);
-  const [meta, setMeta] = useState({ currentPage: 1, lastPage: 1, total: 0 });
+  const [meta, setMeta] = useState({ currentPage: 1, lastPage: 1, total: 0, perPage: 20 });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [grade, setGrade] = useState('');
-  const [section, setSection] = useState('');
-  const [status, setStatus] = useState('');
+  const [search, setSearch] = useState("");
+  const [grade, setGrade] = useState("");
+  const [section, setSection] = useState("");
+  const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page),
-      per_page: '20',
+      per_page: "20",
       ...(search ? { search } : {}),
       ...(grade ? { grade } : {}),
       ...(section ? { section } : {}),
       ...(status ? { status } : {}),
     });
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/students?${params}`, {
-        credentials: 'include',
+        try {
+      const res = await fetch(`/api/students?${params}`, {
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to load students');
+
+      if (!res.ok) {
+        const body = await res.text();
+        console.error(`Failed to load students — status ${res.status}:`, body);
+        throw new Error("Failed to load students");
+      }
+
       const json = await res.json();
       setStudents(json.data);
       setMeta(json.meta);
@@ -48,141 +54,132 @@ export default function StudentsPage() {
     fetchStudents();
   }, [fetchStudents]);
 
-  // Reset to page 1 whenever a filter changes
   useEffect(() => {
     setPage(1);
   }, [search, grade, section, status]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Students</h1>
-        <Link
-          href="/students/enroll"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-        >
+    <div className="students-page">
+      <div className="students-header">
+        <h1>Students</h1>
+        <Link href="/enrollment" className="students-btn-primary">
           + Add Student
         </Link>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="students-toolbar">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍 Search by name or Student ID"
-          className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search by name or Student ID"
+          className="students-search"
         />
-        <select
-          value={grade}
-          onChange={(e) => setGrade(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        >
+        <select value={grade} onChange={(e) => setGrade(e.target.value)} className="students-filter">
           <option value="">All Grade Levels</option>
           {GRADE_OPTIONS.map((g) => (
             <option key={g} value={g}>{g}</option>
           ))}
         </select>
-        <select
-          value={section}
-          onChange={(e) => setSection(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        >
+        <select value={section} onChange={(e) => setSection(e.target.value)} className="students-filter">
           <option value="">All Sections</option>
           {SECTION_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        >
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="students-filter">
           <option value="">All Statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-left">
+      <div className="students-table-card">
+        <table className="students-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3 font-medium">Student ID</th>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Grade & Section</th>
-              <th className="px-4 py-3 font-medium">RFID Tag</th>
-              <th className="px-4 py-3 font-medium">Parent Linked</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3"></th>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Grade &amp; Section</th>
+              <th>RFID Tag</th>
+              <th>Parent Linked</th>
+              <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {loading &&
               [...Array(5)].map((_, i) => (
-                <tr key={i} className="border-t border-gray-100 animate-pulse">
-                  <td className="px-4 py-3" colSpan={7}>
-                    <div className="h-4 bg-gray-100 rounded w-full" />
+                <tr key={i}>
+                  <td colSpan={7}>
+                    <div className="students-skeleton-row" />
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
 
             {!loading && students.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
-                  No students found. Try adjusting your search or filters.
+                <td colSpan={7}>
+                  <div className="students-empty">
+                    No students found. Try adjusting your search or filters.
+                  </div>
                 </td>
               </tr>
             )}
 
-            {!loading && students.map((s) => (
-              <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-700">{s.studentId}</td>
-                <td className="px-4 py-3 text-gray-900 font-medium">{s.fullName}</td>
-                <td className="px-4 py-3 text-gray-700">{s.gradeLevel} - {s.section}</td>
-                <td className="px-4 py-3">
-                  {s.hasRfidTag ? (
-                    <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs">🟢 Assigned</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-xs">🟡 Not Assigned</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-700">{s.hasParentLink ? '✓' : '—'}</td>
-                <td className="px-4 py-3 text-gray-700 capitalize">{s.status}</td>
-                <td className="px-4 py-3 text-right">
-                  <Link href={`/students/${s.id}`} className="text-blue-600 hover:underline font-medium">
-                    View
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {!loading &&
+              students.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.studentId}</td>
+                  <td className="students-name">{s.fullName}</td>
+                  <td>{s.gradeLevel} - {s.section}</td>
+                  <td>
+                    {s.hasRfidTag ? (
+                      <span className="students-badge students-badge-success">🟢 Assigned</span>
+                    ) : (
+                      <span className="students-badge students-badge-pending">🟡 Not Assigned</span>
+                    )}
+                  </td>
+                  <td>{s.hasParentLink ? "✓" : "—"}</td>
+                  <td>
+                    <span
+                      className={
+                        "students-badge " +
+                        (s.status === "active" ? "students-badge-success" : "students-badge-neutral")
+                      }
+                    >
+                      {s.status}
+                    </span>
+                  </td>
+                  <td>
+                    <Link href={`/students/${s.id}`} className="students-view-link">
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
       {!loading && students.length > 0 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+        <div className="students-pagination">
           <span>
             Showing {(meta.currentPage - 1) * meta.perPage + 1}
             –{Math.min(meta.currentPage * meta.perPage, meta.total)} of {meta.total}
           </span>
-          <div className="flex gap-2">
+          <div className="students-pagination-controls">
             <button
+              className="students-pagination-btn"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={meta.currentPage <= 1}
-              className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
+              className="students-pagination-btn"
               onClick={() => setPage((p) => Math.min(meta.lastPage, p + 1))}
               disabled={meta.currentPage >= meta.lastPage}
-              className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next
             </button>
