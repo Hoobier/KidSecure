@@ -62,7 +62,7 @@ function validateForm(form) {
 }
 
 export default function EditStudentPage({ params }) {
-  
+
   const { id } = use(params);
   const router = useRouter();
 
@@ -70,6 +70,7 @@ export default function EditStudentPage({ params }) {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [errors, setErrors] = useState({});
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -86,6 +87,7 @@ export default function EditStudentPage({ params }) {
   const [rfidValue, setRfidValue] = useState("");
   const [rfidSaving, setRfidSaving] = useState(false);
   const [rfidFeedback, setRfidFeedback] = useState(null);
+  const [showRfidConfirm, setShowRfidConfirm] = useState(false);
 
   // Parent reassignment section state
   const [parentSearchQuery, setParentSearchQuery] = useState("");
@@ -94,6 +96,7 @@ export default function EditStudentPage({ params }) {
   const [selectedNewParent, setSelectedNewParent] = useState(null);
   const [parentReassignSaving, setParentReassignSaving] = useState(false);
   const [parentFeedback, setParentFeedback] = useState(null);
+  const [showParentConfirm, setShowParentConfirm] = useState(false);
   const parentDebounceRef = useRef(null);
 
   useEffect(() => {
@@ -128,7 +131,10 @@ export default function EditStudentPage({ params }) {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  async function handleSubmit(e) {
+  // Runs client-side validation only, and opens the confirm modal if the
+  // form is valid. The actual save happens in performSave(), triggered by
+  // the modal's confirm button — not here.
+  function handleSubmit(e) {
     e.preventDefault();
     setFeedback(null);
     setErrors({});
@@ -140,6 +146,11 @@ export default function EditStudentPage({ params }) {
       return;
     }
 
+    setShowSaveConfirm(true);
+  }
+
+  async function performSave() {
+    setShowSaveConfirm(false);
     setSaving(true);
 
     try {
@@ -175,7 +186,8 @@ export default function EditStudentPage({ params }) {
     );
   }
 
-  async function handleSaveRfid() {
+  async function performSaveRfid() {
+    setShowRfidConfirm(false);
     setRfidSaving(true);
     setRfidFeedback(null);
     try {
@@ -221,8 +233,9 @@ export default function EditStudentPage({ params }) {
     }, 400);
   }
 
-  async function handleReassignParent() {
+  async function performReassignParent() {
     if (!selectedNewParent) return;
+    setShowParentConfirm(false);
     setParentReassignSaving(true);
     setParentFeedback(null);
     try {
@@ -250,8 +263,12 @@ export default function EditStudentPage({ params }) {
 
   return (
     <div className="edit-page">
-      <Link href={`/students/${id}`} className="edit-back-link">← Back to Student</Link>
-      <h1>Edit Student Information</h1>
+      <div className="edit-page-header">
+        <div className="edit-page-header-title">
+          <h1>Edit Student Information</h1>
+        </div>
+        <Link href={`/students/${id}`} className="edit-back-btn">← Back to Student</Link>
+      </div>
 
       {feedback && (
         <div className={"edit-feedback " + (feedback.type === "success" ? "edit-feedback-success" : "edit-feedback-error")}>
@@ -260,7 +277,9 @@ export default function EditStudentPage({ params }) {
       )}
 
       <form className="edit-card" onSubmit={handleSubmit}>
-        <div className="edit-form-row">
+        <h2>Student Information</h2>
+
+        <div className="edit-form-row-3">
           <div className="edit-form-group">
             <label>First Name<span className="required">*</span></label>
             <input
@@ -281,31 +300,29 @@ export default function EditStudentPage({ params }) {
             />
             {errors.middleName && <div className="edit-field-error">{errors.middleName[0]}</div>}
           </div>
+          <div className="edit-form-group">
+            <label>Last Name<span className="required">*</span></label>
+            <input
+              type="text"
+              value={form.lastName}
+              onChange={(e) => updateField("lastName", e.target.value)}
+              className={errors.lastName ? "input-invalid" : ""}
+            />
+            {errors.lastName && <div className="edit-field-error">{errors.lastName[0]}</div>}
+          </div>
         </div>
 
-        <div className="edit-form-group">
-          <label>Last Name<span className="required">*</span></label>
-          <input
-            type="text"
-            value={form.lastName}
-            onChange={(e) => updateField("lastName", e.target.value)}
-            className={errors.lastName ? "input-invalid" : ""}
-          />
-          {errors.lastName && <div className="edit-field-error">{errors.lastName[0]}</div>}
-        </div>
-
-        <div className="edit-form-group">
-          <label>Date of Birth<span className="required">*</span></label>
-          <input
-            type="date"
-            value={form.dateOfBirth}
-            onChange={(e) => updateField("dateOfBirth", e.target.value)}
-            className={errors.dateOfBirth ? "input-invalid" : ""}
-          />
-          {errors.dateOfBirth && <div className="edit-field-error">{errors.dateOfBirth[0]}</div>}
-        </div>
-
-        <div className="edit-form-row">
+        <div className="edit-form-row-3">
+          <div className="edit-form-group">
+            <label>Date of Birth<span className="required">*</span></label>
+            <input
+              type="date"
+              value={form.dateOfBirth}
+              onChange={(e) => updateField("dateOfBirth", e.target.value)}
+              className={errors.dateOfBirth ? "input-invalid" : ""}
+            />
+            {errors.dateOfBirth && <div className="edit-field-error">{errors.dateOfBirth[0]}</div>}
+          </div>
           <div className="edit-form-group">
             <label>Grade Level<span className="required">*</span></label>
             <select value={form.gradeLevel} onChange={(e) => updateField("gradeLevel", e.target.value)}>
@@ -332,28 +349,28 @@ export default function EditStudentPage({ params }) {
 
       {/* RFID Tag Reassignment */}
       <div className="edit-card" style={{ marginTop: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1b2a4a", marginBottom: "1rem" }}>
-          RFID Tag
-        </h2>
+        <h2>RFID Tag</h2>
         {rfidFeedback && (
           <div className={"edit-feedback " + (rfidFeedback.type === "success" ? "edit-feedback-success" : "edit-feedback-error")}>
             {rfidFeedback.message}
           </div>
         )}
-        <div className="edit-form-group">
-          <label>Tag ID</label>
-          <input
-            type="text"
-            value={rfidValue}
-            onChange={(e) => setRfidValue(e.target.value)}
-            placeholder="No tag assigned"
-          />
+        <div className="edit-form-row">
+          <div className="edit-form-group" style={{ flex: "2 1 0" }}>
+            <label>Tag ID</label>
+            <input
+              type="text"
+              value={rfidValue}
+              onChange={(e) => setRfidValue(e.target.value)}
+              placeholder="No tag assigned"
+            />
+          </div>
         </div>
         <div className="edit-actions" style={{ borderTop: "none", paddingTop: 0, marginTop: "1rem" }}>
           <button
             type="button"
             className="edit-btn edit-btn-primary"
-            onClick={handleSaveRfid}
+            onClick={() => setShowRfidConfirm(true)}
             disabled={rfidSaving}
           >
             {rfidSaving ? "Saving…" : "Save RFID Tag"}
@@ -363,77 +380,164 @@ export default function EditStudentPage({ params }) {
 
       {/* Parent/Guardian Reassignment */}
       <div className="edit-card" style={{ marginTop: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1b2a4a", marginBottom: "1rem" }}>
-          Parent/Guardian
-        </h2>
+        <h2>Parent/Guardian</h2>
         {parentFeedback && (
           <div className={"edit-feedback " + (parentFeedback.type === "success" ? "edit-feedback-success" : "edit-feedback-error")}>
             {parentFeedback.message}
           </div>
         )}
 
-        {student?.parent && (
-          <div className="edit-form-group">
-            <label>Currently Linked</label>
-            <p style={{ fontSize: "0.9rem", color: "#33415c" }}>
-              {student.parent.fullName} ({student.parent.email})
-            </p>
-          </div>
-        )}
-
-        <div className="edit-form-group">
-          <label>Search for a Different Parent/Guardian</label>
-          {selectedNewParent ? (
-            <div className="enrollment-selected-parent">
-              <span>{selectedNewParent.firstName} {selectedNewParent.lastName}</span>
-              <button type="button" onClick={() => setSelectedNewParent(null)}>Change</button>
+        <div className="edit-form-row">
+          {student?.parent && (
+            <div className="edit-form-group">
+              <label>Currently Linked</label>
+              <div style={{
+                padding: "0.75rem 0.9rem",
+                border: "1px solid #d5dae2",
+                borderRadius: "8px",
+                background: "#f8fafc",
+                fontSize: "0.925rem",
+                color: "#1b2a4a",
+                fontWeight: 500,
+              }}>
+                {student.parent.fullName}
+                <span style={{ color: "#8a94a6", fontWeight: 400, marginLeft: 6 }}>
+                  ({student.parent.email})
+                </span>
+              </div>
             </div>
-          ) : (
-            <>
-              <input
-                type="text"
-                placeholder="Start typing a name or email..."
-                value={parentSearchQuery}
-                onChange={(e) => handleParentSearchChange(e.target.value)}
-              />
-              {parentSearching && <p className="enrollment-help-text">Searching...</p>}
-              {!parentSearching && parentSearchQuery && parentSearchResults.length === 0 && (
-                <p className="enrollment-help-text">No matching parent/guardian found.</p>
-              )}
-              {parentSearchResults.length > 0 && (
-                <div className="enrollment-search-results">
-                  {parentSearchResults.map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      className="enrollment-search-result-item"
-                      onClick={() => {
-                        setSelectedNewParent(p);
-                        setParentSearchQuery("");
-                        setParentSearchResults([]);
-                      }}
-                    >
-                      <span className="result-name">{p.firstName} {p.lastName}</span>
-                      <span className="result-email">{p.email}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
           )}
+
+          <div className="edit-form-group" style={{ flex: "2 1 0" }}>
+            <label>Search for a Different Parent/Guardian</label>
+            {selectedNewParent ? (
+              <div className="enrollment-selected-parent">
+                <span>{selectedNewParent.firstName} {selectedNewParent.lastName}</span>
+                <button type="button" onClick={() => setSelectedNewParent(null)}>Change</button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Start typing a name or email..."
+                  value={parentSearchQuery}
+                  onChange={(e) => handleParentSearchChange(e.target.value)}
+                />
+                {parentSearching && <p className="enrollment-help-text">Searching...</p>}
+                {!parentSearching && parentSearchQuery && parentSearchResults.length === 0 && (
+                  <p className="enrollment-help-text">No matching parent/guardian found.</p>
+                )}
+                {parentSearchResults.length > 0 && (
+                  <div className="enrollment-search-results">
+                    {parentSearchResults.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className="enrollment-search-result-item"
+                        onClick={() => {
+                          setSelectedNewParent(p);
+                          setParentSearchQuery("");
+                          setParentSearchResults([]);
+                        }}
+                      >
+                        <span className="result-name">{p.firstName} {p.lastName}</span>
+                        <span className="result-email">{p.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         <div className="edit-actions" style={{ borderTop: "none", paddingTop: 0, marginTop: "1rem" }}>
           <button
             type="button"
             className="edit-btn edit-btn-primary"
-            onClick={handleReassignParent}
+            onClick={() => setShowParentConfirm(true)}
             disabled={!selectedNewParent || parentReassignSaving}
           >
             {parentReassignSaving ? "Saving…" : "Reassign Parent/Guardian"}
           </button>
         </div>
       </div>
+
+      {showSaveConfirm && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <h3>Save these changes?</h3>
+            <p>
+              This will update {form.firstName} {form.lastName}&apos;s student information.
+            </p>
+            <div className="edit-modal-actions">
+              <button
+                className="edit-modal-btn-cancel"
+                onClick={() => setShowSaveConfirm(false)}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button className="edit-modal-btn-confirm" onClick={performSave} disabled={saving}>
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRfidConfirm && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <h3>Update RFID tag?</h3>
+            <p>
+              {rfidValue.trim()
+                ? `This will assign tag "${rfidValue.trim()}" to this student.`
+                : "This will remove the currently assigned RFID tag from this student."}
+            </p>
+            <div className="edit-modal-actions">
+              <button
+                className="edit-modal-btn-cancel"
+                onClick={() => setShowRfidConfirm(false)}
+                disabled={rfidSaving}
+              >
+                Cancel
+              </button>
+              <button className="edit-modal-btn-confirm" onClick={performSaveRfid} disabled={rfidSaving}>
+                {rfidSaving ? "Saving…" : "Save RFID Tag"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showParentConfirm && selectedNewParent && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <h3>Reassign parent/guardian?</h3>
+            <p>
+              This will link this student to {selectedNewParent.firstName} {selectedNewParent.lastName}
+              {student?.parent ? `, replacing ${student.parent.fullName}` : ""}.
+            </p>
+            <div className="edit-modal-actions">
+              <button
+                className="edit-modal-btn-cancel"
+                onClick={() => setShowParentConfirm(false)}
+                disabled={parentReassignSaving}
+              >
+                Cancel
+              </button>
+              <button
+                className="edit-modal-btn-confirm"
+                onClick={performReassignParent}
+                disabled={parentReassignSaving}
+              >
+                {parentReassignSaving ? "Saving…" : "Reassign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

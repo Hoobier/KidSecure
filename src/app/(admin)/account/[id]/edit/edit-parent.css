@@ -1,9 +1,8 @@
-/* src/app/(admin)/students/[id]/edit/edit-student.css */
-
 .edit-page {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem 3rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .edit-page-header {
@@ -147,14 +146,8 @@
   justify-content: center;
 }
 
-.edit-btn:hover {
-  opacity: 0.9;
-}
-
-.edit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.edit-btn:hover { opacity: 0.9; }
+.edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .edit-btn-primary {
   background: #1b2a4a;
@@ -175,15 +168,8 @@
   margin-bottom: 1.5rem;
 }
 
-.edit-feedback-success {
-  background: rgba(30, 130, 76, 0.08);
-  color: #1e824c;
-}
-
-.edit-feedback-error {
-  background: rgba(192, 57, 43, 0.08);
-  color: #c0392b;
-}
+.edit-feedback-success { background: rgba(30, 130, 76, 0.08); color: #1e824c; }
+.edit-feedback-error { background: rgba(192, 57, 43, 0.08); color: #c0392b; }
 
 .edit-skeleton-title {
   height: 2.25rem;
@@ -195,7 +181,7 @@
 }
 
 .edit-skeleton-block {
-  height: 480px;
+  height: 360px;
   background: #eef0f4;
   border-radius: 14px;
   animation: edit-pulse 1.4s ease-in-out infinite;
@@ -206,7 +192,6 @@
   50% { opacity: 0.5; }
 }
 
-/* Confirmation modals — local to this page */
 .edit-modal-overlay {
   position: fixed;
   inset: 0;
@@ -258,10 +243,7 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
 }
-
-.edit-modal-btn-cancel:hover {
-  background: #f8fafc;
-}
+.edit-modal-btn-cancel:hover { background: #f8fafc; }
 
 .edit-modal-btn-confirm {
   padding: 0.7rem 1.2rem;
@@ -274,16 +256,20 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
 }
-
-.edit-modal-btn-confirm:hover {
-  opacity: 0.9;
-}
+.edit-modal-btn-confirm:hover { opacity: 0.9; }
 
 .edit-modal-btn-cancel:disabled,
 .edit-modal-btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.detail-not-found {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #33415c;
+}
+.detail-not-found p { margin-bottom: 1rem; }
 
 @media (max-width: 780px) {
   .edit-form-row,

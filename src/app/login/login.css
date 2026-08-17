@@ -106,7 +106,7 @@
   transition: all 0.2s ease;
   font-family: 'Poppins', sans-serif;
   outline: none;
-  color: #ffffff;
+  color: #000000;
 }
 
 .form-group input::placeholder {
@@ -203,7 +203,7 @@
   text-align: center;
   margin-top: 24px;
   font-size: 13.5px;
-  color: #718096;
+  color: #c7c7c7;
 }
 
 .signup-link a {
@@ -214,4 +214,41 @@
 
 .signup-link a:hover {
   text-decoration: underline;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-field {
+  width: 100%;
+  padding-right: 44px; /* room for the icon button */
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #718096;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.password-toggle-btn:hover {
+  color: #1B2A4A;
+  background: #F1F5F9;
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid #1B2A4A;
+  outline-offset: 2px;
 }

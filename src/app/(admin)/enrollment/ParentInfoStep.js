@@ -200,7 +200,7 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
         </div>
       ) : (
         <>
-          <div className="enrollment-form-row">
+          <div className="enrollment-form-row-3">
             <div className="enrollment-form-group">
               <label htmlFor="parentFirstName">
                 First Name<span className="required">*</span>
@@ -230,24 +230,21 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
               />
               {errors.lastName && <p className="enrollment-field-error">{errors.lastName}</p>}
             </div>
-          </div>
 
-          <div className="enrollment-form-group">
-            <label htmlFor="parentEmail">
-              Email<span className="required">*</span>
-            </label>
-            <input
-              id="parentEmail"
-              type="email"
-              placeholder="maria.delacruz@email.com"
-              value={data.email}
-              onChange={(e) => handleFieldChange("email", e.target.value)}
-              className={errors.email ? "input-invalid" : ""}
-            />
-            <p className="enrollment-help-text">
-              Mobile app login details will be sent to this email once enrollment is complete.
-            </p>
-            {errors.email && <p className="enrollment-field-error">{errors.email}</p>}
+            <div className="enrollment-form-group">
+              <label htmlFor="parentEmail">
+                Email<span className="required">*</span>
+              </label>
+              <input
+                id="parentEmail"
+                type="email"
+                placeholder="maria.delacruz@email.com"
+                value={data.email}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                className={errors.email ? "input-invalid" : ""}
+              />
+              {errors.email && <p className="enrollment-field-error">{errors.email}</p>}
+            </div>
           </div>
 
           <div className="enrollment-form-group">
@@ -264,6 +261,9 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
                 onChange={(e) => handleFieldChange("phone", e.target.value.replace(/\D/g, "").slice(0, 11))}
                 className={errors.phone ? "input-invalid" : ""}
             />
+            <p className="enrollment-help-text">
+              Mobile app login details will be sent to the email above once enrollment is complete.
+            </p>
             {errors.phone && <p className="enrollment-field-error">{errors.phone}</p>}
           </div>
         </>

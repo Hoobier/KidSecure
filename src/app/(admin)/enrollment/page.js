@@ -31,11 +31,21 @@ const BLANK_FORM_DATA = {
   rfidTag: "",
 };
 
+function hasFilledData(formData) {
+  const s = formData.student;
+  const p = formData.parent;
+  return Boolean(
+    s.firstName || s.middleName || s.lastName || s.dateOfBirth || s.gradeLevel || s.section ||
+    p.firstName || p.lastName || p.email || p.phone || p.existingParentId || p.existingParentName ||
+    formData.rfidTag
+  );
+}
+
 export default function EnrollmentPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState(BLANK_FORM_DATA);
   const [restored, setRestored] = useState(false);
-  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // On mount, check for a saved draft and restore it.
   useEffect(() => {
@@ -43,9 +53,10 @@ export default function EnrollmentPage() {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.formData) setFormData(parsed.formData);
-        if (typeof parsed.currentStep === "number") setCurrentStep(parsed.currentStep);
-        setShowRestoreBanner(true);
+        const restoredFormData = parsed.formData || BLANK_FORM_DATA;
+        const restoredStep = typeof parsed.currentStep === "number" ? parsed.currentStep : 0;
+        setFormData(restoredFormData);
+        setCurrentStep(restoredStep);
       }
     } catch {
       // Corrupted or missing draft — just start fresh, no need to surface an error for this.
@@ -53,6 +64,17 @@ export default function EnrollmentPage() {
       setRestored(true);
     }
   }, []);
+
+  const showRestoreBanner = !bannerDismissed && hasFilledData(formData);
+
+  // Whenever the form becomes fully empty (e.g., after Start Over clears everything,
+  // or the user manually blanks every field), re-arm the banner so it pops up again
+  // the next time the user starts typing.
+  useEffect(() => {
+    if (!hasFilledData(formData)) {
+      setBannerDismissed(false);
+    }
+  }, [formData]);
 
   // Persist on every change, but only after the initial restore check has run —
   // otherwise we'd immediately overwrite a saved draft with the blank initial state.
@@ -93,7 +115,7 @@ export default function EnrollmentPage() {
     clearDraft();
     setFormData(BLANK_FORM_DATA);
     setCurrentStep(0);
-    setShowRestoreBanner(false);
+    setBannerDismissed(true);
   }
 
   return (
