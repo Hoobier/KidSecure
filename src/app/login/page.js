@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import "./login.css";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -92,18 +93,16 @@ export default function LoginPage() {
             <p className="input-error">{emailError}</p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={passwordError ? "input-invalid" : ""}
-            />
-            <p className="input-error">{passwordError}</p>
-          </div>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <PasswordInput
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={passwordError ? "input-invalid" : ""}
+              />
+              <p className="input-error">{passwordError}</p>
+            </div>
 
           <div className="form-options">
             <label className="remember-me">

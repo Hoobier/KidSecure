@@ -12,6 +12,15 @@ export default function StudentDetailPage({ params }) {
   const [showResendConfirm, setShowResendConfirm] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message }
 
+  function calculateAge(dobString) {
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age;
+  }
+
   useEffect(() => {
     async function fetchStudent() {
       setLoading(true);
@@ -103,6 +112,13 @@ export default function StudentDetailPage({ params }) {
   if (loading) {
     return (
       <div className="detail-page">
+        <div className="detail-header" style={{ opacity: 0, pointerEvents: "none" }}>
+          <div><h1>Loading</h1></div>
+          <div className="detail-header-actions">
+            <span className="detail-back-btn" aria-hidden>Back</span>
+            <span className="detail-btn-primary" aria-hidden>Edit</span>
+          </div>
+        </div>
         <div className="detail-skeleton-title" />
         <div className="detail-skeleton-block" />
       </div>
@@ -114,7 +130,7 @@ export default function StudentDetailPage({ params }) {
       <div className="detail-page">
         <div className="detail-not-found">
           <p>We couldn&apos;t find this student record.</p>
-          <Link href="/students" className="detail-back-link">← Back to Students</Link>
+          <Link href="/students" className="detail-back-btn">← Back to Students</Link>
         </div>
       </div>
     );
@@ -124,8 +140,6 @@ export default function StudentDetailPage({ params }) {
 
   return (
     <div className="detail-page">
-      <Link href="/students" className="detail-back-link">← Back to Students</Link>
-
       <div className="detail-header">
         <div>
           <h1>{fullName}</h1>
@@ -137,9 +151,12 @@ export default function StudentDetailPage({ params }) {
             </span>
           </div>
         </div>
-        <Link href={`/students/${id}/edit`} className="detail-btn-primary">
-          Edit
-        </Link>
+        <div className="detail-header-actions">
+          <Link href="/students" className="detail-back-btn">← Back to Students</Link>
+          <Link href={`/students/${id}/edit`} className="detail-btn-primary">
+            Edit
+          </Link>
+        </div>
       </div>
 
       {feedback && (
@@ -153,12 +170,24 @@ export default function StudentDetailPage({ params }) {
         <h2>Student Information</h2>
         <dl className="detail-fields">
           <div className="detail-field">
+            <dt>Student ID</dt>
+            <dd>{student.studentId || "—"}</dd>
+          </div>
+          <div className="detail-field">
             <dt>Date of Birth</dt>
             <dd>{student.dateOfBirth || "—"}</dd>
           </div>
           <div className="detail-field">
             <dt>Grade &amp; Section</dt>
             <dd>{student.gradeLevel} - {student.section}</dd>
+          </div>
+          <div className="detail-field">
+            <dt>Age</dt>
+            <dd>{student.dateOfBirth ? calculateAge(student.dateOfBirth) + " yrs" : "—"}</dd>
+          </div>
+          <div className="detail-field">
+            <dt>Full Name</dt>
+            <dd>{fullName}</dd>
           </div>
           <div className="detail-field">
             <dt>Enrolled On</dt>
@@ -172,14 +201,18 @@ export default function StudentDetailPage({ params }) {
         <h2>Parent / Guardian Information</h2>
         {student.parent ? (
           <>
-            <dl className="detail-fields" style={{ marginBottom: "1rem" }}>
+            <dl className="detail-fields" style={{ marginBottom: "1.25rem" }}>
               <div className="detail-field">
-                <dt>Name</dt>
+                <dt>Full Name</dt>
                 <dd>{student.parent.fullName}</dd>
               </div>
               <div className="detail-field">
                 <dt>Contact Number</dt>
                 <dd>{student.parent.phone || "—"}</dd>
+              </div>
+              <div className="detail-field">
+                <dt>Email</dt>
+                <dd>{student.parent.email || "—"}</dd>
               </div>
             </dl>
             <div className="detail-login-block">

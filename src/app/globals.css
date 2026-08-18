@@ -32,10 +32,11 @@ body {
 .app-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  min-height: calc(100vh - 40px);
-  align-items: start;  /* ADD THIS — stops sidebar from stretching to content height */
+  height: calc(100vh - 40px); /* CHANGED from min-height to height */
+  align-items: start;
   gap: 24px;
   padding: 20px;
+  overflow: hidden; /* NEW — app-shell itself never scrolls */
 }
 
 .sidebar {
@@ -46,9 +47,7 @@ body {
   color: white;
   border-radius: 24px;
   padding: 28px 22px;
-  height: calc(100vh - 40px);   /* CHANGE from min-height to height */
-  position: sticky;              /* ADD — keeps it pinned while content scrolls */
-  top: 20px;                     /* ADD — matches your page padding */
+  height: 100%; /* CHANGED — fills app-shell exactly, sticky no longer needed */
 }
 
 .sidebar-brand {
@@ -129,6 +128,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  height: 100%; /* NEW */
+  overflow-y: auto; /* NEW — only this pane scrolls */
+  padding-right: 4px; /* NEW — small buffer so scrollbar doesn't touch card edges */
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    height: auto; /* NEW — override the desktop fixed height */
+    overflow: visible; /* NEW — revert to normal page scrolling */
+  }
+
+  .content-area {
+    width: 100%;
+    height: auto; /* NEW */
+    overflow-y: visible; /* NEW */
+  }
 }
 
 @media (max-width: 760px) {
@@ -136,6 +153,7 @@ body {
     position: sticky;
     top: 0;
     width: 100%;
+    height: auto; /* NEW — mobile top bar shouldn't fill 100% height */
     min-height: auto;
     border-radius: 0 0 20px 20px;
     padding: 18px 16px;
@@ -197,4 +215,80 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+/* Logout confirmation modal — local to (admin)/layout.js */
+.logout-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.logout-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.2);
+}
+
+.logout-modal h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1B2A4A;
+  margin-bottom: 10px;
+}
+
+.logout-modal p {
+  color: #4A5568;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.logout-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.logout-modal-btn-cancel {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: #1B2A4A;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.logout-modal-btn-cancel:hover {
+  background: #F8FAFC;
+}
+
+.logout-modal-btn-confirm {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: #C0392B;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.logout-modal-btn-confirm:hover {
+  background: #A93226;
+}
+
+.logout-modal-btn-cancel:disabled,
+.logout-modal-btn-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
