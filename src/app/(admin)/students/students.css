@@ -149,12 +149,15 @@
 .students-filter:focus {
   border-color: #1a1f3a;
   box-shadow: 0 0 0 3px rgba(26, 31, 58, 0.08);
+<<<<<<< HEAD
 }
 
 .students-filter-sort {
   min-width: 210px;
   font-weight: 600;
   color: #1B2A4A;
+=======
+>>>>>>> 1727e4193366359284e4f2b8a19b611032dce84c
 }
 
 /* ---------- Table Card ---------- */

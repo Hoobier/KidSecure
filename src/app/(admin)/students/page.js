@@ -16,8 +16,11 @@ export default function StudentsPage() {
   const [section, setSection] = useState("");
   const [status, setStatus] = useState("active,inactive");
   const [page, setPage] = useState(1);
+<<<<<<< HEAD
   const [sort, setSort] = useState(""); // "" | "name" | "studentId"
   const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+=======
+>>>>>>> 1727e4193366359284e4f2b8a19b611032dce84c
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -100,6 +103,117 @@ export default function StudentsPage() {
   function sortIndicator(col) {
     if (sort !== col) return "";
     return sortDir === "asc" ? " ▲" : " ▼";
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === students.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(students.map((s) => s.id)));
+    }
+  }
+
+  function requestDeleteSelected() {
+    if (selectedIds.size === 0 || deleting) return;
+    setConfirmOpen(true);
+  }
+
+  function handleCancelDelete() {
+    if (deleting) return;
+    setConfirmOpen(false);
+  }
+
+  async function handleConfirmDelete() {
+    if (selectedIds.size === 0 || deleting) return;
+    const snapshotCount = selectedIds.size;
+    setDeleting(true);
+    setNotice(null);
+    let successCount = 0;
+    let failedCount = 0;
+    const failureMessages = [];
+
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/students/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        let payload = null;
+        try {
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) payload = await res.json();
+        } catch {
+          // ignore parse error
+        }
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          failedCount++;
+          if (payload && payload.message) {
+            const student = students.find((s) => s.id === id);
+            const label = student ? student.fullName || student.studentId : `#${id}`;
+            failureMessages.push(`${label}: ${payload.message}`);
+          }
+        }
+      } catch {
+        failedCount++;
+      }
+    }
+
+    setSelectedIds(new Set());
+    setConfirmOpen(false);
+    setDeleting(false);
+
+    if (successCount > 0 && failedCount === 0) {
+      setNotice({
+        type: "success",
+        message: snapshotCount === 1
+          ? "Student moved to Deleted Students."
+          : `${successCount} students moved to Deleted Students.`,
+      });
+    } else if (successCount > 0) {
+      setNotice({
+        type: "error",
+        message: `${successCount} deleted, ${failedCount} failed.${failureMessages.length > 0 ? " " + failureMessages[0] : ""}`,
+      });
+    } else {
+      setNotice({
+        type: "error",
+        message: failureMessages.length > 0
+          ? `Failed to delete. ${failureMessages[0]}`
+          : "Failed to delete selected students. Please try again.",
+      });
+    }
+
+    fetchStudents();
+    setTimeout(() => setNotice(null), 5000);
+  }
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [students]);
+
+  const hasAnyFilter = Boolean(search || grade || section || status);
+
+  function handleClearFilters() {
+    setSearch("");
+    setGrade("");
+    setSection("");
+    setStatus("");
+    setPage(1);
   }
 
   function toggleSelect(id) {
@@ -292,6 +406,7 @@ export default function StudentsPage() {
                   disabled={loading || students.length === 0}
                 />
               </th>
+<<<<<<< HEAD
               <th>
                 <button
                   type="button"
@@ -316,6 +431,10 @@ export default function StudentsPage() {
                   Full Name{sortIndicator("name")}
                 </button>
               </th>
+=======
+              <th>Student ID</th>
+              <th>Full Name</th>
+>>>>>>> 1727e4193366359284e4f2b8a19b611032dce84c
               <th>Grade</th>
               <th>Section</th>
               <th>RFID Tag</th>
