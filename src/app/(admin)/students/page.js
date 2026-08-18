@@ -18,6 +18,7 @@ export default function StudentsPage() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState(""); // "" | "name" | "studentId"
   const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -38,7 +39,7 @@ export default function StudentsPage() {
       ...(sort ? { sort_by: sort, sort_dir: sortDir } : {}),
     });
 
-        try {
+    try {
       const res = await fetch(`/api/students?${params}`, {
         credentials: "include",
       });
@@ -292,6 +293,7 @@ export default function StudentsPage() {
                   disabled={loading || students.length === 0}
                 />
               </th>
+
               <th>
                 <button
                   type="button"
@@ -316,6 +318,7 @@ export default function StudentsPage() {
                   Full Name{sortIndicator("name")}
                 </button>
               </th>
+
               <th>Grade</th>
               <th>Section</th>
               <th>RFID Tag</th>
@@ -330,7 +333,6 @@ export default function StudentsPage() {
                   <td className="students-check-col">
                     <div className="students-skeleton-cell students-skeleton-check" />
                   </td>
-                  <td><div className="students-skeleton-cell" /></td>
                   <td><div className="students-skeleton-cell" /></td>
                   <td><div className="students-skeleton-cell" /></td>
                   <td><div className="students-skeleton-cell" /></td>
