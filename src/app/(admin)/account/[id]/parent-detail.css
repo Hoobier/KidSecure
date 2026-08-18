@@ -1,9 +1,8 @@
-/* src/app/(admin)/students/[id]/student-detail.css */
-
 .detail-page {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem 3rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .detail-page-header {
@@ -38,8 +37,6 @@
   text-decoration: none;
 }
 
-/* ---------- Header ---------- */
-
 .detail-header {
   display: flex;
   align-items: flex-start;
@@ -60,6 +57,7 @@
   font-weight: 700;
   color: #1b2a4a;
   line-height: 1.2;
+  margin: 0;
 }
 
 .detail-subline {
@@ -88,9 +86,7 @@
   justify-content: center;
 }
 
-.detail-btn-primary:hover {
-  opacity: 0.9;
-}
+.detail-btn-primary:hover { opacity: 0.9; }
 
 .detail-btn-secondary {
   padding: 0.7rem 1.3rem;
@@ -104,32 +100,8 @@
   font-family: 'Poppins', sans-serif;
 }
 
-.detail-btn-secondary:hover:not(:disabled) {
-  background: #f5f7fa;
-}
-
-.detail-btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.detail-btn-danger-outline {
-  padding: 0.7rem 1.3rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid #e8b4ab;
-  background: #ffffff;
-  color: #c0392b;
-  font-family: 'Poppins', sans-serif;
-}
-
-.detail-btn-danger-outline:hover {
-  background: #fdf1ef;
-}
-
-/* ---------- Badges ---------- */
+.detail-btn-secondary:hover:not(:disabled) { background: #f5f7fa; }
+.detail-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .detail-badge {
   padding: 0.25rem 0.7rem;
@@ -139,17 +111,8 @@
   text-transform: capitalize;
 }
 
-.detail-badge-active {
-  background: rgba(30, 130, 76, 0.1);
-  color: #1e824c;
-}
-
-.detail-badge-inactive {
-  background: #eef0f4;
-  color: #8a94a6;
-}
-
-/* ---------- Feedback Banner ---------- */
+.detail-badge-active { background: rgba(30, 130, 76, 0.1); color: #1e824c; }
+.detail-badge-inactive { background: #eef0f4; color: #8a94a6; }
 
 .detail-feedback {
   padding: 0.85rem 1.1rem;
@@ -157,18 +120,8 @@
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
 }
-
-.detail-feedback-success {
-  background: rgba(30, 130, 76, 0.08);
-  color: #1e824c;
-}
-
-.detail-feedback-error {
-  background: rgba(192, 57, 43, 0.08);
-  color: #c0392b;
-}
-
-/* ---------- Section Cards ---------- */
+.detail-feedback-success { background: rgba(30, 130, 76, 0.08); color: #1e824c; }
+.detail-feedback-error { background: rgba(192, 57, 43, 0.08); color: #c0392b; }
 
 .detail-section {
   background: #ffffff;
@@ -210,10 +163,7 @@
   margin: 0;
 }
 
-.detail-empty-note {
-  font-size: 0.9rem;
-  color: #8a94a6;
-}
+.detail-empty-note { font-size: 0.9rem; color: #8a94a6; }
 
 .detail-login-block {
   border-top: 1px solid #eef0f4;
@@ -235,50 +185,62 @@
   margin-bottom: 0.85rem;
 }
 
-.detail-rfid-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.detail-linked-students {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
-.detail-rfid-assigned {
-  font-size: 0.95rem;
-  color: #1b2a4a;
-  font-weight: 500;
+.detail-student-card {
+  display: block;
+  text-decoration: none;
+  background: #f8f9fc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  transition: all 0.15s ease;
+  font-family: 'Poppins', sans-serif;
 }
-
-.detail-rfid-empty {
-  font-size: 0.95rem;
+.detail-student-card:hover {
+  background: #eef2f7;
+  border-color: #1b2a4a;
+}
+.detail-student-card.parents-child-pill-inactive {
+  background: #fafafa;
+  border-color: #d5dae2;
   color: #8a94a6;
 }
-
-/* ---------- Danger Zone ---------- */
-
-.detail-danger-zone {
-  background: #fdf6f5;
-  border: 1px solid #f3d9d5;
-  border-radius: 14px;
-  padding: 2rem 2.5rem;
+.detail-student-card.parents-child-pill-deleted {
+  background: #fff5f5;
+  border-color: #fed7d7;
 }
 
-.detail-danger-zone h2 {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #c0392b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin: 0 0 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(192, 57, 43, 0.12);
+.detail-student-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1b2a4a;
+  margin-bottom: 0.35rem;
 }
 
-.detail-danger-zone p {
-  font-size: 0.9rem;
-  color: #7a6a68;
-  margin: 0 0 1rem;
+.detail-student-card.parents-child-pill-inactive .detail-student-name { color: #8a94a6; }
+.detail-student-card.parents-child-pill-deleted .detail-student-name { color: #c53030; }
+
+.detail-student-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #718096;
 }
 
-/* ---------- Confirmation Modal ---------- */
+.parents-child-inactive-label,
+.parents-child-deleted-label {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+.parents-child-inactive-label { color: #8a94a6; }
+.parents-child-deleted-label { color: #c53030; }
 
 .detail-modal-overlay {
   position: fixed;
@@ -330,10 +292,7 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
 }
-
-.detail-modal-btn-cancel:hover {
-  background: #f5f7fa;
-}
+.detail-modal-btn-cancel:hover { background: #f5f7fa; }
 
 .detail-modal-btn-confirm {
   padding: 0.7rem 1.2rem;
@@ -346,12 +305,7 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
 }
-
-.detail-modal-btn-confirm:hover {
-  opacity: 0.9;
-}
-
-/* ---------- Loading / Not Found ---------- */
+.detail-modal-btn-confirm:hover { opacity: 0.9; }
 
 .detail-skeleton-title {
   height: 2.25rem;
@@ -379,22 +333,7 @@
   padding: 4rem 1rem;
   color: #33415c;
 }
-
-.detail-not-found p {
-  margin-bottom: 1rem;
-}
-
-.detail-rfid-edit-link {
-  display: inline-block;
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: #1b2a4a;
-  font-weight: 600;
-  text-decoration: none;
-}
-.detail-rfid-edit-link:hover {
-  text-decoration: underline;
-}
+.detail-not-found p { margin-bottom: 1rem; }
 
 @media (max-width: 780px) {
   .detail-header {
@@ -408,6 +347,6 @@
   .detail-back-btn,
   .detail-btn-primary { align-self: flex-start; }
   .detail-fields { grid-template-columns: 1fr 1fr; }
-  .detail-section,
-  .detail-danger-zone { padding: 1.5rem; }
+  .detail-linked-students { grid-template-columns: 1fr; }
+  .detail-section { padding: 1.5rem; }
 }

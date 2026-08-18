@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname() || "/";
   const router = useRouter();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const linkClass = (path) =>
     pathname === path || (path !== "/dashboard" && pathname.startsWith(path))
@@ -14,6 +16,7 @@ export default function AdminLayout({ children }) {
       : "sidebar-link";
 
   async function handleLogout() {
+    setLoggingOut(true);
     await fetch("/api/logout", { method: "POST" });
     window.location.href = "/login";
   }
@@ -21,9 +24,6 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     function handlePageShow(event) {
       if (event.persisted) {
-        // Page was restored from bfcache (e.g. browser Back button after logout).
-        // Re-verify the session is actually still valid before letting the
-        // stale cached DOM sit there looking logged-in.
         fetch("/api/auth/check", { credentials: "include" })
           .then((res) => {
             if (!res.ok) {
@@ -31,8 +31,6 @@ export default function AdminLayout({ children }) {
             }
           })
           .catch(() => {
-            // If the check itself fails to reach the server, fail safe and
-            // redirect rather than silently trusting the stale page.
             router.replace("/login");
           });
       }
@@ -74,7 +72,7 @@ export default function AdminLayout({ children }) {
 
           <div className="sidebar-footer">
             <hr className="sidebar-divider" />
-            <button className="sidebar-link sidebar-logout" onClick={handleLogout}>
+            <button className="sidebar-link sidebar-logout" onClick={() => setShowLogoutConfirm(true)}>
               Log Out
             </button>
           </div>
@@ -82,6 +80,31 @@ export default function AdminLayout({ children }) {
 
         <div className="content-area">{children}</div>
       </div>
+
+      {showLogoutConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Log out?</h3>
+            <p>You&apos;ll need to sign in again to access the dashboard.</p>
+            <div className="logout-modal-actions">
+              <button
+                className="logout-modal-btn-cancel"
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={loggingOut}
+              >
+                Cancel
+              </button>
+              <button
+                className="logout-modal-btn-confirm"
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                {loggingOut ? "Logging out…" : "Log Out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -9,29 +9,63 @@ export default function ParentDirectoryPage() {
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({
+    current_page: 1,
+    from: 0,
+    to: 0,
+    total: 0,
+    per_page: 20,
+    last_page: 1,
+  });
   const debounceRef = useRef(null);
-  const [resendTarget, setResendTarget] = useState(null); // { id, name, email }
+  const requestSeqRef = useRef(0);
+  const [resendTarget, setResendTarget] = useState(null);
   const [resending, setResending] = useState(false);
-  const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message }
+  const [feedback, setFeedback] = useState(null);
 
-  const fetchParents = useCallback(async (search = "") => {
+  const fetchParents = useCallback(async (overrides = {}) => {
+    const search = overrides.search ?? searchInput;
+    const pageVal = overrides.page ?? page;
+
+    const params = new URLSearchParams();
+    params.set("page", String(pageVal));
+    params.set("per_page", "20");
+    if (search) params.set("search", search);
+
+    const mySeq = ++requestSeqRef.current;
     setLoading(true);
     setError("");
+
     try {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
       const res = await fetch(`/api/parents?${params.toString()}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setParents(data.data || []);
+
+      if (mySeq === requestSeqRef.current) {
+        setParents(data.data || []);
+        const m = data.meta || {};
+        setMeta({
+          current_page: m.current_page ?? pageVal,
+          from: m.from ?? 0,
+          to: m.to ?? 0,
+          total: m.total ?? 0,
+          per_page: m.per_page ?? 20,
+          last_page: m.last_page ?? 1,
+        });
+      }
     } catch {
-      setError("Unable to load parent accounts right now.");
+      if (mySeq === requestSeqRef.current) {
+        setError("Unable to load parent accounts right now.");
+      }
     } finally {
-      setLoading(false);
+      if (mySeq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [searchInput, page]);
 
   useEffect(() => {
     fetchParents();
@@ -39,8 +73,15 @@ export default function ParentDirectoryPage() {
 
   function handleSearchChange(value) {
     setSearchInput(value);
+    setPage(1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchParents(value), 300);
+    debounceRef.current = setTimeout(() => fetchParents({ search: value, page: 1 }), 300);
+  }
+
+  function handleClearFilters() {
+    setSearchInput("");
+    setPage(1);
+    fetchParents({ search: "", page: 1 });
   }
 
   async function handleResendCredentials() {
@@ -53,15 +94,24 @@ export default function ParentDirectoryPage() {
       });
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "Failed");
+      if (!res.ok) {
+        const msg = (data && (data.debug || data.message)) || "Unable to resend login information. Please try again.";
+        throw new Error(msg);
+      }
 
       setFeedback({ type: "success", message: "✅ Login information has been resent." });
-    } catch {
-      setFeedback({ type: "error", message: "⚠️ Unable to resend login information. Please try again." });
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message:
+          err && typeof err === "object" && "message" in err
+            ? `⚠️ ${err.message}`
+            : "⚠️ Unable to resend login information. Please try again.",
+      });
     } finally {
       setResending(false);
       setResendTarget(null);
-      setTimeout(() => setFeedback(null), 5000);
+      setTimeout(() => setFeedback(null), 8000);
     }
   }
 
@@ -82,11 +132,20 @@ export default function ParentDirectoryPage() {
         <div className="parents-card-header">
           <input
             type="text"
-            className="parents-filter-input"
+            className="parents-filter-input parents-filter-search"
             placeholder="🔍 Search by parent name or email"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
+          {searchInput && (
+            <button
+              type="button"
+              className="parents-clear-btn"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
         <div className="parents-table-container">
@@ -110,7 +169,11 @@ export default function ParentDirectoryPage() {
               ) : (
                 parents.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.name || "—"}</td>
+                    <td>
+                      <Link href={`/account/${p.id}`} className="parents-name-link">
+                        {p.name || "—"}
+                      </Link>
+                    </td>
                     <td>{p.email || "—"}</td>
                     <td>{p.phone || "—"}</td>
                     <td>
@@ -118,19 +181,40 @@ export default function ParentDirectoryPage() {
                         <span className="parents-no-children">No linked students</span>
                       ) : (
                         <div className="parents-children-list">
-                          {p.children.map((c) => (
-                            <Link
-                              key={c.id}
-                              href={`/students/${c.id}`}
-                              className={`parents-child-pill ${c.status !== "active" ? "parents-child-pill-inactive" : ""}`}
-                            >
-                              {c.name}
-                              {c.status !== "active" && <span className="parents-child-inactive-label"> (Inactive)</span>}
-                            </Link>
-                          ))}
+                          {p.children.map((c) => {
+                            const statusClass =
+                              c.status === "deleted"
+                                ? "parents-child-pill-deleted"
+                                : c.status === "inactive"
+                                ? "parents-child-pill-inactive"
+                                : "";
+                            const statusLabel =
+                              c.status === "deleted"
+                                ? " (Deleted)"
+                                : c.status === "inactive"
+                                ? " (Inactive)"
+                                : "";
+                            const statusLabelClass =
+                              c.status === "deleted"
+                                ? "parents-child-deleted-label"
+                                : c.status === "inactive"
+                                ? "parents-child-inactive-label"
+                                : "";
+                            return (
+                              <Link
+                                key={c.id}
+                                href={`/students/${c.id}`}
+                                className={`parents-child-pill ${statusClass}`}
+                              >
+                                {c.name}
+                                {statusLabel !== "" && (
+                                  <span className={statusLabelClass}>{statusLabel}</span>
+                                )}
+                              </Link>
+                            );
+                          })}
                         </div>
                       )}
-                      
                     </td>
                     <td>
                       <button
@@ -146,7 +230,40 @@ export default function ParentDirectoryPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="parents-pagination">
+          <div className="parents-pagination-info">
+            Showing {meta.from ?? 0}–{meta.to ?? 0} of {meta.total ?? 0}
+          </div>
+          <div className="parents-pagination-buttons">
+            <button
+              type="button"
+              className="parents-pagination-btn"
+              disabled={page <= 1 || loading}
+              onClick={() => {
+                const next = Math.max(1, page - 1);
+                setPage(next);
+                fetchParents({ page: next });
+              }}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="parents-pagination-btn"
+              disabled={page >= (meta.last_page || 1) || loading}
+              onClick={() => {
+                const next = Math.min(meta.last_page || 1, page + 1);
+                setPage(next);
+                fetchParents({ page: next });
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
+
       {resendTarget && (
         <div className="parents-modal-overlay">
           <div className="parents-modal">

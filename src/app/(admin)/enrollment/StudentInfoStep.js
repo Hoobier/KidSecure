@@ -29,12 +29,25 @@ function calculateAge(dobString) {
 
 export default function StudentInfoStep({ data, onChange, onNext }) {
   const [errors, setErrors] = useState({});
+  const [dobBadInput, setDobBadInput] = useState(false);
 
   function handleFieldChange(field, value) {
     onChange({ [field]: value });
     // Clear that field's error the moment the admin starts fixing it
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  }
+
+  function handleDobChange(e) {
+    const isBadInput = e.target.validity.badInput;
+    setDobBadInput(isBadInput);
+    onChange({ dateOfBirth: e.target.value });
+
+    if (isBadInput) {
+      setErrors((prev) => ({ ...prev, dateOfBirth: "That date doesn't exist. Please check the day and month." }));
+    } else if (errors.dateOfBirth) {
+      setErrors((prev) => ({ ...prev, dateOfBirth: "" }));
     }
   }
 
@@ -57,17 +70,24 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
       newErrors.lastName = "Last name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
     }
 
-    if (!data.dateOfBirth) {
+    if (dobBadInput) { // NEW — check this BEFORE the generic empty check
+      newErrors.dateOfBirth = "That date doesn't exist. Please check the day and month.";
+    } else if (!data.dateOfBirth) {
       newErrors.dateOfBirth = "Date of birth is required.";
     } else {
       const dob = new Date(data.dateOfBirth);
-      const today = new Date();
-      if (dob > today) {
-        newErrors.dateOfBirth = "Date of birth cannot be in the future.";
+
+      if (isNaN(dob.getTime())) {
+        newErrors.dateOfBirth = "Please enter a valid date.";
       } else {
-        const age = calculateAge(data.dateOfBirth);
-        if (age < 3 || age > 15) {
-          newErrors.dateOfBirth = "Student age must be between 3 and 15 years old.";
+        const today = new Date();
+        if (dob > today) {
+          newErrors.dateOfBirth = "Date of birth cannot be in the future.";
+        } else {
+          const age = calculateAge(data.dateOfBirth);
+          if (age < 3 || age > 15) {
+            newErrors.dateOfBirth = "Student age must be between 3 and 15 years old.";
+          }
         }
       }
     }
@@ -89,7 +109,7 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
     <div>
       <h2 className="enrollment-step-title">Student Information</h2>
 
-      <div className="enrollment-form-row">
+      <div className="enrollment-form-row-3">
         <div className="enrollment-form-group">
           <label htmlFor="firstName">
             First Name<span className="required">*</span>
@@ -117,39 +137,40 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
           />
           {errors.middleName && <p className="enrollment-field-error">{errors.middleName}</p>}
         </div>
+
+        <div className="enrollment-form-group">
+          <label htmlFor="lastName">
+            Last Name<span className="required">*</span>
+          </label>
+          <input
+            id="lastName"
+            type="text"
+            placeholder="Dela Cruz"
+            value={data.lastName}
+            onChange={(e) => handleFieldChange("lastName", e.target.value)}
+            className={errors.lastName ? "input-invalid" : ""}
+          />
+          {errors.lastName && <p className="enrollment-field-error">{errors.lastName}</p>}
+        </div>
       </div>
 
-      <div className="enrollment-form-group">
-        <label htmlFor="lastName">
-          Last Name<span className="required">*</span>
-        </label>
-        <input
-          id="lastName"
-          type="text"
-          placeholder="Dela Cruz"
-          value={data.lastName}
-          onChange={(e) => handleFieldChange("lastName", e.target.value)}
-          className={errors.lastName ? "input-invalid" : ""}
-        />
-        {errors.lastName && <p className="enrollment-field-error">{errors.lastName}</p>}
-      </div>
+      <div className="enrollment-form-row-3">
+        <div className="enrollment-form-group">
+          <label htmlFor="dateOfBirth">
+            Date of Birth<span className="required">*</span>
+          </label>
+          <input
+            id="dateOfBirth"
+            type="date"
+            value={data.dateOfBirth}
+            onChange={handleDobChange}
+            onInput={handleDobChange}
+            className={errors.dateOfBirth ? "input-invalid" : ""}
+            max={new Date().toISOString().split("T")[0]}
+          />
+          {errors.dateOfBirth && <p className="enrollment-field-error">{errors.dateOfBirth}</p>}
+        </div>
 
-      <div className="enrollment-form-group">
-        <label htmlFor="dateOfBirth">
-          Date of Birth<span className="required">*</span>
-        </label>
-        <input
-          id="dateOfBirth"
-          type="date"
-          value={data.dateOfBirth}
-          onChange={(e) => handleFieldChange("dateOfBirth", e.target.value)}
-          className={errors.dateOfBirth ? "input-invalid" : ""}
-          max={new Date().toISOString().split("T")[0]}
-        />
-        {errors.dateOfBirth && <p className="enrollment-field-error">{errors.dateOfBirth}</p>}
-      </div>
-
-      <div className="enrollment-form-row">
         <div className="enrollment-form-group">
           <label htmlFor="gradeLevel">
             Grade Level<span className="required">*</span>
