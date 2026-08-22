@@ -10,6 +10,9 @@ const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4
 const SECTION_OPTIONS = ["A", "B", "C"];
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
+const RFID_POLL_INTERVAL_MS = 1500;
+const RFID_LISTEN_TIMEOUT_MS = 20000;
+
 function calculateAge(dobString) {
   const dob = new Date(dobString);
   const today = new Date();
@@ -89,6 +92,12 @@ export default function EditStudentPage({ params }) {
   const [rfidFeedback, setRfidFeedback] = useState(null);
   const [showRfidConfirm, setShowRfidConfirm] = useState(false);
 
+  // RFID scanning state (Scan button, separate from the manual text input)
+  const [rfidScanState, setRfidScanState] = useState("idle"); // idle | listening | timeout | error
+  const [rfidDuplicateName, setRfidDuplicateName] = useState(null);
+  const rfidPollTimerRef = useRef(null);
+  const rfidTimeoutTimerRef = useRef(null);
+
   // Parent reassignment section state
   const [parentSearchQuery, setParentSearchQuery] = useState("");
   const [parentSearchResults, setParentSearchResults] = useState([]);
@@ -125,6 +134,15 @@ export default function EditStudentPage({ params }) {
     }
     fetchStudent();
   }, [id]);
+
+  // Stop listening for a tag if the admin navigates away mid-scan.
+  useEffect(() => {
+    return () => {
+      clearRfidTimers();
+      stopRfidListening();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -177,15 +195,6 @@ export default function EditStudentPage({ params }) {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="edit-page">
-        <div className="edit-skeleton-title" />
-        <div className="edit-skeleton-block" />
-      </div>
-    );
-  }
-
   async function performSaveRfid() {
     setShowRfidConfirm(false);
     setRfidSaving(true);
@@ -209,6 +218,81 @@ export default function EditStudentPage({ params }) {
       setTimeout(() => setRfidFeedback(null), 5000);
     }
   }
+
+  // --- RFID scanning helpers ------------------------------------------
+
+  function clearRfidTimers() {
+    if (rfidPollTimerRef.current) clearInterval(rfidPollTimerRef.current);
+    if (rfidTimeoutTimerRef.current) clearTimeout(rfidTimeoutTimerRef.current);
+    rfidPollTimerRef.current = null;
+    rfidTimeoutTimerRef.current = null;
+  }
+
+  async function stopRfidListening() {
+    clearRfidTimers();
+    try {
+      await fetch("/api/enrollment/rfid/stop-listening", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // best-effort cleanup
+    }
+  }
+
+  async function rfidPollOnce() {
+    try {
+      const res = await fetch("/api/enrollment/rfid/pending-scan", { credentials: "include" });
+      const json = await res.json();
+
+      if (json.status === "new") {
+        clearRfidTimers();
+        setRfidValue(json.rfidTag);
+        setRfidScanState("idle");
+      } else if (json.status === "duplicate") {
+        clearRfidTimers();
+        setRfidScanState("idle");
+        setRfidDuplicateName(json.studentName || "another student");
+      } else if (json.status === "expired") {
+        clearRfidTimers();
+        setRfidScanState("timeout");
+      }
+      // "waiting" → keep polling
+    } catch {
+      clearRfidTimers();
+      setRfidScanState("error");
+    }
+  }
+
+  async function handleStartRfidScan() {
+    setRfidScanState("listening");
+    setRfidFeedback(null);
+
+    try {
+      await fetch("/api/enrollment/rfid/start-listening", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excludeStudentId: id }),
+      });
+    } catch {
+      setRfidScanState("error");
+      return;
+    }
+
+    rfidPollTimerRef.current = setInterval(rfidPollOnce, RFID_POLL_INTERVAL_MS);
+    rfidTimeoutTimerRef.current = setTimeout(() => {
+      clearRfidTimers();
+      setRfidScanState((current) => (current === "listening" ? "timeout" : current));
+    }, RFID_LISTEN_TIMEOUT_MS);
+  }
+
+  function handleCancelRfidScan() {
+    stopRfidListening();
+    setRfidScanState("idle");
+  }
+
+  // --- Parent reassignment helpers ------------------------------------
 
   function handleParentSearchChange(value) {
     setParentSearchQuery(value);
@@ -259,6 +343,15 @@ export default function EditStudentPage({ params }) {
       setParentReassignSaving(false);
       setTimeout(() => setParentFeedback(null), 5000);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="edit-page">
+        <div className="edit-skeleton-title" />
+        <div className="edit-skeleton-block" />
+      </div>
+    );
   }
 
   return (
@@ -355,23 +448,49 @@ export default function EditStudentPage({ params }) {
             {rfidFeedback.message}
           </div>
         )}
-        <div className="edit-form-row">
-          <div className="edit-form-group" style={{ flex: "2 1 0" }}>
-            <label>Tag ID</label>
-            <input
-              type="text"
-              value={rfidValue}
-              onChange={(e) => setRfidValue(e.target.value)}
-              placeholder="No tag assigned"
-            />
+
+        {rfidScanState === "listening" ? (
+          <div className="edit-form-row">
+            <div className="edit-form-group" style={{ flex: "2 1 0" }}>
+              <p style={{ margin: "0.25rem 0" }}>📡 Tap the new tag on the reader now…</p>
+            </div>
+            <div className="edit-form-group" style={{ justifyContent: "flex-end", display: "flex" }}>
+              <button type="button" className="edit-btn edit-btn-secondary" onClick={handleCancelRfidScan}>
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="edit-form-row">
+            <div className="edit-form-group" style={{ flex: "2 1 0" }}>
+              <label>Tag ID</label>
+              <input
+                type="text"
+                value={rfidValue}
+                onChange={(e) => setRfidValue(e.target.value)}
+                placeholder="No tag assigned"
+              />
+              {rfidScanState === "timeout" && (
+                <div className="edit-field-error">No tag detected. Make sure the tag is close to the reader.</div>
+              )}
+              {rfidScanState === "error" && (
+                <div className="edit-field-error">Couldn&apos;t reach the reader. Please try again.</div>
+              )}
+            </div>
+            <div className="edit-form-group" style={{ justifyContent: "flex-end", display: "flex" }}>
+              <button type="button" className="edit-btn edit-btn-secondary" onClick={handleStartRfidScan}>
+                📡 Scan New Tag
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="edit-actions" style={{ borderTop: "none", paddingTop: 0, marginTop: "1rem" }}>
           <button
             type="button"
             className="edit-btn edit-btn-primary"
             onClick={() => setShowRfidConfirm(true)}
-            disabled={rfidSaving}
+            disabled={rfidSaving || rfidScanState === "listening"}
           >
             {rfidSaving ? "Saving…" : "Save RFID Tag"}
           </button>
@@ -505,6 +624,32 @@ export default function EditStudentPage({ params }) {
               </button>
               <button className="edit-modal-btn-confirm" onClick={performSaveRfid} disabled={rfidSaving}>
                 {rfidSaving ? "Saving…" : "Save RFID Tag"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rfidDuplicateName && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <h3>This tag is already in use</h3>
+            <p>
+              This tag is already assigned to <strong>{rfidDuplicateName}</strong>. Please use a
+              different tag for this student.
+            </p>
+            <div className="edit-modal-actions">
+              <button className="edit-modal-btn-cancel" onClick={() => setRfidDuplicateName(null)}>
+                Close
+              </button>
+              <button
+                className="edit-modal-btn-confirm"
+                onClick={() => {
+                  setRfidDuplicateName(null);
+                  handleStartRfidScan();
+                }}
+              >
+                Try Another Tag
               </button>
             </div>
           </div>

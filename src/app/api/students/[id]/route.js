@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 
+// src/app/api/students/[id]/route.js
+
 export async function GET(request, { params }) {
   const { id } = await params;
   const cookieStore = await cookies();

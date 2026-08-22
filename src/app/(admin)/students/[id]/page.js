@@ -4,6 +4,8 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
 
+// src/app/(admin)/students/[id]/page.js
+
 export default function StudentDetailPage({ params }) {
   const { id } = use(params);
   const [student, setStudent] = useState(null);

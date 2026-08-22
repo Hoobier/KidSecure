@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import "./students.css";
 
+// src/app/(admin)/students/page.js
+
 const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 const SECTION_OPTIONS = ["A", "B", "C"];
 
