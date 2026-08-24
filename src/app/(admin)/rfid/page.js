@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import "./rfid.css";
 
+const AUTO_POLL_INTERVAL_MS = 2500;
+const NEW_ROW_HIGHLIGHT_MS = 4000;
+
 export default function RfidPage() {
   const [logs, setLogs] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
@@ -24,9 +27,13 @@ export default function RfidPage() {
     per_page: 20,
     last_page: 1,
   });
+  const [newlyArrivedIds, setNewlyArrivedIds] = useState(new Set());
 
   const debounceRef = useRef(null);
   const requestSeqRef = useRef(0);
+  const pollTimerRef = useRef(null);
+  const latestTimestampRef = useRef(null);
+  const highlightTimersRef = useRef([]);
 
   // Load dropdown options once on mount
   useEffect(() => {
@@ -80,7 +87,22 @@ export default function RfidPage() {
       const data = await res.json();
 
       if (mySeq === requestSeqRef.current) {
-        setLogs(data.data || []);
+        const newData = data.data || [];
+        setLogs(newData);
+
+        if (newData.length > 0) {
+          const timestamps = newData
+            .map((l) => l.timestamp)
+            .filter(Boolean)
+            .sort();
+          if (timestamps.length > 0) {
+            const latest = timestamps[timestamps.length - 1];
+            if (!latestTimestampRef.current || latest > latestTimestampRef.current) {
+              latestTimestampRef.current = latest;
+            }
+          }
+        }
+
         const m = data.meta || {};
         setMeta({
           current_page: m.current_page ?? pageVal,
@@ -108,6 +130,92 @@ export default function RfidPage() {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function makeRowKey(log, fallbackIndex = 0) {
+    return `${log.studentId || "?"}-${log.timestamp || "?"}-${fallbackIndex}`;
+  }
+
+  const pollForNewLogs = useCallback(async () => {
+    if (!latestTimestampRef.current) return;
+
+    const hasFilters = Boolean(
+      searchInput || dateFilter || gradeLevel || section || sort
+    );
+    const notOnPage1 = page !== 1;
+    if (hasFilters || notOnPage1) return;
+
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("per_page", "20");
+    params.set("since", latestTimestampRef.current);
+
+    try {
+      const res = await fetch(`/api/attendance-logs?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const newRows = data.data || [];
+      if (!newRows.length) return;
+
+      let newLatest = latestTimestampRef.current;
+      const newKeys = [];
+      const deduped = [];
+      const existingKeys = new Set(logs.map((l, i) => makeRowKey(l, i)));
+
+      for (let i = 0; i < newRows.length; i++) {
+        const row = newRows[i];
+        const key = makeRowKey(row, i);
+        if (existingKeys.has(key)) continue;
+        deduped.push(row);
+        newKeys.push(key);
+        if (row.timestamp && row.timestamp > newLatest) {
+          newLatest = row.timestamp;
+        }
+      }
+
+      if (!deduped.length) return;
+      latestTimestampRef.current = newLatest;
+
+      setLogs((prev) => {
+        const merged = [...deduped, ...prev].slice(0, 20);
+        return merged;
+      });
+
+      if (data.meta && typeof data.meta.total === "number") {
+        setMeta((prevMeta) => ({
+          ...prevMeta,
+          total: Math.max(prevMeta.total, data.meta.total),
+          to: Math.min(prevMeta.per_page, Math.max(prevMeta.total, deduped.length)),
+        }));
+      }
+
+      setNewlyArrivedIds((prevSet) => {
+        const next = new Set(prevSet);
+        newKeys.forEach((k) => next.add(k));
+        return next;
+      });
+
+      const clearTimer = setTimeout(() => {
+        setNewlyArrivedIds((prevSet) => {
+          const next = new Set(prevSet);
+          newKeys.forEach((k) => next.delete(k));
+          return next;
+        });
+      }, NEW_ROW_HIGHLIGHT_MS);
+      highlightTimersRef.current.push(clearTimer);
+    } catch {
+    }
+  }, [logs, searchInput, dateFilter, gradeLevel, section, sort, page]);
+
+  useEffect(() => {
+    pollTimerRef.current = setInterval(pollForNewLogs, AUTO_POLL_INTERVAL_MS);
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      highlightTimersRef.current.forEach((t) => clearTimeout(t));
+      highlightTimersRef.current = [];
+    };
+  }, [pollForNewLogs]);
 
   // Debounce the search box — wait 300ms after typing stops before calling the API
   function handleSearchChange(value) {
@@ -321,20 +429,27 @@ export default function RfidPage() {
               ) : logs.length === 0 ? (
                 <tr><td colSpan={6} className="empty-state">No attendance records found.</td></tr>
               ) : (
-                logs.map((log, i) => (
-                  <tr key={`${log.studentId}-${log.timestamp}-${i}`}>
-                    <td>{log.studentId || "-"}</td>
-                    <td>{log.name || "-"}</td>
-                    <td>{log.gradeLevel || "-"}</td>
-                    <td>{log.section || "-"}</td>
-                    <td>{formatTimestamp(log.timestamp)}</td>
-                    <td>
-                      <span className={`scan-badge scan-badge--${log.type}`}>
-                        {log.type ? log.type.toUpperCase() : "-"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                logs.map((log, i) => {
+                  const rowKey = makeRowKey(log, i);
+                  const isNew = newlyArrivedIds.has(rowKey);
+                  return (
+                    <tr
+                      key={rowKey}
+                      className={isNew ? "log-row--new" : ""}
+                    >
+                      <td>{log.studentId || "-"}</td>
+                      <td>{log.name || "-"}</td>
+                      <td>{log.gradeLevel || "-"}</td>
+                      <td>{log.section || "-"}</td>
+                      <td>{formatTimestamp(log.timestamp)}</td>
+                      <td>
+                        <span className={`scan-badge scan-badge--${log.type}`}>
+                          {log.type ? log.type.toUpperCase() : "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

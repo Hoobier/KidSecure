@@ -237,18 +237,18 @@ export default function RfidStep({ value, onChange, onNext, onBack, editingStude
       </div>
 
       {scanState === "duplicate" && (
-        <div className="students-modal-overlay">
-          <div className="students-modal">
+        <div className="enrollment-modal-overlay">
+          <div className="enrollment-modal">
             <h3>This tag is already in use</h3>
             <p>
               This tag is already assigned to <strong>{duplicateName}</strong>. Please use a
               different tag for this student.
             </p>
-            <div className="students-modal-actions">
-              <button type="button" className="students-modal-btn students-modal-btn-cancel" onClick={() => setScanState("idle")}>
+            <div className="enrollment-modal-actions">
+              <button type="button" className="enrollment-btn enrollment-btn-secondary" onClick={() => setScanState("idle")}>
                 Cancel
               </button>
-              <button type="button" className="students-modal-btn students-modal-btn-danger" onClick={handleTryAgain}>
+              <button type="button" className="enrollment-btn enrollment-btn-primary" onClick={handleTryAgain}>
                 Try Another Tag
               </button>
             </div>

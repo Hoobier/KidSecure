@@ -91,42 +91,48 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
   // ---- Success confirmation screen ----
   if (successInfo) {
     return (
-      <div className="enrollment-success">
-        <div className="enrollment-success-icon">✓</div>
-        <h2>Enrollment Complete</h2>
-        <p>
-          <strong>{successInfo.studentName}</strong> has been successfully enrolled.
-        </p>
-        <div className="enrollment-success-id">
-          <span>Student ID</span>
-          <strong>{successInfo.studentId}</strong>
-        </div>
-        {formData.parent.mode === "new" && successInfo.parentLinkedExisting && (
-          <p className="enrollment-help-text">
-            An account with this parent&apos;s email already existed — the student has been linked
-            to that existing account instead of creating a new one.
+      <div className="enrollment-success-card">
+        <div className="enrollment-success">
+          <div className="enrollment-success-icon">✓</div>
+          <h2>Enrollment Complete</h2>
+          <p>
+            <strong>{successInfo.studentName}</strong> has been successfully enrolled.
           </p>
-        )}
-        {formData.parent.mode === "new" && !successInfo.parentLinkedExisting && (
-          <p className="enrollment-help-text">
-            Login details for the parent mobile app have been sent to {formData.parent.email}.
-          </p>
-        )}
-        <div className="enrollment-step-actions">
-          <button
-            type="button"
-            className="enrollment-btn enrollment-btn-secondary"
-            onClick={() => router.push("/students")}
-          >
-            View All Students
-          </button>
-          <button
-            type="button"
-            className="enrollment-btn enrollment-btn-primary"
-            onClick={() => window.location.reload()}
-          >
-            Enroll Another Student
-          </button>
+          <div className="enrollment-success-id">
+            <span>Student ID</span>
+            <strong>{successInfo.studentId}</strong>
+          </div>
+          {formData.parent.mode === "new" && successInfo.parentLinkedExisting && (
+            <div className="enrollment-notice enrollment-notice-info">
+              <p>
+                An account with this parent&apos;s email already existed — the student has been linked
+                to that existing account instead of creating a new one.
+              </p>
+            </div>
+          )}
+          {formData.parent.mode === "new" && !successInfo.parentLinkedExisting && (
+            <div className="enrollment-notice enrollment-notice-success">
+              <p>
+                Login details for the parent mobile app have been sent to <strong>{formData.parent.email}</strong>.
+              </p>
+            </div>
+          )}
+          <div className="enrollment-step-actions">
+            <button
+              type="button"
+              className="enrollment-btn enrollment-btn-secondary"
+              onClick={() => router.push("/students")}
+            >
+              View All Students
+            </button>
+            <button
+              type="button"
+              className="enrollment-btn enrollment-btn-primary"
+              onClick={() => window.location.reload()}
+            >
+              Enroll Another Student
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -148,66 +154,127 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
       <h2 className="enrollment-step-title">Review Enrollment</h2>
 
       {hasAnyStudentInfo && (
-        <div className="enrollment-review-section">
-          <h3>Student Information</h3>
+        <div className="enrollment-review-card">
+          <div className="enrollment-review-card-header">
+            <div className="enrollment-review-icon enrollment-review-icon-student">
+              👤
+            </div>
+            <h3>Student Information</h3>
+          </div>
           <div className="enrollment-review-grid">
             <div className="enrollment-review-row">
               <span>Full Name</span>
-              <span>
+              <span className="enrollment-review-value">
                 {student.firstName} {student.middleName} {student.lastName}
               </span>
             </div>
             <div className="enrollment-review-row">
               <span>Date of Birth</span>
-              <span>{student.dateOfBirth || "—"}</span>
+              <span className="enrollment-review-value">{student.dateOfBirth || "—"}</span>
             </div>
             <div className="enrollment-review-row">
               <span>Grade Level</span>
-              <span>{GRADE_LEVELS_LABEL(student.gradeLevel)}</span>
+              <span>
+                {student.gradeLevel ? (
+                  <span className="enrollment-badge enrollment-badge-info">
+                    {GRADE_LEVELS_LABEL(student.gradeLevel)}
+                  </span>
+                ) : (
+                  <span className="enrollment-review-empty">—</span>
+                )}
+              </span>
             </div>
             <div className="enrollment-review-row">
               <span>Section</span>
-              <span>{student.section || "—"}</span>
+              <span>
+                {student.section ? (
+                  <span className="enrollment-badge enrollment-badge-info">
+                    Section {student.section}
+                  </span>
+                ) : (
+                  <span className="enrollment-review-empty">—</span>
+                )}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="enrollment-review-section">
-        <h3>Parent/Guardian Information</h3>
+      <div className="enrollment-review-card">
+        <div className="enrollment-review-card-header">
+          <div className="enrollment-review-icon enrollment-review-icon-parent">
+            👨‍👩‍👧
+          </div>
+          <h3>
+            Parent/Guardian Information
+            {parent.mode === "existing" ? (
+              <span className="enrollment-badge enrollment-badge-neutral" style={{ marginLeft: "0.75rem" }}>
+                Existing Account
+              </span>
+            ) : (
+              <span className="enrollment-badge enrollment-badge-success" style={{ marginLeft: "0.75rem" }}>
+                New Account
+              </span>
+            )}
+          </h3>
+        </div>
         {parent.mode === "existing" ? (
           <div className="enrollment-review-grid">
             <div className="enrollment-review-row">
               <span>Linked Parent/Guardian</span>
-              <span>{parent.existingParentName}</span>
+              <span className="enrollment-review-value">{parent.existingParentName}</span>
             </div>
           </div>
         ) : (
           <div className="enrollment-review-grid">
             <div className="enrollment-review-row">
               <span>Full Name</span>
-              <span>
+              <span className="enrollment-review-value">
                 {parent.firstName} {parent.lastName}
               </span>
             </div>
             <div className="enrollment-review-row">
               <span>Email</span>
-              <span>{parent.email}</span>
+              <span className="enrollment-review-value">{parent.email}</span>
             </div>
             <div className="enrollment-review-row">
               <span>Phone Number</span>
-              <span>{parent.phone}</span>
+              <span className="enrollment-review-value">{parent.phone}</span>
             </div>
           </div>
         )}
       </div>
 
-      <div className="enrollment-review-section">
-        <h3>RFID Tag</h3>
+      <div className="enrollment-review-card">
+        <div className="enrollment-review-card-header">
+          <div className="enrollment-review-icon enrollment-review-icon-rfid">
+            📡
+          </div>
+          <h3>
+            RFID Tag
+            {rfidTag ? (
+              <span className="enrollment-badge enrollment-badge-success" style={{ marginLeft: "0.75rem" }}>
+                Assigned
+              </span>
+            ) : (
+              <span className="enrollment-badge enrollment-badge-warning" style={{ marginLeft: "0.75rem" }}>
+                Not Assigned
+              </span>
+            )}
+          </h3>
+        </div>
         <div className="enrollment-review-grid">
           <div className="enrollment-review-row">
             <span>Tag ID</span>
-            <span>{rfidTag ? rfidTag : "Not assigned yet"}</span>
+            <span>
+              {rfidTag ? (
+                <span className="enrollment-review-code">{rfidTag}</span>
+              ) : (
+                <span className="enrollment-review-empty">
+                  Will be assigned later from Students page
+                </span>
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -238,24 +305,41 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
           <div className="enrollment-modal">
             <h3>{duplicateWarning.sameParent ? "⚠️ Likely Duplicate Student" : "Possible Duplicate Student"}</h3>
             <p>{duplicateWarning.message}</p>
-            <div className="enrollment-modal-existing">
+            <div className="enrollment-modal-box">
+              <div className="enrollment-modal-box-title">
+                <span className="enrollment-modal-box-icon">📋</span>
+                Existing Student Record
+              </div>
               <div className="enrollment-review-row">
-                <span>Existing Student</span>
-                <span>{duplicateWarning.existingStudent.fullName}</span>
+                <span>Full Name</span>
+                <span className="enrollment-review-value">{duplicateWarning.existingStudent.fullName}</span>
               </div>
               <div className="enrollment-review-row">
                 <span>Student ID</span>
-                <span>{duplicateWarning.existingStudent.studentId}</span>
+                <span className="enrollment-review-code">{duplicateWarning.existingStudent.studentId}</span>
               </div>
               <div className="enrollment-review-row">
                 <span>Grade &amp; Section</span>
                 <span>
-                  {duplicateWarning.existingStudent.gradeLevel} - {duplicateWarning.existingStudent.section}
+                  <span className="enrollment-badge enrollment-badge-info">
+                    {duplicateWarning.existingStudent.gradeLevel} - {duplicateWarning.existingStudent.section}
+                  </span>
                 </span>
               </div>
               <div className="enrollment-review-row">
                 <span>Status</span>
-                <span>{duplicateWarning.existingStudent.status}</span>
+                <span>
+                  <span className={
+                    "enrollment-badge " +
+                    (duplicateWarning.existingStudent.status === "Active"
+                      ? "enrollment-badge-success"
+                      : duplicateWarning.existingStudent.status === "Inactive"
+                      ? "enrollment-badge-neutral"
+                      : "enrollment-badge-warning")
+                  }>
+                    {duplicateWarning.existingStudent.status}
+                  </span>
+                </span>
               </div>
             </div>
 
@@ -306,18 +390,22 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
           <div className="enrollment-modal">
             <h3>⚠️ Email Already Registered</h3>
             <p>{parentMismatchWarning.message}</p>
-            <div className="enrollment-modal-existing">
+            <div className="enrollment-modal-box">
+              <div className="enrollment-modal-box-title">
+                <span className="enrollment-modal-box-icon">👤</span>
+                Registered Parent/Guardian
+              </div>
               <div className="enrollment-review-row">
-                <span>Registered Parent/Guardian</span>
-                <span>{parentMismatchWarning.existingParent.fullName}</span>
+                <span>Full Name</span>
+                <span className="enrollment-review-value">{parentMismatchWarning.existingParent.fullName}</span>
               </div>
               <div className="enrollment-review-row">
                 <span>Email</span>
-                <span>{parentMismatchWarning.existingParent.email}</span>
+                <span className="enrollment-review-value">{parentMismatchWarning.existingParent.email}</span>
               </div>
               <div className="enrollment-review-row">
                 <span>Phone Number</span>
-                <span>{parentMismatchWarning.existingParent.phone}</span>
+                <span className="enrollment-review-value">{parentMismatchWarning.existingParent.phone}</span>
               </div>
             </div>
 
