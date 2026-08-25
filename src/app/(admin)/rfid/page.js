@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import "./rfid.css";
 
 const AUTO_POLL_INTERVAL_MS = 2500;
-const NEW_ROW_HIGHLIGHT_MS = 4000;
 
 export default function RfidPage() {
   const [logs, setLogs] = useState([]);
@@ -27,13 +26,10 @@ export default function RfidPage() {
     per_page: 20,
     last_page: 1,
   });
-  const [newlyArrivedIds, setNewlyArrivedIds] = useState(new Set());
-
   const debounceRef = useRef(null);
   const requestSeqRef = useRef(0);
   const pollTimerRef = useRef(null);
   const latestTimestampRef = useRef(null);
-  const highlightTimersRef = useRef([]);
 
   // Load dropdown options once on mount
   useEffect(() => {
@@ -131,8 +127,8 @@ export default function RfidPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function makeRowKey(log, fallbackIndex = 0) {
-    return `${log.studentId || "?"}-${log.timestamp || "?"}-${fallbackIndex}`;
+  function makeRowKey(log) {
+    return `${log.studentId || "?"}-${log.timestamp || "?"}-${log.type || "?"}`;
   }
 
   const pollForNewLogs = useCallback(async () => {
@@ -159,30 +155,41 @@ export default function RfidPage() {
       if (!newRows.length) return;
 
       let newLatest = latestTimestampRef.current;
-      const newKeys = [];
       const deduped = [];
-      const existingKeys = new Set(logs.map((l, i) => makeRowKey(l, i)));
-
-      for (let i = 0; i < newRows.length; i++) {
-        const row = newRows[i];
-        const key = makeRowKey(row, i);
-        if (existingKeys.has(key)) continue;
-        deduped.push(row);
-        newKeys.push(key);
-        if (row.timestamp && row.timestamp > newLatest) {
-          newLatest = row.timestamp;
-        }
-      }
-
-      if (!deduped.length) return;
-      latestTimestampRef.current = newLatest;
 
       setLogs((prev) => {
+        const existingKeys = new Set(prev.map((l) => makeRowKey(l)));
+        const seenKeys = new Set(existingKeys);
+
+        for (let i = 0; i < newRows.length; i++) {
+          const row = newRows[i];
+          const key = makeRowKey(row);
+          if (seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          deduped.push(row);
+          if (row.timestamp && row.timestamp > newLatest) {
+            newLatest = row.timestamp;
+          }
+        }
+
+        if (!deduped.length) return prev;
         const merged = [...deduped, ...prev].slice(0, 20);
-        return merged;
+        const finalKeys = new Set();
+        const finalMerged = [];
+        for (const row of merged) {
+          const k = makeRowKey(row);
+          if (finalKeys.has(k)) continue;
+          finalKeys.add(k);
+          finalMerged.push(row);
+        }
+        return finalMerged;
       });
 
-      if (data.meta && typeof data.meta.total === "number") {
+      if (deduped.length) {
+        latestTimestampRef.current = newLatest;
+      }
+
+      if (deduped.length && data.meta && typeof data.meta.total === "number") {
         setMeta((prevMeta) => ({
           ...prevMeta,
           total: Math.max(prevMeta.total, data.meta.total),
@@ -190,30 +197,14 @@ export default function RfidPage() {
         }));
       }
 
-      setNewlyArrivedIds((prevSet) => {
-        const next = new Set(prevSet);
-        newKeys.forEach((k) => next.add(k));
-        return next;
-      });
-
-      const clearTimer = setTimeout(() => {
-        setNewlyArrivedIds((prevSet) => {
-          const next = new Set(prevSet);
-          newKeys.forEach((k) => next.delete(k));
-          return next;
-        });
-      }, NEW_ROW_HIGHLIGHT_MS);
-      highlightTimersRef.current.push(clearTimer);
     } catch {
     }
-  }, [logs, searchInput, dateFilter, gradeLevel, section, sort, page]);
+  }, [searchInput, dateFilter, gradeLevel, section, sort, page]);
 
   useEffect(() => {
     pollTimerRef.current = setInterval(pollForNewLogs, AUTO_POLL_INTERVAL_MS);
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-      highlightTimersRef.current.forEach((t) => clearTimeout(t));
-      highlightTimersRef.current = [];
     };
   }, [pollForNewLogs]);
 
@@ -429,14 +420,10 @@ export default function RfidPage() {
               ) : logs.length === 0 ? (
                 <tr><td colSpan={6} className="empty-state">No attendance records found.</td></tr>
               ) : (
-                logs.map((log, i) => {
-                  const rowKey = makeRowKey(log, i);
-                  const isNew = newlyArrivedIds.has(rowKey);
+                logs.map((log) => {
+                  const rowKey = makeRowKey(log);
                   return (
-                    <tr
-                      key={rowKey}
-                      className={isNew ? "log-row--new" : ""}
-                    >
+                    <tr key={rowKey}>
                       <td>{log.studentId || "-"}</td>
                       <td>{log.name || "-"}</td>
                       <td>{log.gradeLevel || "-"}</td>
