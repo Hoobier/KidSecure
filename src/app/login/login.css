@@ -107,6 +107,8 @@
   font-family: 'Poppins', sans-serif;
   outline: none;
   color: #000000;
+  background-color: #ffffff;
+  color-scheme: light;
 }
 
 .form-group input::placeholder {
