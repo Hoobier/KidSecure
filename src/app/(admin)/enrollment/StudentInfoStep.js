@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const GRADE_LEVELS = [
   "Kindergarten",
@@ -16,6 +18,22 @@ const SECTIONS = ["A", "B", "C"];
 
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
+// ---- Date helpers: convert between "YYYY-MM-DD" string and real Date objects ----
+
+function stringToDate(dobString) {
+  if (!dobString) return null;
+  const [year, month, day] = dobString.split("-").map(Number);
+  return new Date(year, month - 1, day); // JS months are 0-indexed
+}
+
+function dateToString(date) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function calculateAge(dobString) {
   const dob = new Date(dobString);
   const today = new Date();
@@ -27,26 +45,34 @@ function calculateAge(dobString) {
   return age;
 }
 
+// ---- Allowed birth date range: student must be between 3 and 15 years old ----
+
+function getMinDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 16);
+  d.setDate(d.getDate() + 1); // one day after turning 16, so 15 is still valid
+  return d;
+}
+
+function getMaxDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 3);
+  return d;
+}
+
 export default function StudentInfoStep({ data, onChange, onNext }) {
   const [errors, setErrors] = useState({});
-  const [dobBadInput, setDobBadInput] = useState(false);
 
   function handleFieldChange(field, value) {
     onChange({ [field]: value });
-    // Clear that field's error the moment the admin starts fixing it
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   }
 
-  function handleDobChange(e) {
-    const isBadInput = e.target.validity.badInput;
-    setDobBadInput(isBadInput);
-    onChange({ dateOfBirth: e.target.value });
-
-    if (isBadInput) {
-      setErrors((prev) => ({ ...prev, dateOfBirth: "That date doesn't exist. Please check the day and month." }));
-    } else if (errors.dateOfBirth) {
+  function handleDobChange(date) {
+    onChange({ dateOfBirth: dateToString(date) });
+    if (errors.dateOfBirth) {
       setErrors((prev) => ({ ...prev, dateOfBirth: "" }));
     }
   }
@@ -70,27 +96,11 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
       newErrors.lastName = "Last name may only contain letters, spaces, hyphens, apostrophes, and periods (2–50 characters).";
     }
 
-    if (dobBadInput) { // NEW — check this BEFORE the generic empty check
-      newErrors.dateOfBirth = "That date doesn't exist. Please check the day and month.";
-    } else if (!data.dateOfBirth) {
+    if (!data.dateOfBirth) {
       newErrors.dateOfBirth = "Date of birth is required.";
-    } else {
-      const dob = new Date(data.dateOfBirth);
-
-      if (isNaN(dob.getTime())) {
-        newErrors.dateOfBirth = "Please enter a valid date.";
-      } else {
-        const today = new Date();
-        if (dob > today) {
-          newErrors.dateOfBirth = "Date of birth cannot be in the future.";
-        } else {
-          const age = calculateAge(data.dateOfBirth);
-          if (age < 3 || age > 15) {
-            newErrors.dateOfBirth = "Student age must be between 3 and 15 years old.";
-          }
-        }
-      }
     }
+    // No need to re-check the age range here — the calendar itself
+    // only allows selecting dates within the valid 3–15 age window.
 
     if (!data.gradeLevel) newErrors.gradeLevel = "Please select a grade level.";
     if (!data.section) newErrors.section = "Please select a section.";
@@ -159,14 +169,19 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
           <label htmlFor="dateOfBirth">
             Date of Birth<span className="required">*</span>
           </label>
-          <input
+          <DatePicker
             id="dateOfBirth"
-            type="date"
-            value={data.dateOfBirth}
+            selected={stringToDate(data.dateOfBirth)}
             onChange={handleDobChange}
-            onInput={handleDobChange}
+            minDate={getMinDate()}
+            maxDate={getMaxDate()}
+            placeholderText="mm/dd/yyyy"
+            dateFormat="MM/dd/yyyy"
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
             className={errors.dateOfBirth ? "input-invalid" : ""}
-            max={new Date().toISOString().split("T")[0]}
+            wrapperClassName="enrollment-datepicker-wrapper"
           />
           {errors.dateOfBirth && <p className="enrollment-field-error">{errors.dateOfBirth}</p>}
         </div>

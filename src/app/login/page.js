@@ -1,7 +1,7 @@
 // src/app/login/page.js
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import "./login.css";
@@ -14,14 +14,28 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [formMessage, setFormMessage] = useState("");
+  const [modal, setModal] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!modal) return;
+
+    const timer = setTimeout(() => {
+      if (modal.type === "success") {
+        window.location.href = "/dashboard";
+      } else {
+        setModal(null);
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [modal]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setEmailError("");
     setPasswordError("");
-    setFormMessage("");
+    setModal(null);
 
     if (!email) return setEmailError("Please enter your email.");
     if (!password) return setPasswordError("Please enter your password.");
@@ -37,7 +51,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setFormMessage(data.message || "Invalid credentials.");
+        setModal({ type: "error", message: data.message || "Invalid credentials." });
         return;
       }
 
@@ -47,13 +61,15 @@ export default function LoginPage() {
         localStorage.removeItem("rememberedAdminEmail");
       }
 
-      window.location.href = "/dashboard";
+      setModal({ type: "success", message: "You have successfully signed in." });
     } catch (error) {
-      setFormMessage("Unable to sign in right now.");
+      setModal({ type: "error", message: "Unable to sign in right now." });
     } finally {
       setLoading(false);
     }
   }
+
+
 
   return (
     <div className="login-page">
@@ -115,13 +131,22 @@ export default function LoginPage() {
             </label>
           </div>
 
-          <p className="form-message">{formMessage}</p>
 
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? "Signing In..." : "Sign In"}
           </button>
         </form>
       </div>
+      {modal && (
+        <div className="login-modal-overlay">
+          <div className="login-modal">
+            <div className={`login-modal-icon ${modal.type}`}>
+              {modal.type === "success" ? "✓" : "✕"}
+            </div>
+            <p className="login-modal-message">{modal.message}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

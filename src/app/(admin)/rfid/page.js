@@ -1,9 +1,25 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import "./rfid.css";
 
 const AUTO_POLL_INTERVAL_MS = 2500;
+
+function stringToDate(dobString) {
+  if (!dobString) return null;
+  const [year, month, day] = dobString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function dateToString(date) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function RfidPage() {
   const [logs, setLogs] = useState([]);
@@ -218,7 +234,8 @@ export default function RfidPage() {
     }, 300);
   }
 
-  function handleDateChange(value) {
+  function handleDateChange(date) {
+    const value = dateToString(date);
     setDateFilter(value);
     setPage(1);
     fetchLogs({ date: value, page: 1 });
@@ -328,11 +345,15 @@ export default function RfidPage() {
               ))}
             </select>
 
-            <input
-              type="date"
-              className="filter-input"
-              value={dateFilter}
-              onChange={(e) => handleDateChange(e.target.value)}
+            <DatePicker
+              selected={stringToDate(dateFilter)}
+              onChange={handleDateChange}
+              maxDate={new Date()}
+              placeholderText="mm/dd/yyyy"
+              dateFormat="MM/dd/yyyy"
+              isClearable
+              className="filter-input filter-date"
+              wrapperClassName="rfid-datepicker-wrapper"
             />
 
             <select
