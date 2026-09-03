@@ -18,6 +18,16 @@ const SECTIONS = ["A", "B", "C"];
 
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
+const BASE_DOCUMENTS = [
+  { type: "birth_certificate", label: "Birth Certificate", icon: "📄" },
+  { type: "id_photo", label: "1x1 ID Picture", icon: "🖼" },
+];
+
+const TRANSFEREE_DOCUMENTS = [
+  { type: "form_138", label: "Form 138 (Report Card)", icon: "📋" },
+  { type: "good_moral", label: "Good Moral Certificate", icon: "📜" },
+];
+
 // ---- Date helpers: convert between "YYYY-MM-DD" string and real Date objects ----
 
 function stringToDate(dobString) {
@@ -60,8 +70,10 @@ function getMaxDate() {
   return d;
 }
 
-export default function StudentInfoStep({ data, onChange, onNext }) {
+export default function StudentInfoStep({ data, onChange, onNext, draftId, documents, onDocumentsChange }) {
   const [errors, setErrors] = useState({});
+  const [uploadingType, setUploadingType] = useState(null);
+  const [uploadError, setUploadError] = useState({});
 
   function handleFieldChange(field, value) {
     onChange({ [field]: value });
@@ -105,6 +117,10 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
     if (!data.gradeLevel) newErrors.gradeLevel = "Please select a grade level.";
     if (!data.section) newErrors.section = "Please select a section.";
 
+    if (data.isTransferee && !(data.previousSchool || "").trim()) {
+      newErrors.previousSchool = "Please enter the student's previous school.";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -114,6 +130,50 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
       onNext();
     }
   }
+
+    function getDocumentFor(type) {
+    return (documents || []).find((doc) => doc.type === type);
+  }
+
+  async function handleFileSelect(type, file) {
+    if (!file) return;
+
+    setUploadingType(type);
+    setUploadError((prev) => ({ ...prev, [type]: "" }));
+
+    const body = new FormData();
+    body.append("type", type);
+    body.append("file", file);
+
+    try {
+      const res = await fetch(`/api/enrollment-drafts/${draftId}/documents`, {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setUploadError((prev) => ({ ...prev, [type]: json.message || "Upload failed. Please try again." }));
+        return;
+      }
+
+      const updatedDocuments = [
+        ...(documents || []).filter((doc) => doc.type !== type),
+        json.document,
+      ];
+      onDocumentsChange(updatedDocuments);
+    } catch {
+      setUploadError((prev) => ({ ...prev, [type]: "Unable to reach the server. Please try again." }));
+    } finally {
+      setUploadingType(null);
+    }
+  }
+
+    const documentsToShow = data.isTransferee
+    ? [...BASE_DOCUMENTS, ...TRANSFEREE_DOCUMENTS]
+    : BASE_DOCUMENTS;
 
   return (
     <div>
@@ -225,6 +285,84 @@ export default function StudentInfoStep({ data, onChange, onNext }) {
           </select>
           {errors.section && <p className="enrollment-field-error">{errors.section}</p>}
         </div>
+      </div>
+
+      <div className="enrollment-form-group">
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={data.isTransferee || false}
+            onChange={(e) => handleFieldChange("isTransferee", e.target.checked)}
+            style={{ width: "auto" }}
+          />
+          This student is transferring from another school
+        </label>
+      </div>
+
+      {data.isTransferee && (
+        <div className="enrollment-form-group">
+          <label htmlFor="previousSchool">
+            Previous School Name<span className="required">*</span>
+          </label>
+          <input
+            id="previousSchool"
+            type="text"
+            placeholder="e.g. Bagumbong Elementary School"
+            value={data.previousSchool || ""}
+            onChange={(e) => handleFieldChange("previousSchool", e.target.value)}
+            className={errors.previousSchool ? "input-invalid" : ""}
+          />
+          {errors.previousSchool && <p className="enrollment-field-error">{errors.previousSchool}</p>}
+        </div>
+      )}
+
+      <div className="enrollment-form-group" style={{ marginTop: "0.5rem" }}>
+        <label>Requirements</label>
+        <p className="enrollment-help-text" style={{ marginTop: "-0.2rem", marginBottom: "0.75rem" }}>
+          You can upload these now, or come back and add them later from the student's profile.
+        </p>
+
+        {documentsToShow.map(({ type, label, icon }) => {
+          const uploaded = getDocumentFor(type);
+          const isUploading = uploadingType === type;
+
+          return (
+            <div
+              key={type}
+              className="rfid-manual-entry"
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, color: "#1b2a4a" }}>
+                  {icon} {label}
+                </div>
+                {uploaded ? (
+                  <div style={{ fontSize: "0.85rem", color: "#166534", marginTop: "0.2rem" }}>
+                    ✅ {uploaded.original_filename}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.85rem", color: "#854d0e", marginTop: "0.2rem" }}>
+                    ⚠ Not uploaded
+                  </div>
+                )}
+                {uploadError[type] && (
+                  <p className="enrollment-field-error">{uploadError[type]}</p>
+                )}
+              </div>
+
+              <label className="enrollment-btn enrollment-btn-secondary" style={{ cursor: "pointer", margin: 0 }}>
+                {isUploading ? "Uploading..." : uploaded ? "Replace" : "Upload"}
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  style={{ display: "none" }}
+                  disabled={isUploading}
+                  onChange={(e) => handleFileSelect(type, e.target.files?.[0])}
+                />
+              </label>
+            </div>
+          );
+        })}
       </div>
 
       <div className="enrollment-step-actions">

@@ -1,5 +1,5 @@
 "use client";
-
+//src/app/(admin)/enrollment/ReviewStep.js
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -196,8 +196,16 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
                 )}
               </span>
             </div>
+            {student.isTransferee && (
+              <div className="enrollment-review-row">
+                <span>Transferring From</span>
+                <span className="enrollment-review-value">{student.previousSchool || "—"}</span>
+              </div>
+            )}
           </div>
         </div>
+
+
       )}
 
       <div className="enrollment-review-card">
@@ -276,6 +284,41 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
               )}
             </span>
           </div>
+        </div>
+      </div>
+
+      <div className="enrollment-review-card">
+        <div className="enrollment-review-card-header">
+          <div className="enrollment-review-icon enrollment-review-icon-student">
+            📎
+          </div>
+          <h3>Requirements</h3>
+        </div>
+        <div className="enrollment-review-grid">
+          {(student.isTransferee
+            ? ["birth_certificate", "id_photo", "form_138", "good_moral"]
+            : ["birth_certificate", "id_photo"]
+          ).map((type) => {
+            const doc = (formData.documents || []).find((d) => d.type === type);
+            const labels = {
+              birth_certificate: "Birth Certificate",
+              id_photo: "1x1 ID Picture",
+              form_138: "Form 138 (Report Card)",
+              good_moral: "Good Moral Certificate",
+            };
+            return (
+              <div className="enrollment-review-row" key={type}>
+                <span>{labels[type]}</span>
+                <span>
+                  {doc ? (
+                    <span className="enrollment-badge enrollment-badge-success">Uploaded</span>
+                  ) : (
+                    <span className="enrollment-badge enrollment-badge-warning">Pending</span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

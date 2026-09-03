@@ -1,5 +1,7 @@
 "use client";
 
+//src/app/(admin)/enrollment/page.js
+
 import { useState, useEffect } from "react";
 import StudentInfoStep from "./StudentInfoStep";
 import ParentInfoStep from "./ParentInfoStep";
@@ -18,6 +20,8 @@ const BLANK_FORM_DATA = {
     dateOfBirth: "",
     gradeLevel: "",
     section: "",
+    isTransferee: false,
+    previousSchool: "",
   },
   parent: {
     mode: "new",
@@ -29,6 +33,7 @@ const BLANK_FORM_DATA = {
     existingParentName: "",
   },
   rfidTag: "",
+  documents: [],
 };
 
 function hasFilledData(formData) {
@@ -44,6 +49,7 @@ function hasFilledData(formData) {
 export default function EnrollmentPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState(BLANK_FORM_DATA);
+  const [draftId, setDraftId] = useState(null);
   const [restored, setRestored] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -57,9 +63,12 @@ export default function EnrollmentPage() {
         const restoredStep = typeof parsed.currentStep === "number" ? parsed.currentStep : 0;
         setFormData(restoredFormData);
         setCurrentStep(restoredStep);
+        setDraftId(parsed.draftId || crypto.randomUUID());
+      } else {
+        setDraftId(crypto.randomUUID());   // ADD THIS
       }
     } catch {
-      // Corrupted or missing draft — just start fresh, no need to surface an error for this.
+      setDraftId(crypto.randomUUID());
     } finally {
       setRestored(true);
     }
@@ -81,12 +90,12 @@ export default function EnrollmentPage() {
   useEffect(() => {
     if (!restored) return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, currentStep, draftId }));
     } catch {
       // sessionStorage can fail in rare cases (private browsing quotas, etc.) —
       // non-critical, the wizard just won't persist this session.
     }
-  }, [formData, currentStep, restored]);
+  }, [formData, currentStep, draftId, restored]);
 
   function clearDraft() {
     try {
@@ -116,6 +125,7 @@ export default function EnrollmentPage() {
     setFormData(BLANK_FORM_DATA);
     setCurrentStep(0);
     setBannerDismissed(true);
+    setDraftId(crypto.randomUUID());
   }
 
   return (
@@ -154,6 +164,9 @@ export default function EnrollmentPage() {
             data={formData.student}
             onChange={(fields) => updateFormData("student", fields)}
             onNext={goNext}
+            draftId={draftId}
+            documents={formData.documents}
+            onDocumentsChange={(docs) => setFormData((prev) => ({ ...prev, documents: docs }))}
           />
         )}
         {currentStep === 1 && (
