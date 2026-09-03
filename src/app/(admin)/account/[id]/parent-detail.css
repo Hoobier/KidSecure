@@ -60,6 +60,12 @@
   margin: 0;
 }
 
+.detail-header-relationship {
+  font-weight: 500;
+  color: #8a94a6;
+  font-size: 1.6rem;
+}
+
 .detail-subline {
   display: flex;
   align-items: center;

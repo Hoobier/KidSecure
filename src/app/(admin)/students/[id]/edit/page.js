@@ -24,6 +24,15 @@ function calculateAge(dobString) {
   return age;
 }
 
+function formatRelationship(rel) {
+  if (!rel) return "";
+  const normalized = String(rel).toLowerCase();
+  if (normalized === "mom" || normalized === "mother") return "Mom";
+  if (normalized === "dad" || normalized === "father") return "Dad";
+  if (normalized === "guardian") return "Guardian";
+  return rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+}
+
 function validateForm(form) {
   const errors = {};
 
@@ -520,8 +529,13 @@ export default function EditStudentPage({ params }) {
                 fontWeight: 500,
               }}>
                 {student.parent.fullName}
+                {formatRelationship(student.parent.relationship || "") && (
+                  <span style={{ color: "#8a94a6", fontWeight: 400, marginLeft: 6 }}>
+                    ({formatRelationship(student.parent.relationship)})
+                  </span>
+                )}
                 <span style={{ color: "#8a94a6", fontWeight: 400, marginLeft: 6 }}>
-                  ({student.parent.email})
+                  · {student.parent.email}
                 </span>
               </div>
             </div>
@@ -531,7 +545,14 @@ export default function EditStudentPage({ params }) {
             <label>Search for a Different Parent/Guardian</label>
             {selectedNewParent ? (
               <div className="enrollment-selected-parent">
-                <span>{selectedNewParent.firstName} {selectedNewParent.lastName}</span>
+                <span>
+                  {selectedNewParent.firstName} {selectedNewParent.lastName}
+                  {formatRelationship(selectedNewParent.relationship || "") && (
+                    <span style={{ color: "#8a94a6", fontWeight: 500 }}>
+                      {" "}({formatRelationship(selectedNewParent.relationship)})
+                    </span>
+                  )}
+                </span>
                 <button type="button" onClick={() => setSelectedNewParent(null)}>Change</button>
               </div>
             ) : (
@@ -548,7 +569,9 @@ export default function EditStudentPage({ params }) {
                 )}
                 {parentSearchResults.length > 0 && (
                   <div className="enrollment-search-results">
-                    {parentSearchResults.map((p) => (
+                    {parentSearchResults.map((p) => {
+                      const rel = formatRelationship(p.relationship || "");
+                      return (
                       <button
                         type="button"
                         key={p.id}
@@ -559,10 +582,14 @@ export default function EditStudentPage({ params }) {
                           setParentSearchResults([]);
                         }}
                       >
-                        <span className="result-name">{p.firstName} {p.lastName}</span>
+                        <span className="result-name">
+                          {p.firstName} {p.lastName}
+                          {rel && <span className="result-relationship"> ({rel})</span>}
+                        </span>
                         <span className="result-email">{p.email}</span>
                       </button>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </>
@@ -661,8 +688,23 @@ export default function EditStudentPage({ params }) {
           <div className="edit-modal">
             <h3>Reassign parent/guardian?</h3>
             <p>
-              This will link this student to {selectedNewParent.firstName} {selectedNewParent.lastName}
-              {student?.parent ? `, replacing ${student.parent.fullName}` : ""}.
+              This will link this student to{" "}
+              <strong>
+                {selectedNewParent.firstName} {selectedNewParent.lastName}
+                {formatRelationship(selectedNewParent.relationship || "") &&
+                  ` (${formatRelationship(selectedNewParent.relationship)})`}
+              </strong>
+              {student?.parent && (
+                <>
+                  , replacing{" "}
+                  <strong>
+                    {student.parent.fullName}
+                    {formatRelationship(student.parent.relationship || "") &&
+                      ` (${formatRelationship(student.parent.relationship)})`}
+                  </strong>
+                </>
+              )}
+              .
             </p>
             <div className="edit-modal-actions">
               <button

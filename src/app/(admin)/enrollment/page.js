@@ -29,8 +29,10 @@ const BLANK_FORM_DATA = {
     lastName: "",
     email: "",
     phone: "",
+    relationship: "",
     existingParentId: null,
     existingParentName: "",
+    existingParentRelationship: "",
   },
   rfidTag: "",
   documents: [],
@@ -41,7 +43,8 @@ function hasFilledData(formData) {
   const p = formData.parent;
   return Boolean(
     s.firstName || s.middleName || s.lastName || s.dateOfBirth || s.gradeLevel || s.section ||
-    p.firstName || p.lastName || p.email || p.phone || p.existingParentId || p.existingParentName ||
+    p.firstName || p.lastName || p.email || p.phone || p.relationship ||
+    p.existingParentId || p.existingParentName || p.existingParentRelationship ||
     formData.rfidTag
   );
 }

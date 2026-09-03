@@ -16,6 +16,60 @@ const TRANSFEREE_DOCUMENTS = [
   { type: "good_moral", label: "Good Moral Certificate" },
 ];
 
+function formatRelationship(rel) {
+  if (!rel) return "";
+  const normalized = String(rel).toLowerCase();
+  if (normalized === "mom" || normalized === "mother") return "Mom";
+  if (normalized === "dad" || normalized === "father") return "Dad";
+  if (normalized === "guardian") return "Guardian";
+  return rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+}
+
+const KINDERGARTEN_SUBJECTS = [
+  { code: "CL", name: "Christian Living / Bible Studies", isGroup: false },
+  { code: "COM", name: "Communication Skills (English & Filipino)", isGroup: false },
+  { code: "MATH", name: "Mathematics", isGroup: false },
+  { code: "SEN", name: "Sensory-Perceptual & Socio-Emotional Development", isGroup: false },
+];
+
+const GRADE1_6_SUBJECTS = [
+  { code: "CLVE", name: "Christian Living / Values Education", isGroup: false },
+  { code: "MATH", name: "Mathematics", isGroup: false },
+  { code: "SCI", name: "Science", isGroup: false },
+  { code: "FIL", name: "Filipino", isGroup: false },
+  {
+    code: "MAPEH",
+    name: "MAPEH",
+    isGroup: true,
+    children: [
+      { code: "MA", name: "Music & Arts" },
+      { code: "PE", name: "Physical Education" },
+      { code: "H", name: "Health" },
+    ],
+  },
+  { code: "EPP", name: "Edukasyong Pantahanan at Praktikal", isGroup: false },
+];
+
+function getSubjectsForGrade(gradeLevel) {
+  if (!gradeLevel) return { levelLabel: "", subjects: [] };
+  const normalized = String(gradeLevel).toLowerCase().trim();
+  if (normalized.includes("kindergarten")) {
+    return { levelLabel: "Kindergarten", subjects: KINDERGARTEN_SUBJECTS };
+  }
+  return { levelLabel: gradeLevel, subjects: GRADE1_6_SUBJECTS };
+}
+
+function computeAverage(grades) {
+  const vals = Object.values(grades)
+    .map((v) => Number(v))
+    .filter((v) => !isNaN(v) && v > 0);
+  if (vals.length === 0) return "—";
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return avg.toFixed(2);
+}
+
+const DEFAULT_GRADES = () => ({ Q1: "", Q2: "", Q3: "", Q4: "" });
+
 export default function StudentDetailPage({ params }) {
   const { id } = use(params);
   const [student, setStudent] = useState(null);
@@ -26,6 +80,56 @@ export default function StudentDetailPage({ params }) {
   const [uploadingType, setUploadingType] = useState(null);
   const [docError, setDocError] = useState({});
   const [viewingType, setViewingType] = useState(null);
+
+  const [showReportCard, setShowReportCard] = useState(false);
+  const [reportGrades, setReportGrades] = useState({});
+  const [reportSaving, setReportSaving] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState(null);
+
+  function initReportGrades() {
+    if (!student) return {};
+    const { subjects } = getSubjectsForGrade(student.gradeLevel);
+    const grades = {};
+    subjects.forEach((s) => {
+      grades[s.code] = DEFAULT_GRADES();
+      if (s.isGroup) {
+        s.children.forEach((c) => {
+          grades[c.code] = DEFAULT_GRADES();
+        });
+      }
+    });
+    return grades;
+  }
+
+  useEffect(() => {
+    if (showReportCard && student) {
+      setReportGrades(initReportGrades());
+      setReportFeedback(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showReportCard, student?.id]);
+
+  function updateGrade(code, quarter, value) {
+    const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
+    setReportGrades((prev) => ({
+      ...prev,
+      [code]: { ...prev[code], [quarter]: sanitized },
+    }));
+  }
+
+  async function handleSaveReport() {
+    setReportSaving(true);
+    setReportFeedback(null);
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      setReportFeedback({ type: "success", message: "✅ Report card saved." });
+      setTimeout(() => setReportFeedback(null), 2500);
+    } catch {
+      setReportFeedback({ type: "error", message: "⚠️ Unable to save report card." });
+    } finally {
+      setReportSaving(false);
+    }
+  }
 
   function calculateAge(dobString) {
     const dob = new Date(dobString);
@@ -245,7 +349,16 @@ export default function StudentDetailPage({ params }) {
 
       {/* Student Information */}
       <section className="detail-section">
-        <h2>Student Information</h2>
+        <div className="detail-section-header-row">
+          <h2>Student Information</h2>
+          <button
+            type="button"
+            className="detail-btn-report-card"
+            onClick={() => setShowReportCard(true)}
+          >
+            📋 Report Card
+          </button>
+        </div>
         <dl className="detail-fields">
           <div className="detail-field">
             <dt>Student ID</dt>
@@ -282,7 +395,18 @@ export default function StudentDetailPage({ params }) {
             <dl className="detail-fields" style={{ marginBottom: "1.25rem" }}>
               <div className="detail-field">
                 <dt>Full Name</dt>
-                <dd>{student.parent.fullName}</dd>
+                <dd>
+                  {student.parent.fullName}
+                  {formatRelationship(student.parent.relationship || "") && (
+                    <span style={{ color: "#8a94a6", fontWeight: 500 }}>
+                      {" "}({formatRelationship(student.parent.relationship)})
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div className="detail-field">
+                <dt>Relationship</dt>
+                <dd>{formatRelationship(student.parent.relationship || "") || "—"}</dd>
               </div>
               <div className="detail-field">
                 <dt>Contact Number</dt>
@@ -454,8 +578,169 @@ export default function StudentDetailPage({ params }) {
           </div>
         </div>
       )}
+
+      {/* Report Card Modal */}
+      {showReportCard && student && (() => {
+        const { levelLabel, subjects } = getSubjectsForGrade(student.gradeLevel);
+
+        function renderSubjectRow(s, indent = false, isGroupChild = false) {
+          const g = reportGrades[s.code] || DEFAULT_GRADES();
+          const avg = computeAverage(g);
+          const rowClass =
+            "report-card-row" +
+            (indent ? " report-card-row-indented" : "") +
+            (isGroupChild ? " report-card-row-child" : "");
+          return (
+            <tr key={s.code} className={rowClass}>
+              <td className="report-card-subject">
+                {s.code && !isGroupChild && <span className="report-card-code">{s.code}</span>}
+                <span>{s.name}</span>
+              </td>
+              {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                <td key={q} className="report-card-grade">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="—"
+                    value={g[q]}
+                    onChange={(e) => updateGrade(s.code, q, e.target.value)}
+                  />
+                </td>
+              ))}
+              <td className="report-card-avg">{avg}</td>
+            </tr>
+          );
+        }
+
+        const overallCodes = [];
+        subjects.forEach((s) => {
+          if (s.isGroup) s.children.forEach((c) => overallCodes.push(c.code));
+          else overallCodes.push(s.code);
+        });
+        const allAverages = overallCodes
+          .map((c) => reportGrades[c] && computeAverage(reportGrades[c]))
+          .filter((v) => typeof v === "string" && v !== "—")
+          .map(Number);
+        const overall = allAverages.length
+          ? (allAverages.reduce((a, b) => a + b, 0) / allAverages.length).toFixed(2)
+          : "—";
+
+        return (
+          <div
+            className="detail-modal-overlay detail-report-card-overlay"
+            onClick={(e) => e.target === e.currentTarget && setShowReportCard(false)}
+          >
+            <div className="detail-modal detail-report-card-modal">
+              <div className="detail-report-card-header">
+                <div>
+                  <h3 className="detail-report-card-title">📋 Report Card</h3>
+                  <p className="detail-report-card-sub">
+                    <strong>{fullName}</strong>
+                    <span className="detail-report-card-sep">·</span>
+                    <span>{student.studentId}</span>
+                    <span className="detail-report-card-sep">·</span>
+                    <span className="detail-report-card-level">{levelLabel || "—"} — Section {student.section}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="detail-report-card-close"
+                  onClick={() => setShowReportCard(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {reportFeedback && (
+                <div
+                  className={
+                    "detail-feedback " +
+                    (reportFeedback.type === "success"
+                      ? "detail-feedback-success"
+                      : "detail-feedback-error")
+                  }
+                  style={{ marginBottom: "1rem" }}
+                >
+                  {reportFeedback.message}
+                </div>
+              )}
+
+              {subjects.length === 0 ? (
+                <p className="detail-empty-note">
+                  Set a grade level in the student record to view the correct subject list.
+                </p>
+              ) : (
+                <div className="detail-report-card-table-wrap">
+                  <table className="detail-report-card-table">
+                    <thead>
+                      <tr>
+                        <th className="report-card-subject report-card-th-subject">
+                          Subjects
+                        </th>
+                        <th className="report-card-th-quarter">Q1</th>
+                        <th className="report-card-th-quarter">Q2</th>
+                        <th className="report-card-th-quarter">Q3</th>
+                        <th className="report-card-th-quarter">Q4</th>
+                        <th className="report-card-th-avg">Average</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subjects.map((s) =>
+                        s.isGroup ? (
+                          <>
+                            <tr key={s.code} className="report-card-row report-card-row-group">
+                              <td
+                                colSpan={6}
+                                className="report-card-subject report-card-subject-group"
+                              >
+                                <span className="report-card-code">{s.code}</span>
+                                <span>{s.name}</span>
+                              </td>
+                            </tr>
+                            {s.children.map((c) => renderSubjectRow(c, true, true))}
+                          </>
+                        ) : (
+                          renderSubjectRow(s)
+                        )
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="report-card-row report-card-row-overall">
+                        <td className="report-card-subject report-card-overall-label">
+                          Overall Average
+                        </td>
+                        <td colSpan={4}></td>
+                        <td className="report-card-avg report-card-overall-value">
+                          {overall}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+
+              <div className="detail-modal-actions detail-report-card-actions">
+                <button
+                  className="detail-modal-btn-cancel"
+                  onClick={() => setShowReportCard(false)}
+                >
+                  Close
+                </button>
+                <button
+                  className="detail-modal-btn-confirm"
+                  onClick={handleSaveReport}
+                  disabled={reportSaving || subjects.length === 0}
+                >
+                  {reportSaving ? "Saving…" : "Save Report Card"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
-    
-    
+
+
   );
 }

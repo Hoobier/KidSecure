@@ -230,7 +230,10 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
           <div className="enrollment-review-grid">
             <div className="enrollment-review-row">
               <span>Linked Parent/Guardian</span>
-              <span className="enrollment-review-value">{parent.existingParentName}</span>
+              <span className="enrollment-review-value">
+                {parent.existingParentName}
+                {parent.existingParentRelationship && ` (${parent.existingParentRelationship})`}
+              </span>
             </div>
           </div>
         ) : (
@@ -239,6 +242,18 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
               <span>Full Name</span>
               <span className="enrollment-review-value">
                 {parent.firstName} {parent.lastName}
+              </span>
+            </div>
+            <div className="enrollment-review-row">
+              <span>Relationship</span>
+              <span>
+                {parent.relationship ? (
+                  <span className="enrollment-badge enrollment-badge-info">
+                    {parent.relationship}
+                  </span>
+                ) : (
+                  <span className="enrollment-review-empty">—</span>
+                )}
               </span>
             </div>
             <div className="enrollment-review-row">

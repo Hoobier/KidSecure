@@ -4,6 +4,15 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./parent-detail.css";
 
+function formatRelationship(rel) {
+  if (!rel) return "";
+  const normalized = String(rel).toLowerCase();
+  if (normalized === "mom" || normalized === "mother") return "Mom";
+  if (normalized === "dad" || normalized === "father") return "Dad";
+  if (normalized === "guardian") return "Guardian";
+  return rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+}
+
 export default function ParentDetailPage({ params }) {
   const { id } = use(params);
   const [parent, setParent] = useState(null);
@@ -93,7 +102,14 @@ export default function ParentDetailPage({ params }) {
     <div className="detail-page">
       <div className="detail-header">
         <div>
-          <h1>{parent.name || "Parent Account"}</h1>
+          <h1>
+            {parent.name || "Parent Account"}
+            {formatRelationship(parent.relationship || "") && (
+              <span className="detail-header-relationship">
+                {" "}({formatRelationship(parent.relationship || "")})
+              </span>
+            )}
+          </h1>
           <div className="detail-subline">
             <span>{parent.email || "No email on file"}</span>
             <span>•</span>
@@ -136,6 +152,12 @@ export default function ParentDetailPage({ params }) {
           <div className="detail-field">
             <dt>Last Name</dt>
             <dd>{parent.lastName || "—"}</dd>
+          </div>
+          <div className="detail-field">
+            <dt>Relationship</dt>
+            <dd>
+              {formatRelationship(parent.relationship || "") || "—"}
+            </dd>
           </div>
           <div className="detail-field">
             <dt>Email</dt>

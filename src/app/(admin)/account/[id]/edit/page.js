@@ -40,7 +40,21 @@ function validateForm(form) {
     errors.phone = ["Phone number must start with 09 and be exactly 11 digits."];
   }
 
+  if (!form.relationship) {
+    errors.relationship = ["Please select the relationship to the student."];
+  }
+
   return errors;
+}
+
+function formatRelationship(rel) {
+  if (!rel) return "";
+  const normalized = String(rel).toLowerCase();
+  if (normalized === "mom" || normalized === "mother") return "Mom";
+  if (normalized === "dad" || normalized === "father") return "Dad";
+  if (normalized === "guardian") return "Guardian";
+  const capitalized = rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+  return ["Mom", "Dad", "Guardian"].includes(capitalized) ? capitalized : "";
 }
 
 export default function EditParentPage({ params }) {
@@ -59,6 +73,7 @@ export default function EditParentPage({ params }) {
     lastName: "",
     email: "",
     phone: "",
+    relationship: "",
   });
 
   useEffect(() => {
@@ -74,6 +89,7 @@ export default function EditParentPage({ params }) {
           lastName: json.data.lastName || "",
           email: json.data.email || "",
           phone: json.data.phone || "",
+          relationship: formatRelationship(json.data.relationship || ""),
         });
       } catch {
         setFeedback({
@@ -124,6 +140,7 @@ export default function EditParentPage({ params }) {
           lastName: form.lastName.trim(),
           email: form.email.trim(),
           phone: form.phone.trim(),
+          relationship: form.relationship,
         }),
       });
 
@@ -227,6 +244,27 @@ export default function EditParentPage({ params }) {
           </div>
           <div className="edit-form-group">
             <label>
+              Relationship<span className="required">*</span>
+            </label>
+            <select
+              value={form.relationship}
+              onChange={(e) => updateField("relationship", e.target.value)}
+              className={errors.relationship ? "input-invalid" : ""}
+            >
+              <option value="">Select relationship</option>
+              <option value="Mom">Mom</option>
+              <option value="Dad">Dad</option>
+              <option value="Guardian">Guardian</option>
+            </select>
+            {errors.relationship && (
+              <div className="edit-field-error">{errors.relationship[0]}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="edit-form-row-2">
+          <div className="edit-form-group">
+            <label>
               Email<span className="required">*</span>
             </label>
             <input
@@ -239,9 +277,6 @@ export default function EditParentPage({ params }) {
               <div className="edit-field-error">{errors.email[0]}</div>
             )}
           </div>
-        </div>
-
-        <div className="edit-form-row">
           <div className="edit-form-group">
             <label>
               Contact Number<span className="required">*</span>

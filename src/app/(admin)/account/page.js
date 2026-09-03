@@ -4,6 +4,15 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import "./parents.css";
 
+function formatRelationship(rel) {
+  if (!rel) return "";
+  const normalized = String(rel).toLowerCase();
+  if (normalized === "mom" || normalized === "mother") return "Mom";
+  if (normalized === "dad" || normalized === "father") return "Dad";
+  if (normalized === "guardian") return "Guardian";
+  return rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+}
+
 export default function ParentDirectoryPage() {
   const [parents, setParents] = useState([]);
   const [searchInput, setSearchInput] = useState("");
@@ -153,6 +162,7 @@ export default function ParentDirectoryPage() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Relationship</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Linked Student(s)</th>
@@ -161,18 +171,30 @@ export default function ParentDirectoryPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="parents-empty-state">Loading parent accounts...</td></tr>
+                <tr><td colSpan={6} className="parents-empty-state">Loading parent accounts...</td></tr>
               ) : error ? (
-                <tr><td colSpan={5} className="parents-empty-state parents-error-text">{error}</td></tr>
+                <tr><td colSpan={6} className="parents-empty-state parents-error-text">{error}</td></tr>
               ) : parents.length === 0 ? (
-                <tr><td colSpan={5} className="parents-empty-state">No parent accounts found.</td></tr>
+                <tr><td colSpan={6} className="parents-empty-state">No parent accounts found.</td></tr>
               ) : (
-                parents.map((p) => (
+                parents.map((p) => {
+                  const rel = formatRelationship(p.relationship || "");
+                  const displayName = rel ? `${p.name || "—"} (${rel})` : (p.name || "—");
+                  return (
                   <tr key={p.id}>
                     <td>
                       <Link href={`/account/${p.id}`} className="parents-name-link">
-                        {p.name || "—"}
+                        {displayName}
                       </Link>
+                    </td>
+                    <td>
+                      {rel ? (
+                        <span className={`parents-relationship-pill parents-relationship-${rel.toLowerCase()}`}>
+                          {rel}
+                        </span>
+                      ) : (
+                        <span className="parents-no-children">—</span>
+                      )}
                     </td>
                     <td>{p.email || "—"}</td>
                     <td>{p.phone || "—"}</td>
@@ -225,7 +247,8 @@ export default function ParentDirectoryPage() {
                       </button>
                     </td>
                   </tr>
-                ))
+                );
+                })
               )}
             </tbody>
           </table>

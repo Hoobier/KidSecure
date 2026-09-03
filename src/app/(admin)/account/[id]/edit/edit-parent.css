@@ -66,6 +66,7 @@
 }
 
 .edit-form-row,
+.edit-form-row-2,
 .edit-form-row-3 {
   display: flex;
   gap: 1.1rem;
@@ -73,6 +74,7 @@
 }
 
 .edit-form-row .edit-form-group,
+.edit-form-row-2 .edit-form-group,
 .edit-form-row-3 .edit-form-group {
   flex: 1;
 }
@@ -111,7 +113,8 @@
   box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
 }
 
-.edit-form-group input.input-invalid {
+.edit-form-group input.input-invalid,
+.edit-form-group select.input-invalid {
   border-color: #c0392b;
 }
 
@@ -273,6 +276,7 @@
 
 @media (max-width: 780px) {
   .edit-form-row,
+  .edit-form-row-2,
   .edit-form-row-3,
   .edit-page-header {
     flex-direction: column;

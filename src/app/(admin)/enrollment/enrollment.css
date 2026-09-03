@@ -174,7 +174,14 @@
   align-items: flex-start;
 }
 
+.enrollment-form-row-2 {
+  display: flex;
+  gap: 1.1rem;
+  align-items: flex-start;
+}
+
 .enrollment-form-row .enrollment-form-group,
+.enrollment-form-row-2 .enrollment-form-group,
 .enrollment-form-row-3 .enrollment-form-group {
   flex: 1;
 }
@@ -213,7 +220,8 @@
   box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
 }
 
-.enrollment-form-group input.input-invalid {
+.enrollment-form-group input.input-invalid,
+.enrollment-form-group select.input-invalid {
   border-color: #c0392b;
 }
 
@@ -231,6 +239,7 @@
 
 @media (max-width: 780px) {
   .enrollment-form-row,
+  .enrollment-form-row-2,
   .enrollment-form-row-3 {
     flex-direction: column;
     gap: 0;
@@ -605,6 +614,11 @@
   font-weight: 600;
   color: #1b2a4a;
   font-size: 0.9rem;
+}
+
+.result-relationship {
+  color: #8a94a6;
+  font-weight: 500;
 }
 
 .result-email {

@@ -30,8 +30,10 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
       lastName: "",
       email: "",
       phone: "",
+      relationship: "",
       existingParentId: null,
       existingParentName: "",
+      existingParentRelationship: "",
     });
     setErrors({});
     setSearchQuery("");
@@ -70,17 +72,28 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
     return () => clearTimeout(debounceRef.current);
   }, [searchQuery, data.mode]);
 
+  function formatRelationship(rel) {
+    if (!rel) return "";
+    const normalized = String(rel).toLowerCase();
+    if (normalized === "mom" || normalized === "mother") return "Mom";
+    if (normalized === "dad" || normalized === "father") return "Dad";
+    if (normalized === "guardian") return "Guardian";
+    return rel.charAt(0).toUpperCase() + rel.slice(1).toLowerCase();
+  }
+
   function selectParent(parent) {
+    const rel = formatRelationship(parent.relationship || "");
     onChange({
       existingParentId: parent.id,
       existingParentName: `${parent.firstName} ${parent.lastName}`,
+      existingParentRelationship: rel,
     });
     setSearchQuery("");
     setSearchResults([]);
   }
 
   function clearSelectedParent() {
-    onChange({ existingParentId: null, existingParentName: "" });
+    onChange({ existingParentId: null, existingParentName: "", existingParentRelationship: "" });
   }
 
   function validate() {
@@ -113,6 +126,10 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
           newErrors.phone = "Phone number is required.";
         } else if (!/^09\d{9}$/.test(phoneDigits)) {
           newErrors.phone = "Please enter a valid 11-digit Philippine mobile number (e.g. 09171234567).";
+        }
+
+        if (!data.relationship) {
+          newErrors.relationship = "Please select the relationship to the student.";
         }
       }
 
@@ -156,7 +173,10 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
 
           {data.existingParentId ? (
             <div className="enrollment-selected-parent">
-              <span>{data.existingParentName}</span>
+              <span>
+                {data.existingParentName}
+                {data.existingParentRelationship && ` (${data.existingParentRelationship})`}
+              </span>
               <button type="button" onClick={clearSelectedParent}>
                 Change
               </button>
@@ -177,19 +197,23 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
               )}
               {searchResults.length > 0 && (
                 <div className="enrollment-search-results">
-                  {searchResults.map((parent) => (
-                    <button
-                      type="button"
-                      key={parent.id}
-                      className="enrollment-search-result-item"
-                      onClick={() => selectParent(parent)}
-                    >
-                      <span className="result-name">
-                        {parent.firstName} {parent.lastName}
-                      </span>
-                      <span className="result-email">{parent.email}</span>
-                    </button>
-                  ))}
+                  {searchResults.map((parent) => {
+                    const rel = formatRelationship(parent.relationship || "");
+                    return (
+                      <button
+                        type="button"
+                        key={parent.id}
+                        className="enrollment-search-result-item"
+                        onClick={() => selectParent(parent)}
+                      >
+                        <span className="result-name">
+                          {parent.firstName} {parent.lastName}
+                          {rel && <span className="result-relationship"> ({rel})</span>}
+                        </span>
+                        <span className="result-email">{parent.email}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {errors.existingParent && (
@@ -232,6 +256,26 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
             </div>
 
             <div className="enrollment-form-group">
+              <label htmlFor="parentRelationship">
+                Relationship<span className="required">*</span>
+              </label>
+              <select
+                id="parentRelationship"
+                value={data.relationship}
+                onChange={(e) => handleFieldChange("relationship", e.target.value)}
+                className={errors.relationship ? "input-invalid" : ""}
+              >
+                <option value="">Select relationship</option>
+                <option value="Mom">Mom</option>
+                <option value="Dad">Dad</option>
+                <option value="Guardian">Guardian</option>
+              </select>
+              {errors.relationship && <p className="enrollment-field-error">{errors.relationship}</p>}
+            </div>
+          </div>
+
+          <div className="enrollment-form-row-2">
+            <div className="enrollment-form-group">
               <label htmlFor="parentEmail">
                 Email<span className="required">*</span>
               </label>
@@ -245,13 +289,12 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
               />
               {errors.email && <p className="enrollment-field-error">{errors.email}</p>}
             </div>
-          </div>
 
-          <div className="enrollment-form-group">
-            <label htmlFor="parentPhone">
-              Phone Number<span className="required">*</span>
-            </label>
-            <input
+            <div className="enrollment-form-group">
+              <label htmlFor="parentPhone">
+                Phone Number<span className="required">*</span>
+              </label>
+              <input
                 id="parentPhone"
                 type="tel"
                 inputMode="numeric"
@@ -260,12 +303,14 @@ export default function ParentInfoStep({ data, onChange, onNext, onBack }) {
                 value={data.phone}
                 onChange={(e) => handleFieldChange("phone", e.target.value.replace(/\D/g, "").slice(0, 11))}
                 className={errors.phone ? "input-invalid" : ""}
-            />
-            <p className="enrollment-help-text">
-              Mobile app login details will be sent to the email above once enrollment is complete.
-            </p>
-            {errors.phone && <p className="enrollment-field-error">{errors.phone}</p>}
+              />
+              {errors.phone && <p className="enrollment-field-error">{errors.phone}</p>}
+            </div>
           </div>
+
+          <p className="enrollment-help-text">
+            Mobile app login details will be sent to the email above once enrollment is complete.
+          </p>
         </>
       )}
 
