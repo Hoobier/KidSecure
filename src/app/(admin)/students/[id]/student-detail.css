@@ -411,3 +411,57 @@
   .detail-section,
   .detail-danger-zone { padding: 1.5rem; }
 }
+
+/* ---------- Requirements ---------- */
+
+.detail-requirements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.detail-requirement-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #eef0f4;
+  border-radius: 10px;
+}
+
+.detail-requirement-label {
+  font-weight: 600;
+  color: #1b2a4a;
+  font-size: 0.95rem;
+}
+
+.detail-requirement-status {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.detail-requirement-status-yes {
+  color: #1e824c;
+}
+
+.detail-requirement-status-no {
+  color: #854d0e;
+}
+
+.detail-requirement-error {
+  font-size: 0.8rem;
+  color: #c0392b;
+  margin-top: 0.35rem;
+}
+
+.detail-requirement-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.detail-requirement-upload-label {
+  cursor: pointer;
+  margin: 0;
+}

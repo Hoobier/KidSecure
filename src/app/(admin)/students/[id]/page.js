@@ -6,6 +6,16 @@ import "./student-detail.css";
 
 // src/app/(admin)/students/[id]/page.js
 
+const BASE_DOCUMENTS = [
+  { type: "birth_certificate", label: "Birth Certificate" },
+  { type: "id_photo", label: "1x1 ID Picture" },
+];
+
+const TRANSFEREE_DOCUMENTS = [
+  { type: "form_138", label: "Form 138 (Report Card)" },
+  { type: "good_moral", label: "Good Moral Certificate" },
+];
+
 export default function StudentDetailPage({ params }) {
   const { id } = use(params);
   const [student, setStudent] = useState(null);
@@ -13,6 +23,9 @@ export default function StudentDetailPage({ params }) {
   const [resending, setResending] = useState(false);
   const [showResendConfirm, setShowResendConfirm] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message }
+  const [uploadingType, setUploadingType] = useState(null);
+  const [docError, setDocError] = useState({});
+  const [viewingType, setViewingType] = useState(null);
 
   function calculateAge(dobString) {
     const dob = new Date(dobString);
@@ -110,6 +123,69 @@ export default function StudentDetailPage({ params }) {
         setTimeout(() => setFeedback(null), 5000);
       }
     }
+
+      function getDocumentFor(type) {
+    return (student?.documents || []).find((doc) => doc.type === type);
+  }
+
+  async function handleDocumentUpload(type, file) {
+    if (!file) return;
+
+    setUploadingType(type);
+    setDocError((prev) => ({ ...prev, [type]: "" }));
+
+    const body = new FormData();
+    body.append("type", type);
+    body.append("file", file);
+
+    try {
+      const res = await fetch(`/api/students/${id}/documents`, {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setDocError((prev) => ({ ...prev, [type]: json.message || "Upload failed. Please try again." }));
+        return;
+      }
+
+      setStudent((prev) => {
+        const updatedDocuments = [
+          ...(prev.documents || []).filter((doc) => doc.type !== type),
+          json.document,
+        ];
+        return { ...prev, documents: updatedDocuments };
+      });
+    } catch {
+      setDocError((prev) => ({ ...prev, [type]: "Unable to reach the server. Please try again." }));
+    } finally {
+      setUploadingType(null);
+    }
+  }
+
+  async function handleViewDocument(type) {
+    setViewingType(type);
+    try {
+      const res = await fetch(`/api/students/${id}/documents/${type}`, {
+        credentials: "include",
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setDocError((prev) => ({ ...prev, [type]: json.message || "Unable to open this document." }));
+        return;
+      }
+
+      window.open(json.view_url, "_blank", "noopener,noreferrer");
+    } catch {
+      setDocError((prev) => ({ ...prev, [type]: "Unable to reach the server. Please try again." }));
+    } finally {
+      setViewingType(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -245,6 +321,63 @@ export default function StudentDetailPage({ params }) {
         <Link href={`/students/${id}/edit`} className="detail-rfid-edit-link">
           {student.rfidTag ? "Change RFID Tag" : "Assign RFID Tag"} →
         </Link>
+      </section>
+
+      {/* Requirements */}
+      <section className="detail-section">
+        <h2>Requirements</h2>
+        <div className="detail-requirements-list">
+          {(student.isTransferee ? [...BASE_DOCUMENTS, ...TRANSFEREE_DOCUMENTS] : BASE_DOCUMENTS).map(
+            ({ type, label }) => {
+              const uploaded = getDocumentFor(type);
+              const isUploading = uploadingType === type;
+              const isViewing = viewingType === type;
+
+              return (
+                <div key={type} className="detail-requirement-row">
+                  <div>
+                    <div className="detail-requirement-label">{label}</div>
+                    {uploaded ? (
+                      <div className="detail-requirement-status detail-requirement-status-yes">
+                        ✅ {uploaded.original_filename}
+                      </div>
+                    ) : (
+                      <div className="detail-requirement-status detail-requirement-status-no">
+                        ⚠ Not uploaded
+                      </div>
+                    )}
+                    {docError[type] && (
+                      <p className="detail-requirement-error">{docError[type]}</p>
+                    )}
+                  </div>
+
+                  <div className="detail-requirement-actions">
+                    {uploaded && (
+                      <button
+                        type="button"
+                        className="detail-btn-secondary"
+                        onClick={() => handleViewDocument(type)}
+                        disabled={isViewing}
+                      >
+                        {isViewing ? "Opening…" : "View"}
+                      </button>
+                    )}
+                    <label className="detail-btn-secondary detail-requirement-upload-label">
+                      {isUploading ? "Uploading…" : uploaded ? "Replace" : "Upload"}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        style={{ display: "none" }}
+                        disabled={isUploading}
+                        onChange={(e) => handleDocumentUpload(type, e.target.files?.[0])}
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            }
+          )}
+        </div>
       </section>
 
       {/* Danger Zone */}
