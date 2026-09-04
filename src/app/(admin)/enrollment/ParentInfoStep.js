@@ -1,3 +1,5 @@
+// src/app/(admin)/enrollment/ParentInfoStep.js
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";

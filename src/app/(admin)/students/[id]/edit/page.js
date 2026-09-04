@@ -1,10 +1,12 @@
 "use client";
-
+// src/app/(admin)/students/[id]/edit/page.js
 import { useState, useEffect, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "./edit-student.css";
 import "../../../enrollment/enrollment.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 const SECTION_OPTIONS = ["A", "B", "C"];
@@ -22,6 +24,33 @@ function calculateAge(dobString) {
     age--;
   }
   return age;
+}
+
+function stringToDate(dobString) {
+  if (!dobString) return null;
+  const [year, month, day] = dobString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function dateToString(date) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getMinDob() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 16);
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function getMaxDob() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 3);
+  return d;
 }
 
 function formatRelationship(rel) {
@@ -53,18 +82,7 @@ function validateForm(form) {
   }
 
   if (!form.dateOfBirth) {
-    errors.dateOfBirth = ["Date of birth is required."];
-  } else {
-    const dob = new Date(form.dateOfBirth);
-    const today = new Date();
-    if (dob > today) {
-      errors.dateOfBirth = ["Date of birth cannot be in the future."];
-    } else {
-      const age = calculateAge(form.dateOfBirth);
-      if (age < 3 || age > 15) {
-        errors.dateOfBirth = ["Student age must be between 3 and 15 years old."];
-      }
-    }
+  errors.dateOfBirth = ["Date of birth is required."];
   }
 
   if (!form.gradeLevel) errors.gradeLevel = ["Please select a grade level."];
@@ -417,11 +435,18 @@ export default function EditStudentPage({ params }) {
         <div className="edit-form-row-3">
           <div className="edit-form-group">
             <label>Date of Birth<span className="required">*</span></label>
-            <input
-              type="date"
-              value={form.dateOfBirth}
-              onChange={(e) => updateField("dateOfBirth", e.target.value)}
+            <DatePicker
+              selected={stringToDate(form.dateOfBirth)}
+              onChange={(date) => updateField("dateOfBirth", dateToString(date))}
+              minDate={getMinDob()}
+              maxDate={getMaxDob()}
+              placeholderText="mm/dd/yyyy"
+              dateFormat="MM/dd/yyyy"
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
               className={errors.dateOfBirth ? "input-invalid" : ""}
+              wrapperClassName="edit-datepicker-wrapper"
             />
             {errors.dateOfBirth && <div className="edit-field-error">{errors.dateOfBirth[0]}</div>}
           </div>

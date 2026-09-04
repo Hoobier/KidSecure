@@ -601,7 +601,7 @@
 
 .detail-report-card-table thead th {
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #1b2a4a 0%, #2d3f66 100%);
+  background: #1b2a4a;
   color: #fff;
   text-align: left;
   font-weight: 600;
@@ -611,24 +611,35 @@
   border: none;
 }
 
-.detail-report-card-table thead th:first-child {
+.detail-report-card-table thead tr:first-child th:first-child {
   border-top-left-radius: 10px;
 }
-.detail-report-card-table thead th:last-child {
+.detail-report-card-table thead tr:first-child th:last-child {
   border-top-right-radius: 10px;
 }
 
-.report-card-th-subject { min-width: 320px; }
-.report-card-th-quarter,
+.report-card-th-term-group {
+  text-align: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.report-card-th-subterm,
 .report-card-grade {
-  width: 90px;
+  width: 68px;
   text-align: center;
 }
+
+.report-card-th-subterm {
+  font-size: 0.68rem;
+}
+
 .report-card-th-avg,
 .report-card-avg {
   width: 100px;
   text-align: center;
 }
+
+.report-card-th-subject { min-width: 260px; }
 
 .report-card-row td {
   padding: 0;
@@ -778,7 +789,7 @@
     max-height: 92vh;
   }
   .report-card-th-subject { min-width: 240px; }
-  .report-card-th-quarter,
+  .report-card-th-subterm,
   .report-card-grade { width: 72px; }
   .report-card-row-indented.report-card-row-child td:first-child {
     padding-left: 2rem;
@@ -799,7 +810,7 @@
     margin-right: 0;
     width: fit-content;
   }
-  .report-card-th-quarter,
+  .report-card-th-subterm,
   .report-card-grade { width: 60px; }
   .report-card-overall-value {
     font-size: 1.05rem;

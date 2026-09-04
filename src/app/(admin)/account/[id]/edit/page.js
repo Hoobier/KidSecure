@@ -1,3 +1,5 @@
+// src/app/(admin)/account/[id]/edit/page.js
+
 "use client";
 
 import { useState, useEffect, use } from "react";

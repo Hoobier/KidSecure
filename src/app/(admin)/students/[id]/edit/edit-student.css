@@ -295,3 +295,97 @@
   .edit-back-btn { align-self: flex-start; }
   .edit-card { padding: 1.5rem; }
 }
+
+/* ---------- React Datepicker (Date of Birth) ---------- */
+
+.edit-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1b2a4a;
+  background: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.react-datepicker__input-container input.input-invalid {
+  border-color: #c0392b;
+}
+
+.react-datepicker {
+  font-family: 'Poppins', sans-serif;
+  border: 1px solid #d5dae2;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.react-datepicker__header {
+  background-color: #1b2a4a;
+  border-bottom: none;
+  padding-top: 0.75rem;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: #ffffff;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #ffffff;
+}
+
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  border-radius: 6px;
+  border: none;
+  padding: 2px 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.85rem;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #1b2a4a;
+  color: #ffffff;
+  border-radius: 6px;
+}
+
+.react-datepicker__day:hover {
+  background-color: #f0f4ff;
+  border-radius: 6px;
+}
+
+.react-datepicker__day--disabled {
+  color: #cbd5e1;
+}
+
+.react-datepicker__day--outside-month {
+  color: #cbd5e1;
+}
+
+.react-datepicker__day--outside-month:hover {
+  background-color: #f5f7fa;
+  color: #94a3b8;
+}
+
+.react-datepicker__triangle {
+  display: none;
+}

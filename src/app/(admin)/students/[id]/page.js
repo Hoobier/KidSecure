@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import  React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
 
@@ -59,16 +59,51 @@ function getSubjectsForGrade(gradeLevel) {
   return { levelLabel: gradeLevel, subjects: GRADE1_6_SUBJECTS };
 }
 
-function computeAverage(grades) {
-  const vals = Object.values(grades)
-    .map((v) => Number(v))
-    .filter((v) => !isNaN(v) && v > 0);
+function computeAverage(subjectGrades) {
+  const vals = [];
+  TERMS.forEach((t) => {
+    const term = (subjectGrades && subjectGrades[t.key]) || {};
+    ["midterm", "finals"].forEach((f) => {
+      const n = Number(term[f]);
+      if (term[f] !== "" && term[f] !== undefined && !isNaN(n) && n > 0) vals.push(n);
+    });
+  });
   if (vals.length === 0) return "—";
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
   return avg.toFixed(2);
 }
 
-const DEFAULT_GRADES = () => ({ Q1: "", Q2: "", Q3: "", Q4: "" });
+const TERMS = [
+  { key: "T1", label: "T1" },
+  { key: "T2", label: "T2" },
+  { key: "T3", label: "T3" },
+];
+
+  const DEFAULT_TERM = () => ({ midterm: "", finals: "" });
+  const DEFAULT_GRADES = () => {
+    const g = {};
+    TERMS.forEach((t) => { g[t.key] = DEFAULT_TERM(); });
+    return g;
+  };
+
+  function mergeWithDefaults(subjects, saved) {
+    const grades = {};
+    const applyDefaults = (code) => {
+      const savedTerm = (saved && saved[code]) || {};
+      grades[code] = {};
+      TERMS.forEach((t) => {
+        grades[code][t.key] = {
+          midterm: savedTerm[t.key]?.midterm ?? "",
+          finals: savedTerm[t.key]?.finals ?? "",
+        };
+      });
+    };
+    subjects.forEach((s) => {
+      applyDefaults(s.code);
+      if (s.isGroup) s.children.forEach((c) => applyDefaults(c.code));
+    });
+    return grades;
+  }
 
 export default function StudentDetailPage({ params }) {
   const { id } = use(params);
@@ -85,35 +120,35 @@ export default function StudentDetailPage({ params }) {
   const [reportGrades, setReportGrades] = useState({});
   const [reportSaving, setReportSaving] = useState(false);
   const [reportFeedback, setReportFeedback] = useState(null);
-
-  function initReportGrades() {
-    if (!student) return {};
-    const { subjects } = getSubjectsForGrade(student.gradeLevel);
-    const grades = {};
-    subjects.forEach((s) => {
-      grades[s.code] = DEFAULT_GRADES();
-      if (s.isGroup) {
-        s.children.forEach((c) => {
-          grades[c.code] = DEFAULT_GRADES();
-        });
-      }
-    });
-    return grades;
-  }
+  const [reportLoading, setReportLoading] = useState(false); 
 
   useEffect(() => {
     if (showReportCard && student) {
-      setReportGrades(initReportGrades());
       setReportFeedback(null);
+      setReportLoading(true);
+      const { subjects } = getSubjectsForGrade(student.gradeLevel);
+
+      (async () => {
+        try {
+          const res = await fetch(`/api/students/${id}/report-card`, { credentials: "include" });
+          const json = await res.json();
+          const saved = res.ok ? (json.data || {}) : {};
+          setReportGrades(mergeWithDefaults(subjects, saved));
+        } catch {
+          setReportGrades(mergeWithDefaults(subjects, {}));
+        } finally {
+          setReportLoading(false);
+        }
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showReportCard, student?.id]);
 
-  function updateGrade(code, quarter, value) {
+  function updateGrade(code, term, field, value) {
     const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
     setReportGrades((prev) => ({
       ...prev,
-      [code]: { ...prev[code], [quarter]: sanitized },
+      [code]: { ...prev[code], [term]: { ...prev[code]?.[term], [field]: sanitized } },
     }));
   }
 
@@ -121,11 +156,18 @@ export default function StudentDetailPage({ params }) {
     setReportSaving(true);
     setReportFeedback(null);
     try {
-      await new Promise((r) => setTimeout(r, 500));
+      const res = await fetch(`/api/students/${id}/report-card`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grades: reportGrades }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed");
       setReportFeedback({ type: "success", message: "✅ Report card saved." });
       setTimeout(() => setReportFeedback(null), 2500);
-    } catch {
-      setReportFeedback({ type: "error", message: "⚠️ Unable to save report card." });
+    } catch (err) {
+      setReportFeedback({ type: "error", message: `⚠️ ${err.message || "Unable to save report card."}` });
     } finally {
       setReportSaving(false);
     }
@@ -596,17 +638,26 @@ export default function StudentDetailPage({ params }) {
                 {s.code && !isGroupChild && <span className="report-card-code">{s.code}</span>}
                 <span>{s.name}</span>
               </td>
-              {["Q1", "Q2", "Q3", "Q4"].map((q) => (
-                <td key={q} className="report-card-grade">
+              {TERMS.flatMap((t) => ([
+                <td key={`${s.code}-${t.key}-mid`} className="report-card-grade">
                   <input
                     type="text"
                     inputMode="decimal"
                     placeholder="—"
-                    value={g[q]}
-                    onChange={(e) => updateGrade(s.code, q, e.target.value)}
+                    value={g[t.key]?.midterm ?? ""}
+                    onChange={(e) => updateGrade(s.code, t.key, "midterm", e.target.value)}
                   />
-                </td>
-              ))}
+                </td>,
+                <td key={`${s.code}-${t.key}-fin`} className="report-card-grade">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="—"
+                    value={g[t.key]?.finals ?? ""}
+                    onChange={(e) => updateGrade(s.code, t.key, "finals", e.target.value)}
+                  />
+                </td>,
+              ]))}
               <td className="report-card-avg">{avg}</td>
             </tr>
           );
@@ -666,7 +717,9 @@ export default function StudentDetailPage({ params }) {
                 </div>
               )}
 
-              {subjects.length === 0 ? (
+              {reportLoading ? (
+                <p className="detail-empty-note">Loading saved grades…</p>
+              ) : subjects.length === 0 ? (
                 <p className="detail-empty-note">
                   Set a grade level in the student record to view the correct subject list.
                 </p>
@@ -675,31 +728,31 @@ export default function StudentDetailPage({ params }) {
                   <table className="detail-report-card-table">
                     <thead>
                       <tr>
-                        <th className="report-card-subject report-card-th-subject">
-                          Subjects
-                        </th>
-                        <th className="report-card-th-quarter">Q1</th>
-                        <th className="report-card-th-quarter">Q2</th>
-                        <th className="report-card-th-quarter">Q3</th>
-                        <th className="report-card-th-quarter">Q4</th>
-                        <th className="report-card-th-avg">Average</th>
+                        <th className="report-card-subject report-card-th-subject" rowSpan={2}>Subjects</th>
+                        {TERMS.map((t) => (
+                          <th key={t.key} className="report-card-th-term-group" colSpan={2}>{t.label}</th>
+                        ))}
+                        <th className="report-card-th-avg" rowSpan={2}>Average</th>
+                      </tr>
+                      <tr>
+                        {TERMS.flatMap((t) => ([
+                          <th key={`${t.key}-mid`} className="report-card-th-subterm">Midterm</th>,
+                          <th key={`${t.key}-fin`} className="report-card-th-subterm">Finals</th>,
+                        ]))}
                       </tr>
                     </thead>
                     <tbody>
                       {subjects.map((s) =>
                         s.isGroup ? (
-                          <>
-                            <tr key={s.code} className="report-card-row report-card-row-group">
-                              <td
-                                colSpan={6}
-                                className="report-card-subject report-card-subject-group"
-                              >
+                          <React.Fragment key={s.code}>
+                            <tr className="report-card-row report-card-row-group">
+                              <td colSpan={8} className="report-card-subject report-card-subject-group">
                                 <span className="report-card-code">{s.code}</span>
                                 <span>{s.name}</span>
                               </td>
                             </tr>
                             {s.children.map((c) => renderSubjectRow(c, true, true))}
-                          </>
+                          </React.Fragment>
                         ) : (
                           renderSubjectRow(s)
                         )
@@ -707,13 +760,9 @@ export default function StudentDetailPage({ params }) {
                     </tbody>
                     <tfoot>
                       <tr className="report-card-row report-card-row-overall">
-                        <td className="report-card-subject report-card-overall-label">
-                          Overall Average
-                        </td>
-                        <td colSpan={4}></td>
-                        <td className="report-card-avg report-card-overall-value">
-                          {overall}
-                        </td>
+                        <td className="report-card-subject report-card-overall-label">Overall Average</td>
+                        <td colSpan={6}></td>
+                        <td className="report-card-avg report-card-overall-value">{overall}</td>
                       </tr>
                     </tfoot>
                   </table>
