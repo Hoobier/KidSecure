@@ -7,9 +7,10 @@ export function middleware(request) {
   const { pathname } = request.nextUrl;
 
   const isLoginPage = pathname === "/login";
+  const isGuestPage = pathname === "/guest";
 
   // Not logged in and trying to view a protected page → send to login
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !isLoginPage && !isGuestPage) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }

@@ -79,6 +79,8 @@ export default function AdminPage() {
     },
   ];
 
+  const pendingGuestEnrollments = Number(summary.pendingGuestEnrollments ?? 0);
+
   const attentionItems = summary.attentionItems.map((item) => {
     const build = ATTENTION_ITEM_LABELS[item.type];
     if (!build) return null;
@@ -92,6 +94,13 @@ export default function AdminPage() {
         <div>
           <h1>Dashboard</h1>
           <p className="page-title-note">Your school at a glance.</p>
+        </div>
+        <div className="dashboard-actions">
+          <Link href="/online-enrollment" className="btn btn-primary btn-cta-online">
+            <span className="btn-cta-online-icon">🌐</span>
+            Online Enrollment
+            <span className="btn-cta-online-count">{pendingGuestEnrollments || 0} pending</span>
+          </Link>
         </div>
       </div>
 
@@ -183,11 +192,25 @@ export default function AdminPage() {
             <p className="attention-empty">Nothing needs your attention right now. 🎉</p>
           )}
         </div>
-        <div className="secondary-card">
+        <div className="secondary-card secondary-card-stack">
           <h3>Quick Tip</h3>
           <p>
             Attendance updates automatically once RFID scans are recorded at the school entrance.
           </p>
+          <Link href="/online-enrollment" className="online-cta-card">
+            <div className="online-cta-card-icon">📋</div>
+            <div className="online-cta-card-body">
+              <p className="online-cta-card-title">Online Enrollment Submissions</p>
+              <p className="online-cta-card-detail">
+                {pendingGuestEnrollments > 0
+                  ? `${pendingGuestEnrollments} new guest submission${pendingGuestEnrollments === 1 ? "" : "s"} to review.`
+                  : "No pending submissions right now. Check here after families submit via /guest."}
+              </p>
+              <span className="online-cta-card-action">
+                View Online Enrollments →
+              </span>
+            </div>
+          </Link>
         </div>
       </section>
     </div>
