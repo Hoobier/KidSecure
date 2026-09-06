@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-
+// src/app/api/guest/enrollments/[id]/route.js
 export async function POST(request, { params }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("kidsecure_token")?.value;

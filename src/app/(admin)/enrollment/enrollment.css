@@ -983,7 +983,7 @@
 
 .react-datepicker__current-month,
 .react-datepicker__day-name {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .react-datepicker__navigation-icon::before {

@@ -1,5 +1,5 @@
 "use client";
-
+// src/app/%28admin%29/dashboard/page.js
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import "./admin.css";

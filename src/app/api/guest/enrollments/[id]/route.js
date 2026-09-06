@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-
+// src/app/api/guest/enrollments/[id]/route.js
 function needsAuth() {
   return Response.json({ message: "You must be signed in." }, { status: 401 });
 }

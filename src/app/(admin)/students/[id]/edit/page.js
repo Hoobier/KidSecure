@@ -3,10 +3,10 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import "./edit-student.css";
-import "../../../enrollment/enrollment.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import "./edit-student.css";
+import "../../../enrollment/enrollment.css";
 
 const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 const SECTION_OPTIONS = ["A", "B", "C"];

@@ -1,37 +1,13 @@
 import { cookies } from "next/headers";
-
+// src/app/api/guest/enrollments/route.js
 export async function POST(request) {
   const formData = await request.formData();
-
-  const laravelHeaders = new Headers({
-    Accept: "application/json",
-  });
-
-  let laravelBody;
-  const laravelToken = (await cookies()).get("kidsecure_token")?.value;
-  if (laravelToken) {
-    laravelHeaders.set("Authorization", `Bearer ${laravelToken}`);
-    laravelBody = formData;
-  } else {
-    laravelHeaders.set("Content-Type", "application/json");
-    const rawData = formData.get("data");
-    const data = rawData ? JSON.parse(String(rawData)) : {};
-    const files = {};
-    for (const entry of formData.entries()) {
-      const [k, v] = entry;
-      if (k === "data") continue;
-      if (typeof v === "object" && v && "name" in v) {
-        files[k] = { name: v.name, size: v.size, type: v.type };
-      }
-    }
-    laravelBody = JSON.stringify({ ...data, files });
-  }
 
   try {
     const laravelResponse = await fetch(`${process.env.LARAVEL_API_URL}/api/guest/enrollments`, {
       method: "POST",
-      headers: laravelHeaders,
-      body: laravelBody,
+      headers: { Accept: "application/json" },
+      body: formData,
       cache: "no-store",
     });
     const contentType = laravelResponse.headers.get("content-type") || "";
@@ -47,6 +23,7 @@ export async function POST(request) {
     );
   }
 }
+
 
 export async function GET(request) {
   const cookieStore = await cookies();

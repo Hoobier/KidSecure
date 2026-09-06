@@ -1,8 +1,9 @@
 "use client";
-
+// src/app/(admin)/online-enrollment/[id]/page.js
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import RfidApprovalStep from "./RfidApprovalStep";
 import "./online-detail.css";
 
 function formatRelationship(rel) {
@@ -39,6 +40,8 @@ function normalizeItem(raw) {
     get(s, ["fullName"]) ||
     get(s, ["full_name"]) ||
     [firstName, middleName, lastName].filter(Boolean).join(" ").trim();
+  const referenceNumber = get(raw, ["referenceNumber"]) || get(raw, ["reference_number"]) || "";
+  
 
   const parentFirst = get(p, ["firstName"]) || get(p, ["first_name"]) || "";
   const parentLast = get(p, ["lastName"]) || get(p, ["last_name"]) || "";
@@ -101,6 +104,7 @@ function normalizeItem(raw) {
 
   const submittedAt = get(raw, ["submitted_at"]) || get(raw, ["created_at"]) || "";
   const status = get(raw, ["status"]) || "pending";
+  const rejectionReason = get(raw, ["rejectionReason"]) || get(raw, ["rejection_reason"]) || "";
 
   return {
     id: String(raw.id),
@@ -108,10 +112,12 @@ function normalizeItem(raw) {
     phone, address, birthDate, gender, email,
     parentFullName, parentRel, parentRelationship, parentEmail, parentPhone,
     grade, section, previousSchool,
+    referenceNumber,
     signature,
     files,
     status,
     submittedAt,
+    rejectionReason,
     _raw: raw,
   };
 }
@@ -166,8 +172,11 @@ export default function OnlineEnrollmentDetailPage() {
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
-  const [confirmConvertOpen, setConfirmConvertOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReasonError, setRejectReasonError] = useState("");
+  const [showRfidApproval, setShowRfidApproval] = useState(false);
   const [busy, setBusy] = useState(""); // "convert" | "reject" | ""
+  const [refCopied, setRefCopied] = useState(false);
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -193,48 +202,52 @@ export default function OnlineEnrollmentDetailPage() {
     return STATUS_META[status] || STATUS_META.pending;
   }
 
-  async function handleConvert() {
-    if (!data) return;
-    setBusy("convert");
-    setFeedback(null);
-    try {
-      const res = await fetch(`/api/guest/enrollments/${data.id}/convert-to-student`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: data.id }),
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j.message || "Could not convert to student.");
-      setFeedback({ type: "success", message: "✅ Converted to student successfully." });
-      setConfirmConvertOpen(false);
-      fetchDetail();
-      if (j?.student_id) {
-        setTimeout(() => router.push(`/students/${j.student_id}`), 1200);
-      }
-    } catch (err) {
-      setFeedback({
-        type: "error",
-        message: "⚠️ " + (err?.message || "Unable to convert to student."),
-      });
-    } finally {
-      setBusy("");
+  function handleConversionSuccess(json) {
+    setFeedback({ type: "success", message: "✅ Converted to student successfully." });
+    setShowRfidApproval(false);
+    fetchDetail();
+    if (json?.student_id) {
+      setTimeout(() => router.push(`/students/${json.student_id}`), 1200);
     }
+  }
+
+  function openRejectModal() {
+    setRejectReason("");
+    setRejectReasonError("");
+    setConfirmRejectOpen(true);
+  }
+
+  function closeRejectModal() {
+    if (busy !== "") return;
+    setConfirmRejectOpen(false);
+    setRejectReason("");
+    setRejectReasonError("");
   }
 
   async function handleReject() {
     if (!data) return;
+
+    const trimmedReason = rejectReason.trim();
+    if (!trimmedReason) {
+      setRejectReasonError("Please tell the parent why this application is being rejected.");
+      return;
+    }
+
     setBusy("reject");
     setFeedback(null);
+    setRejectReasonError("");
     try {
       const res = await fetch(`/api/guest/enrollments/${data.id}/reject`, {
         method: "POST",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: trimmedReason }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.message || "Could not reject submission.");
       setFeedback({ type: "success", message: "✅ Submission has been rejected." });
       setConfirmRejectOpen(false);
+      setRejectReason("");
       fetchDetail();
     } catch (err) {
       setFeedback({
@@ -244,6 +257,17 @@ export default function OnlineEnrollmentDetailPage() {
     } finally {
       setBusy("");
     }
+  }
+
+  function handleCopyReference() {
+    if (!data?.referenceNumber) return;
+    navigator.clipboard
+      .writeText(it.referenceNumber)
+      .then(() => {
+        setRefCopied(true);
+        setTimeout(() => setRefCopied(false), 2000);
+      })
+      .catch(() => {});
   }
 
   if (loading) {
@@ -276,6 +300,17 @@ export default function OnlineEnrollmentDetailPage() {
           <Link href="/online-enrollment" className="oed-back-link">← Back to Online Enrollment</Link>
           <h1 className="oed-title">{it.studentFullName || "Guest Enrollment Submission"}</h1>
           <p className="oed-subtitle">
+            Reference No. <strong className="oed-refnum">{it.referenceNumber || "—"}</strong>
+            {it.referenceNumber && (
+              <button
+                type="button"
+                className="oed-refnum-copy"
+                onClick={handleCopyReference}
+              >
+                {refCopied ? "Copied!" : "Copy"}
+              </button>
+            )}
+            <br />
             Submitted {formatDateLong(it.submittedAt)} · Status:{" "}
             <span className={`oe-status-pill oe-status-${stat.cls}`}>{stat.label}</span>
           </p>
@@ -285,12 +320,12 @@ export default function OnlineEnrollmentDetailPage() {
             <>
               <button
                 className="oed-btn oed-btn-reject"
-                onClick={() => setConfirmRejectOpen(true)}
+                onClick={openRejectModal}
                 disabled={busy !== ""}
               >✕ Reject</button>
               <button
                 className="oed-btn oed-btn-convert"
-                onClick={() => setConfirmConvertOpen(true)}
+                onClick={() => setShowRfidApproval(true)}
                 disabled={busy !== ""}
               >
                 Convert to Student →
@@ -309,6 +344,12 @@ export default function OnlineEnrollmentDetailPage() {
       {feedback && (
         <div className={`oed-banner oed-banner-${feedback.type === "success" ? "ok" : "err"}`}>
           {feedback.message}
+        </div>
+      )}
+
+      {it.status === "rejected" && it.rejectionReason && (
+        <div className="oed-banner oed-banner-err">
+          <strong>Reason given:</strong> {it.rejectionReason}
         </div>
       )}
 
@@ -406,49 +447,52 @@ export default function OnlineEnrollmentDetailPage() {
       </section>
 
       {/* Confirmation modals */}
-      {confirmConvertOpen && (
-        <div className="oed-modal-overlay" onClick={() => setConfirmConvertOpen(false)}>
-          <div className="oed-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Convert to Student?</h3>
-            <p>
-              This will create a new student enrollment record based on this guest submission and mark
-              it as <strong>Converted</strong>.
-            </p>
-            <ul className="oed-modal-list">
-              <li>Student: <strong>{it.studentFullName || "—"}</strong></li>
-              <li>Grade: <strong>{it.grade || "—"}</strong></li>
-              <li>Parent: <strong>{it.parentFullName || "—"}</strong> {parentRel ? `(${parentRel})` : ""}</li>
-            </ul>
-            <div className="oed-modal-actions">
-              <button
-                className="oed-modal-btn oed-modal-ghost"
-                onClick={() => setConfirmConvertOpen(false)}
-                disabled={busy !== ""}
-              >Cancel</button>
-              <button
-                className="oed-modal-btn oed-modal-primary"
-                onClick={handleConvert}
-                disabled={busy !== ""}
-              >
-                {busy === "convert" ? "Converting…" : "Yes — Convert to Student"}
-              </button>
-            </div>
-          </div>
+      {showRfidApproval && (
+        <div className="oed-modal-overlay" onClick={() => setShowRfidApproval(false)}>
+          <RfidApprovalStep
+            applicationId={it.id}
+            gradeLevel={it.grade}
+            studentFullName={it.studentFullName}
+            onCancel={() => setShowRfidApproval(false)}
+            onSuccess={handleConversionSuccess}
+          />
         </div>
       )}
 
       {confirmRejectOpen && (
-        <div className="oed-modal-overlay" onClick={() => setConfirmRejectOpen(false)}>
+        <div className="oed-modal-overlay" onClick={closeRejectModal}>
           <div className="oed-modal oed-modal-reject" onClick={(e) => e.stopPropagation()}>
             <h3>Reject this submission?</h3>
             <p>
-              This submission will be marked as <strong>Rejected</strong>. You can review it again later,
-              but the applicant will not be converted to a student unless you accept later.
+              This submission will be marked as <strong>Rejected</strong>. The parent will be able to
+              see the reason you enter below when they check their application status.
             </p>
+
+            <div className="enrollment-form-group">
+              <label htmlFor="rejectReason">
+                Reason for Rejecting<span className="required">*</span>
+              </label>
+              <textarea
+                id="rejectReason"
+                rows={4}
+                placeholder="Example: The uploaded birth certificate is unreadable. Please resubmit a clearer copy."
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value);
+                  if (rejectReasonError) setRejectReasonError("");
+                }}
+                className={rejectReasonError ? "input-invalid" : ""}
+                disabled={busy !== ""}
+              />
+              {rejectReasonError && (
+                <p className="enrollment-field-error">⚠️ {rejectReasonError}</p>
+              )}
+            </div>
+
             <div className="oed-modal-actions">
               <button
                 className="oed-modal-btn oed-modal-ghost"
-                onClick={() => setConfirmRejectOpen(false)}
+                onClick={closeRejectModal}
                 disabled={busy !== ""}
               >Cancel</button>
               <button

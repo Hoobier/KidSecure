@@ -1,5 +1,5 @@
 "use client";
-
+// src/app/guest/page.js
 import { useState, useRef, useEffect } from "react";
 import "./guest.css";
 
@@ -41,34 +41,29 @@ const SCHOOL_SEAL_SVG = (
   </svg>
 );
 
-export default function GuestEnrollmentPage() {
-  const [form, setForm] = useState({
-    student: {
-      firstName: "",
-      lastName: "",
-      birthDate: "",
-      gender: "",
-      address: "",
-      phone: "",
-      email: "",
-    },
-    parent: {
-      fullName: "",
-      relationship: "",
-      phone: "",
-      email: "",
-    },
-    academic: {
-      gradeLevel: "",
-      previousSchool: "",
-    },
+function getInitialFormState() {
+  return {
+    student: { firstName: "", lastName: "", birthDate: "", gender: "", address: "", phone: "", email: "" },
+    parent: { firstName: "", lastName: "", relationship: "", phone: "", email: "" },
+    academic: { gradeLevel: "", previousSchool: "" },
     signature: "",
-  });
+  };
+}
+
+export default function GuestEnrollmentPage() {
+  const [form, setForm] = useState(getInitialFormState);
   const [errors, setErrors] = useState({});
   const [files, setFiles] = useState({});
   const [preview, setPreview] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [submittedApplication, setSubmittedApplication] = useState(null); // { referenceNumber }
+  const [lookupRef, setLookupRef] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+  const [lookupResult, setLookupResult] = useState(null);
+  const [showLookupPopup, setShowLookupPopup] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const canvasRef = useRef(null);
   const signaturePadRef = useRef({ drawing: false, ctx: null, lastX: 0, lastY: 0 });
@@ -259,7 +254,8 @@ export default function GuestEnrollmentPage() {
       ["student", "address", "Student Address is required"],
       ["student", "phone", "Student Contact Number is required"],
       ["student", "email", "Email Address is required"],
-      ["parent", "fullName", "Parent/Guardian Name is required"],
+      ["parent", "firstName", "Parent/Guardian First Name is required"],
+      ["parent", "lastName", "Parent/Guardian Last Name is required"],
       ["parent", "relationship", "Relationship is required"],
       ["parent", "phone", "Parent Contact Number is required"],
       ["parent", "email", "Parent Email is required"],
@@ -311,11 +307,7 @@ export default function GuestEnrollmentPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Submission failed. Please try again.");
 
-      setFeedback({
-        type: "success",
-        message: "✅ Enrollment form submitted! We will contact you via email shortly.",
-      });
-      handleReset();
+      setSubmittedApplication({ referenceNumber: data.referenceNumber });
     } catch (err) {
       setFeedback({
         type: "error",
@@ -324,6 +316,59 @@ export default function GuestEnrollmentPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleCopyReference() {
+    if (!submittedApplication?.referenceNumber) return;
+    navigator.clipboard
+      .writeText(submittedApplication.referenceNumber)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {});
+  }
+
+  function startNewApplication() {
+    setSubmittedApplication(null);
+    setForm(getInitialFormState());
+    setErrors({});
+    Object.keys(files).forEach((k) => removeFile(k));
+    clearSignature();
+    setFeedback(null);
+  }
+
+  async function handleLookupSubmit(e) {
+    e.preventDefault();
+    const ref = lookupRef.trim();
+    if (!ref) return;
+
+    setLookupLoading(true);
+    setLookupError("");
+    setLookupResult(null);
+
+    try {
+      const res = await fetch(`/api/guest/enrollments/lookup?ref=${encodeURIComponent(ref)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLookupError(data.message || "We couldn't find an application with that reference number.");
+        setShowLookupPopup(true);
+        return;
+      }
+      setLookupResult(data.data);
+      setShowLookupPopup(true);
+    } catch {
+      setLookupError("Unable to reach the server. Please try again.");
+      setShowLookupPopup(true);
+    } finally {
+      setLookupLoading(false);
+    }
+  }
+
+  function closeLookupPopup() {
+    setShowLookupPopup(false);
+    setLookupResult(null);
+    setLookupError("");
   }
 
   const inputInvalid = (section, field) =>
@@ -344,542 +389,687 @@ export default function GuestEnrollmentPage() {
             Fields marked with <span className="guest-required">*</span> are required
           </p>
         </div>
+
+        <div className="guest-header-lookup-row">
+          <form onSubmit={handleLookupSubmit} className="guest-lookup-form">
+            <input
+              type="text"
+              className="guest-lookup-input"
+              placeholder="Check your application status (e.g. RCAC-7F3K9Q)"
+              value={lookupRef}
+              onChange={(e) => setLookupRef(e.target.value.toUpperCase())}
+            />
+            <button
+              type="submit"
+              className="guest-lookup-btn"
+              disabled={lookupLoading || !lookupRef.trim()}
+            >
+              {lookupLoading ? "Checking…" : "Check Status"}
+            </button>
+          </form>
+        </div>
       </header>
 
       <main className="guest-main">
-        <form className="guest-form-card" onSubmit={handleSubmit} noValidate>
-          {feedback && (
-            <div
-              className={
-                "guest-feedback " +
-                (feedback.type === "success" ? "guest-feedback-success" : "guest-feedback-error")
-              }
-            >
-              {feedback.message}
-            </div>
-          )}
-
-          {/* Student Information */}
-          <section className="guest-section">
-            <h2 className="guest-section-title">Student Information</h2>
-
-            <div className="guest-row guest-row-2">
-              <div className="guest-field">
-                <label htmlFor="studentFirstName">
-                  Student Name: <span className="guest-required">*</span>
-                </label>
-                <div className="guest-row guest-row-2 guest-nested">
-                  <div className="guest-field guest-field-nested">
-                    <input
-                      id="studentFirstName"
-                      className={inputInvalid("student", "firstName")}
-                      placeholder="First Name"
-                      value={form.student.firstName}
-                      onChange={(e) => updateForm("student", "firstName", e.target.value)}
-                    />
-                    {errors?.student?.firstName && (
-                      <p className="guest-field-error">{errors.student.firstName}</p>
-                    )}
-                  </div>
-                  <div className="guest-field guest-field-nested">
-                    <input
-                      id="studentLastName"
-                      className={inputInvalid("student", "lastName")}
-                      placeholder="Last Name"
-                      value={form.student.lastName}
-                      onChange={(e) => updateForm("student", "lastName", e.target.value)}
-                    />
-                    {errors?.student?.lastName && (
-                      <p className="guest-field-error">{errors.student.lastName}</p>
-                    )}
-                  </div>
-                </div>
+        {submittedApplication ? (
+          <div className="guest-form-card guest-success-card">
+            <div className="guest-success">
+              <div className="guest-success-icon">✓</div>
+              <h2>Application Submitted!</h2>
+              <p>
+                Please save your reference number below. You can look it up anytime using the
+                search bar at the top of this page to check your application status.
+              </p>
+              <div className="guest-refnum-box">
+                <span className="guest-refnum-label">Your Reference Number</span>
+                <strong className="guest-refnum-value">{submittedApplication.referenceNumber}</strong>
+                <button
+                  type="button"
+                  className="guest-btn guest-btn-ghost guest-refnum-copy"
+                  onClick={handleCopyReference}
+                >
+                  {copied ? "Copied!" : "Copy Reference Number"}
+                </button>
               </div>
+              <p className="guest-success-note">
+                You will be able to check your status anytime with the reference number above. If
+                your application is approved, your parent app login details will be sent to the
+                email address you provided.
+              </p>
+              <button type="button" className="guest-btn guest-btn-primary" onClick={startNewApplication}>
+                Submit Another Application
+              </button>
             </div>
-
-            <div className="guest-row guest-row-2">
-              <div className="guest-field">
-                <label htmlFor="studentBirthDate">
-                  Birth Date: <span className="guest-required">*</span>
-                </label>
-                <div className="guest-dob-wrap" ref={dobWrapRef}>
-                  <button
-                    id="studentBirthDate"
-                    type="button"
-                    className={
-                      (inputInvalid("student", "birthDate") + " guest-dob-trigger") +
-                      (form.student.birthDate ? " has-value" : "")
-                    }
-                    onClick={() => { openDobPicker(); }}
-                  >
-                    {form.student.birthDate ? formatDisplayYMD(form.student.birthDate) : "mm/dd/yyyy"}
-                    <span className="guest-dob-cal-icon" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="5" width="18" height="16" rx="2" stroke="#1b2a4a" strokeWidth="2"/>
-                        <path d="M16 3v4M8 3v4M3 10h18" stroke="#1b2a4a" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </span>
-                  </button>
-                  {dobOpen && (
-                    <div className="guest-dob-popover" role="dialog">
-                      <div className="guest-dob-header">
-                        <button
-                          type="button"
-                          className="guest-dob-nav"
-                          onClick={() => stepDobMonth(-1)}
-                          aria-label="Previous month"
-                        >
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15 6l-6 6 6 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                        <div className="guest-dob-title">
-                          {MONTHS[dobPicker.m]} {dobPicker.y}
-                        </div>
-                        <button
-                          type="button"
-                          className="guest-dob-nav guest-dob-nav-next"
-                          onClick={() => stepDobMonth(1)}
-                          aria-label="Next month"
-                        >
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 6l6 6-6 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="guest-dob-select-row">
-                        <select
-                          className="guest-dob-select"
-                          value={dobPicker.m}
-                          onChange={(e) => setDobPicker((p) => ({ ...p, m: Number(e.target.value) }))}
-                        >
-                          {MONTHS.map((name, i) => (
-                            <option key={name} value={i}>{name}</option>
-                          ))}
-                        </select>
-                        <select
-                          className="guest-dob-select"
-                          value={dobPicker.y}
-                          onChange={(e) => setDobPicker((p) => ({ ...p, y: Number(e.target.value) }))}
-                        >
-                          {(() => {
-                            const curY = new Date().getFullYear();
-                            const out = [];
-                            for (let y = curY; y >= curY - 25; y--) out.push(y);
-                            return out.map((y) => (
-                              <option key={y} value={y}>{y}</option>
-                            ));
-                          })()}
-                        </select>
-                      </div>
-                      <div className="guest-dob-weekday-row">
-                        {["S", "M", "T", "W", "T", "F", "S"].map((w, i) => (
-                          <div key={i} className="guest-dob-weekday">{w}</div>
-                        ))}
-                      </div>
-                      <div className="guest-dob-day-grid">
-                        {dobDayGrid().map((cell, idx) => {
-                          const isSelected = (
-                            cell.inMonth &&
-                            form.student.birthDate === `${dobPicker.y}-${pad2(dobPicker.m + 1)}-${pad2(cell.d)}`
-                          );
-                          const isToday = (() => {
-                            const t = new Date();
-                            return cell.inMonth &&
-                              dobPicker.y === t.getFullYear() &&
-                              dobPicker.m === t.getMonth() &&
-                              cell.d === t.getDate();
-                          })();
-                          return (
-                            <button
-                              type="button"
-                              key={idx}
-                              className={
-                                "guest-dob-day" +
-                                (!cell.inMonth ? " out" : "") +
-                                (isSelected ? " selected" : "") +
-                                (isToday ? " today" : "")
-                              }
-                              onClick={() => { if (cell.inMonth) selectDobDay(cell.d); }}
-                              disabled={!cell.inMonth}
-                            >
-                              {cell.d}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {errors?.student?.birthDate && (
-                  <p className="guest-field-error">{errors.student.birthDate}</p>
-                )}
+          </div>
+        ) : (
+          <form className="guest-form-card" onSubmit={handleSubmit} noValidate>
+            {feedback && (
+              <div
+                className={
+                  "guest-feedback " +
+                  (feedback.type === "success" ? "guest-feedback-success" : "guest-feedback-error")
+                }
+              >
+                {feedback.message}
               </div>
-              <div className="guest-field">
-                <label>
-                  Gender: <span className="guest-required">*</span>
-                </label>
-                <div className="guest-radio-row">
-                  {["Male", "Female"].map((g) => (
-                    <label key={g} className="guest-radio">
+            )}
+
+            {/* Student Information */}
+            <section className="guest-section">
+              <h2 className="guest-section-title">Student Information</h2>
+
+              <div className="guest-row guest-row-2">
+                <div className="guest-field">
+                  <label htmlFor="studentFirstName">
+                    Student Name: <span className="guest-required">*</span>
+                  </label>
+                  <div className="guest-row guest-row-2 guest-nested">
+                    <div className="guest-field guest-field-nested">
                       <input
-                        type="radio"
-                        name="gender"
-                        value={g}
-                        checked={form.student.gender === g}
-                        onChange={(e) => updateForm("student", "gender", e.target.value)}
+                        id="studentFirstName"
+                        className={inputInvalid("student", "firstName")}
+                        placeholder="First Name"
+                        value={form.student.firstName}
+                        onChange={(e) => updateForm("student", "firstName", e.target.value)}
                       />
-                      <span>{g}</span>
-                    </label>
-                  ))}
-                </div>
-                {errors?.student?.gender && (
-                  <p className="guest-field-error">{errors.student.gender}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="guest-row">
-              <div className="guest-field">
-                <label htmlFor="studentAddress">
-                  Student Address: <span className="guest-required">*</span>
-                </label>
-                <input
-                  id="studentAddress"
-                  className={inputInvalid("student", "address")}
-                  placeholder="Full Address"
-                  value={form.student.address}
-                  onChange={(e) => updateForm("student", "address", e.target.value)}
-                />
-                {errors?.student?.address && (
-                  <p className="guest-field-error">{errors.student.address}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="guest-row guest-row-2">
-              <div className="guest-field">
-                <label htmlFor="studentPhone">
-                  Contact Number: <span className="guest-required">*</span>
-                  <span className="guest-field-hint">(PH: 09XXXXXXXXX)</span>
-                </label>
-                <input
-                  id="studentPhone"
-                  type="tel"
-                  className={inputInvalid("student", "phone")}
-                  placeholder="09XXXXXXXXX"
-                  inputMode="numeric"
-                  maxLength={11}
-                  value={form.student.phone}
-                  onChange={(e) => updatePhone("student", "phone", e.target.value)}
-                />
-                {errors?.student?.phone && (
-                  <p className="guest-field-error">{errors.student.phone}</p>
-                )}
-              </div>
-              <div className="guest-field">
-                <label htmlFor="studentEmail">
-                  Email Address: <span className="guest-required">*</span>
-                </label>
-                <input
-                  id="studentEmail"
-                  type="email"
-                  className={inputInvalid("student", "email")}
-                  placeholder="name@example.com"
-                  value={form.student.email}
-                  onChange={(e) => updateForm("student", "email", e.target.value)}
-                />
-                {errors?.student?.email && (
-                  <p className="guest-field-error">{errors.student.email}</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Parent / Guardian */}
-          <section className="guest-section">
-            <h2 className="guest-section-title">Parent / Guardian Information</h2>
-
-            <div className="guest-row">
-              <div className="guest-field">
-                <label htmlFor="parentName">
-                  Parent / Guardian Name: <span className="guest-required">*</span>
-                </label>
-                <input
-                  id="parentName"
-                  className={inputInvalid("parent", "fullName")}
-                  placeholder="Full Name"
-                  value={form.parent.fullName}
-                  onChange={(e) => updateForm("parent", "fullName", e.target.value)}
-                />
-                {errors?.parent?.fullName && (
-                  <p className="guest-field-error">{errors.parent.fullName}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="guest-row guest-row-3">
-              <div className="guest-field">
-                <label htmlFor="parentRelationship">
-                  Relationship To Student: <span className="guest-required">*</span>
-                </label>
-                <select
-                  id="parentRelationship"
-                  className={inputInvalid("parent", "relationship")}
-                  value={form.parent.relationship}
-                  onChange={(e) => updateForm("parent", "relationship", e.target.value)}
-                >
-                  <option value="">Ex- Father/Mother</option>
-                  {RELATIONSHIP_OPTIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                {errors?.parent?.relationship && (
-                  <p className="guest-field-error">{errors.parent.relationship}</p>
-                )}
-              </div>
-              <div className="guest-field">
-                <label htmlFor="parentPhone">
-                  Contact Number: <span className="guest-required">*</span>
-                  <span className="guest-field-hint">(PH: 09XXXXXXXXX)</span>
-                </label>
-                <input
-                  id="parentPhone"
-                  type="tel"
-                  className={inputInvalid("parent", "phone")}
-                  placeholder="09XXXXXXXXX"
-                  inputMode="numeric"
-                  maxLength={11}
-                  value={form.parent.phone}
-                  onChange={(e) => updatePhone("parent", "phone", e.target.value)}
-                />
-                {errors?.parent?.phone && (
-                  <p className="guest-field-error">{errors.parent.phone}</p>
-                )}
-              </div>
-              <div className="guest-field">
-                <label htmlFor="parentEmail">
-                  Email Address: <span className="guest-required">*</span>
-                </label>
-                <input
-                  id="parentEmail"
-                  type="email"
-                  className={inputInvalid("parent", "email")}
-                  placeholder="name@example.com"
-                  value={form.parent.email}
-                  onChange={(e) => updateForm("parent", "email", e.target.value)}
-                />
-                {errors?.parent?.email && (
-                  <p className="guest-field-error">{errors.parent.email}</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Academic */}
-          <section className="guest-section">
-            <h2 className="guest-section-title">Academic Information</h2>
-
-            <div className="guest-row guest-row-2">
-              <div className="guest-field">
-                <label htmlFor="gradeLevel">
-                  Grade / Program Applying For: <span className="guest-required">*</span>
-                </label>
-                <select
-                  id="gradeLevel"
-                  className={inputInvalid("academic", "gradeLevel")}
-                  value={form.academic.gradeLevel}
-                  onChange={(e) => updateForm("academic", "gradeLevel", e.target.value)}
-                >
-                  <option value="">Ex- 8th Grade</option>
-                  {GRADE_OPTIONS.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
-                {errors?.academic?.gradeLevel && (
-                  <p className="guest-field-error">{errors.academic.gradeLevel}</p>
-                )}
-              </div>
-              <div className="guest-field">
-                <label htmlFor="previousSchool">Previous School (if applicable):</label>
-                <input
-                  id="previousSchool"
-                  className="guest-input"
-                  placeholder="Full Name"
-                  value={form.academic.previousSchool}
-                  onChange={(e) => updateForm("academic", "previousSchool", e.target.value)}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Document Uploads */}
-          <section className="guest-section">
-            <h2 className="guest-section-title">Required Documents</h2>
-            <div className="guest-requirements">
-              {REQUIREMENTS.map((req) => {
-                const file = files[req.type];
-                const hasFile = !!file;
-                const inputId = `req-${req.type}`;
-                return (
-                  <div
-                    key={req.type}
-                    className={
-                      "guest-requirement " +
-                      (hasFile ? "guest-requirement-uploaded" : "")
-                    }
-                  >
-                    <div className="guest-requirement-info">
-                      <span className="guest-requirement-icon">{req.icon}</span>
-                      <div>
-                        <h3 className="guest-requirement-name">{req.label}</h3>
-                        {hasFile ? (
-                          <p className="guest-requirement-status guest-status-ok">
-                            ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                          </p>
-                        ) : (
-                          <p className="guest-requirement-status guest-status-pending">
-                            ⚠ Not uploaded
-                          </p>
-                        )}
-                        {hasFile && preview[req.type] && (
-                          <img
-                            src={preview[req.type]}
-                            alt={req.label}
-                            className="guest-requirement-preview"
-                          />
-                        )}
-                      </div>
+                      {errors?.student?.firstName && (
+                        <p className="guest-field-error">{errors.student.firstName}</p>
+                      )}
                     </div>
-                    <div className="guest-requirement-actions">
-                      {hasFile ? (
-                        <button
-                          type="button"
-                          className="guest-btn guest-btn-secondary"
-                          onClick={() => removeFile(req.type)}
-                        >
-                          Remove
-                        </button>
-                      ) : (
-                        <>
-                          <label
-                            htmlFor={inputId}
-                            className="guest-btn guest-btn-primary guest-btn-upload"
-                          >
-                            Upload
-                          </label>
-                          <input
-                            id={inputId}
-                            type="file"
-                            className="guest-file-input"
-                            accept={
-                              req.type === "id_picture_1x1"
-                                ? "image/*"
-                                : "application/pdf,image/*"
-                            }
-                            onChange={(e) =>
-                              handleFileUpload(req.type, e.target.files?.[0] || null)
-                            }
-                          />
-                        </>
+                    <div className="guest-field guest-field-nested">
+                      <input
+                        id="studentLastName"
+                        className={inputInvalid("student", "lastName")}
+                        placeholder="Last Name"
+                        value={form.student.lastName}
+                        onChange={(e) => updateForm("student", "lastName", e.target.value)}
+                      />
+                      {errors?.student?.lastName && (
+                        <p className="guest-field-error">{errors.student.lastName}</p>
                       )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                </div>
+              </div>
 
-          {/* Consent */}
-          <section className="guest-section guest-section-consent">
-            <h2 className="guest-section-title">Consent and Signature</h2>
+              <div className="guest-row guest-row-2">
+                <div className="guest-field">
+                  <label htmlFor="studentBirthDate">
+                    Birth Date: <span className="guest-required">*</span>
+                  </label>
+                  <div className="guest-dob-wrap" ref={dobWrapRef}>
+                    <button
+                      id="studentBirthDate"
+                      type="button"
+                      className={
+                        (inputInvalid("student", "birthDate") + " guest-dob-trigger") +
+                        (form.student.birthDate ? " has-value" : "")
+                      }
+                      onClick={() => { openDobPicker(); }}
+                    >
+                      {form.student.birthDate ? formatDisplayYMD(form.student.birthDate) : "mm/dd/yyyy"}
+                      <span className="guest-dob-cal-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="5" width="18" height="16" rx="2" stroke="#1b2a4a" strokeWidth="2"/>
+                          <path d="M16 3v4M8 3v4M3 10h18" stroke="#1b2a4a" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </span>
+                    </button>
+                    {dobOpen && (
+                      <div className="guest-dob-popover" role="dialog">
+                        <div className="guest-dob-header">
+                          <button
+                            type="button"
+                            className="guest-dob-nav"
+                            onClick={() => stepDobMonth(-1)}
+                            aria-label="Previous month"
+                          >
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M15 6l-6 6 6 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                          <div className="guest-dob-title">
+                            {MONTHS[dobPicker.m]} {dobPicker.y}
+                          </div>
+                          <button
+                            type="button"
+                            className="guest-dob-nav guest-dob-nav-next"
+                            onClick={() => stepDobMonth(1)}
+                            aria-label="Next month"
+                          >
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M9 6l6 6-6 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="guest-dob-select-row">
+                          <select
+                            className="guest-dob-select"
+                            value={dobPicker.m}
+                            onChange={(e) => setDobPicker((p) => ({ ...p, m: Number(e.target.value) }))}
+                          >
+                            {MONTHS.map((name, i) => (
+                              <option key={name} value={i}>{name}</option>
+                            ))}
+                          </select>
+                          <select
+                            className="guest-dob-select"
+                            value={dobPicker.y}
+                            onChange={(e) => setDobPicker((p) => ({ ...p, y: Number(e.target.value) }))}
+                          >
+                            {(() => {
+                              const curY = new Date().getFullYear();
+                              const out = [];
+                              for (let y = curY; y >= curY - 25; y--) out.push(y);
+                              return out.map((y) => (
+                                <option key={y} value={y}>{y}</option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+                        <div className="guest-dob-weekday-row">
+                          {["S", "M", "T", "W", "T", "F", "S"].map((w, i) => (
+                            <div key={i} className="guest-dob-weekday">{w}</div>
+                          ))}
+                        </div>
+                        <div className="guest-dob-day-grid">
+                          {dobDayGrid().map((cell, idx) => {
+                            const isSelected = (
+                              cell.inMonth &&
+                              form.student.birthDate === `${dobPicker.y}-${pad2(dobPicker.m + 1)}-${pad2(cell.d)}`
+                            );
+                            const isToday = (() => {
+                              const t = new Date();
+                              return cell.inMonth &&
+                                dobPicker.y === t.getFullYear() &&
+                                dobPicker.m === t.getMonth() &&
+                                cell.d === t.getDate();
+                            })();
+                            return (
+                              <button
+                                type="button"
+                                key={idx}
+                                className={
+                                  "guest-dob-day" +
+                                  (!cell.inMonth ? " out" : "") +
+                                  (isSelected ? " selected" : "") +
+                                  (isToday ? " today" : "")
+                                }
+                                onClick={() => { if (cell.inMonth) selectDobDay(cell.d); }}
+                                disabled={!cell.inMonth}
+                              >
+                                {cell.d}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {errors?.student?.birthDate && (
+                    <p className="guest-field-error">{errors.student.birthDate}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label>
+                    Gender: <span className="guest-required">*</span>
+                  </label>
+                  <div className="guest-radio-row">
+                    {["Male", "Female"].map((g) => (
+                      <label key={g} className="guest-radio">
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={g}
+                          checked={form.student.gender === g}
+                          onChange={(e) => updateForm("student", "gender", e.target.value)}
+                        />
+                        <span>{g}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors?.student?.gender && (
+                    <p className="guest-field-error">{errors.student.gender}</p>
+                  )}
+                </div>
+              </div>
 
-            <p className="guest-consent-text">
-              I confirm that all information provided above is true to the best of my knowledge.
-              <span className="guest-required"> *</span>
-            </p>
-
-            <div className="guest-row guest-row-2">
-              <div className="guest-field">
-                <div className="guest-signature-wrap">
-                  <canvas
-                    ref={canvasRef}
-                    width={500}
-                    height={160}
-                    className={
-                      errors?.signature
-                        ? "guest-signature-pad guest-signature-invalid"
-                        : "guest-signature-pad"
-                    }
-                    onMouseDown={onSignatureMouseDown}
-                    onMouseMove={onSignatureMouseMove}
-                    onMouseUp={onSignatureMouseUp}
-                    onMouseLeave={onSignatureMouseUp}
-                    onTouchStart={(e) => {
-                      const t = e.touches[0];
-                      onSignatureMouseDown({ clientX: t.clientX, clientY: t.clientY });
-                    }}
-                    onTouchMove={(e) => {
-                      const t = e.touches[0];
-                      onSignatureMouseMove({ clientX: t.clientX, clientY: t.clientY });
-                    }}
-                    onTouchEnd={onSignatureMouseUp}
+              <div className="guest-row">
+                <div className="guest-field">
+                  <label htmlFor="studentAddress">
+                    Student Address: <span className="guest-required">*</span>
+                  </label>
+                  <input
+                    id="studentAddress"
+                    className={inputInvalid("student", "address")}
+                    placeholder="Full Address"
+                    value={form.student.address}
+                    onChange={(e) => updateForm("student", "address", e.target.value)}
                   />
-                  <button
-                    type="button"
-                    className="guest-signature-clear"
-                    onClick={clearSignature}
-                  >
-                    Clear
-                  </button>
-                </div>
-                {errors?.signature && (
-                  <p className="guest-field-error">{errors.signature}</p>
-                )}
-                <p className="guest-signature-label">Applicant Signature</p>
-              </div>
-              <div className="guest-field guest-brand-footer">
-                <div className="guest-brand-seal">
-                  <span className="guest-seal-k">RCAC</span>
-                  <span className="guest-seal-name">Rainbow 5 Christian Academy of Caloocan Inc.</span>
-                  <span className="guest-seal-since">est. 2011</span>
+                  {errors?.student?.address && (
+                    <p className="guest-field-error">{errors.student.address}</p>
+                  )}
                 </div>
               </div>
-            </div>
-          </section>
 
-          <footer className="guest-form-footer">
-            <button
-              type="reset"
-              className="guest-btn guest-btn-ghost"
-              onClick={() => {
-                setFeedback(null);
-                setErrors({});
-                Object.keys(files).forEach((k) => removeFile(k));
-                clearSignature();
-              }}
-              disabled={submitting}
-            >
-              Reset Form
-            </button>
-            <button
-              type="submit"
-              className="guest-btn guest-btn-submit"
-              disabled={submitting}
-            >
-              {submitting ? "Submitting…" : "Submit Enrollment →"}
-            </button>
-          </footer>
-        </form>
+              <div className="guest-row guest-row-2">
+                <div className="guest-field">
+                  <label htmlFor="studentPhone">
+                    Contact Number: <span className="guest-required">*</span>
+                    <span className="guest-field-hint">(PH: 09XXXXXXXXX)</span>
+                  </label>
+                  <input
+                    id="studentPhone"
+                    type="tel"
+                    className={inputInvalid("student", "phone")}
+                    placeholder="09XXXXXXXXX"
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={form.student.phone}
+                    onChange={(e) => updatePhone("student", "phone", e.target.value)}
+                  />
+                  {errors?.student?.phone && (
+                    <p className="guest-field-error">{errors.student.phone}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label htmlFor="studentEmail">
+                    Email Address: <span className="guest-required">*</span>
+                  </label>
+                  <input
+                    id="studentEmail"
+                    type="email"
+                    className={inputInvalid("student", "email")}
+                    placeholder="name@example.com"
+                    value={form.student.email}
+                    onChange={(e) => updateForm("student", "email", e.target.value)}
+                  />
+                  {errors?.student?.email && (
+                    <p className="guest-field-error">{errors.student.email}</p>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Parent / Guardian */}
+            <section className="guest-section">
+              <h2 className="guest-section-title">Parent / Guardian Information</h2>
+
+              <div className="guest-row">
+                <div className="guest-field">
+                  <label htmlFor="parentFirstName">
+                    Parent / Guardian First Name: <span className="guest-required">*</span>
+                  </label>
+                  <input
+                    id="parentFirstName"
+                    className={inputInvalid("parent", "firstName")}
+                    placeholder="First Name"
+                    value={form.parent.firstName}
+                    onChange={(e) => updateForm("parent", "firstName", e.target.value)}
+                  />
+                  {errors?.parent?.firstName && (
+                    <p className="guest-field-error">{errors.parent.firstName}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label htmlFor="parentLastName">
+                    Parent / Guardian Last Name: <span className="guest-required">*</span>
+                  </label>
+                  <input
+                    id="parentLastName"
+                    className={inputInvalid("parent", "lastName")}
+                    placeholder="Last Name"
+                    value={form.parent.lastName}
+                    onChange={(e) => updateForm("parent", "lastName", e.target.value)}
+                  />
+                  {errors?.parent?.lastName && (
+                    <p className="guest-field-error">{errors.parent.lastName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="guest-row guest-row-3">
+                <div className="guest-field">
+                  <label htmlFor="parentRelationship">
+                    Relationship To Student: <span className="guest-required">*</span>
+                  </label>
+                  <select
+                    id="parentRelationship"
+                    className={inputInvalid("parent", "relationship")}
+                    value={form.parent.relationship}
+                    onChange={(e) => updateForm("parent", "relationship", e.target.value)}
+                  >
+                    <option value="">Ex- Father/Mother</option>
+                    {RELATIONSHIP_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  {errors?.parent?.relationship && (
+                    <p className="guest-field-error">{errors.parent.relationship}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label htmlFor="parentPhone">
+                    Contact Number: <span className="guest-required">*</span>
+                    <span className="guest-field-hint">(PH: 09XXXXXXXXX)</span>
+                  </label>
+                  <input
+                    id="parentPhone"
+                    type="tel"
+                    className={inputInvalid("parent", "phone")}
+                    placeholder="09XXXXXXXXX"
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={form.parent.phone}
+                    onChange={(e) => updatePhone("parent", "phone", e.target.value)}
+                  />
+                  {errors?.parent?.phone && (
+                    <p className="guest-field-error">{errors.parent.phone}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label htmlFor="parentEmail">
+                    Email Address: <span className="guest-required">*</span>
+                  </label>
+                  <input
+                    id="parentEmail"
+                    type="email"
+                    className={inputInvalid("parent", "email")}
+                    placeholder="name@example.com"
+                    value={form.parent.email}
+                    onChange={(e) => updateForm("parent", "email", e.target.value)}
+                  />
+                  {errors?.parent?.email && (
+                    <p className="guest-field-error">{errors.parent.email}</p>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Academic */}
+            <section className="guest-section">
+              <h2 className="guest-section-title">Academic Information</h2>
+
+              <div className="guest-row guest-row-2">
+                <div className="guest-field">
+                  <label htmlFor="gradeLevel">
+                    Grade / Program Applying For: <span className="guest-required">*</span>
+                  </label>
+                  <select
+                    id="gradeLevel"
+                    className={inputInvalid("academic", "gradeLevel")}
+                    value={form.academic.gradeLevel}
+                    onChange={(e) => updateForm("academic", "gradeLevel", e.target.value)}
+                  >
+                    <option value="">Ex- 8th Grade</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                  {errors?.academic?.gradeLevel && (
+                    <p className="guest-field-error">{errors.academic.gradeLevel}</p>
+                  )}
+                </div>
+                <div className="guest-field">
+                  <label htmlFor="previousSchool">Previous School (if applicable):</label>
+                  <input
+                    id="previousSchool"
+                    className="guest-input"
+                    placeholder="Full Name"
+                    value={form.academic.previousSchool}
+                    onChange={(e) => updateForm("academic", "previousSchool", e.target.value)}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Document Uploads */}
+            <section className="guest-section">
+              <h2 className="guest-section-title">Required Documents</h2>
+              <div className="guest-requirements">
+                {REQUIREMENTS.map((req) => {
+                  const file = files[req.type];
+                  const hasFile = !!file;
+                  const inputId = `req-${req.type}`;
+                  return (
+                    <div
+                      key={req.type}
+                      className={
+                        "guest-requirement " +
+                        (hasFile ? "guest-requirement-uploaded" : "")
+                      }
+                    >
+                      <div className="guest-requirement-info">
+                        <span className="guest-requirement-icon">{req.icon}</span>
+                        <div>
+                          <h3 className="guest-requirement-name">{req.label}</h3>
+                          {hasFile ? (
+                            <p className="guest-requirement-status guest-status-ok">
+                              ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                            </p>
+                          ) : (
+                            <p className="guest-requirement-status guest-status-pending">
+                              ⚠ Not uploaded
+                            </p>
+                          )}
+                          {hasFile && preview[req.type] && (
+                            <img
+                              src={preview[req.type]}
+                              alt={req.label}
+                              className="guest-requirement-preview"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="guest-requirement-actions">
+                        {hasFile ? (
+                          <button
+                            type="button"
+                            className="guest-btn guest-btn-secondary"
+                            onClick={() => removeFile(req.type)}
+                          >
+                            Remove
+                          </button>
+                        ) : (
+                          <>
+                            <label
+                              htmlFor={inputId}
+                              className="guest-btn guest-btn-primary guest-btn-upload"
+                            >
+                              Upload
+                            </label>
+                            <input
+                              id={inputId}
+                              type="file"
+                              className="guest-file-input"
+                              accept={
+                                req.type === "id_picture_1x1"
+                                  ? "image/*"
+                                  : "application/pdf,image/*"
+                              }
+                              onChange={(e) =>
+                                handleFileUpload(req.type, e.target.files?.[0] || null)
+                              }
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Consent */}
+            <section className="guest-section guest-section-consent">
+              <h2 className="guest-section-title">Consent and Signature</h2>
+
+              <p className="guest-consent-text">
+                I confirm that all information provided above is true to the best of my knowledge.
+                <span className="guest-required"> *</span>
+              </p>
+
+              <div className="guest-row guest-row-2">
+                <div className="guest-field">
+                  <div className="guest-signature-wrap">
+                    <canvas
+                      ref={canvasRef}
+                      width={500}
+                      height={160}
+                      className={
+                        errors?.signature
+                          ? "guest-signature-pad guest-signature-invalid"
+                          : "guest-signature-pad"
+                      }
+                      onMouseDown={onSignatureMouseDown}
+                      onMouseMove={onSignatureMouseMove}
+                      onMouseUp={onSignatureMouseUp}
+                      onMouseLeave={onSignatureMouseUp}
+                      onTouchStart={(e) => {
+                        const t = e.touches[0];
+                        onSignatureMouseDown({ clientX: t.clientX, clientY: t.clientY });
+                      }}
+                      onTouchMove={(e) => {
+                        const t = e.touches[0];
+                        onSignatureMouseMove({ clientX: t.clientX, clientY: t.clientY });
+                      }}
+                      onTouchEnd={onSignatureMouseUp}
+                    />
+                    <button
+                      type="button"
+                      className="guest-signature-clear"
+                      onClick={clearSignature}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {errors?.signature && (
+                    <p className="guest-field-error">{errors.signature}</p>
+                  )}
+                  <p className="guest-signature-label">Applicant Signature</p>
+                </div>
+                <div className="guest-field guest-brand-footer">
+                  <div className="guest-brand-seal">
+                    <span className="guest-seal-k">RCAC</span>
+                    <span className="guest-seal-name">Rainbow 5 Christian Academy of Caloocan Inc.</span>
+                    <span className="guest-seal-since">est. 2011</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <footer className="guest-form-footer">
+              <button
+                type="reset"
+                className="guest-btn guest-btn-ghost"
+                onClick={() => {
+                  setFeedback(null);
+                  setErrors({});
+                  Object.keys(files).forEach((k) => removeFile(k));
+                  clearSignature();
+                }}
+                disabled={submitting}
+              >
+                Reset Form
+              </button>
+              <button
+                type="submit"
+                className="guest-btn guest-btn-submit"
+                disabled={submitting}
+              >
+                {submitting ? "Submitting…" : "Submit Enrollment →"}
+              </button>
+            </footer>
+          </form>
+        )}
       </main>
 
       <footer className="guest-footer">
         <p>© 2026 KidSecure. · Secure enrollment portal for parents and guardians</p>
       </footer>
+
+      {showLookupPopup && (
+        <div className="guest-lookup-overlay" onClick={closeLookupPopup}>
+          <div className="guest-lookup-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="guest-lookup-close"
+              onClick={closeLookupPopup}
+              aria-label="Close"
+            >
+              ×
+            </button>
+
+            {lookupError ? (
+              <div className="guest-lookup-result guest-lookup-result-error">
+                <div className="guest-lookup-result-icon">❓</div>
+                <h3>Not Found</h3>
+                <p>{lookupError}</p>
+              </div>
+            ) : lookupResult ? (
+              <LookupResultView result={lookupResult} />
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LookupResultView({ result }) {
+  const { referenceNumber, status, studentFirstName, rejectionReason } = result;
+
+  if (status === "pending") {
+    return (
+      <div className="guest-lookup-result guest-lookup-result-pending">
+        <div className="guest-lookup-result-icon">⏳</div>
+        <h3>Application Pending</h3>
+        <p className="guest-lookup-refnum">{referenceNumber}</p>
+        <p>
+          {studentFirstName ? `${studentFirstName}'s` : "This"} application is still being
+          reviewed by the school. Please check back later.
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "rejected") {
+    return (
+      <div className="guest-lookup-result guest-lookup-result-rejected">
+        <div className="guest-lookup-result-icon">✕</div>
+        <h3>Application Not Approved</h3>
+        <p className="guest-lookup-refnum">{referenceNumber}</p>
+        {rejectionReason && (
+          <p className="guest-lookup-reason">
+            <strong>Reason: </strong>{rejectionReason}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (status === "converted") {
+    return (
+      <div className="guest-lookup-result guest-lookup-result-converted">
+        <div className="guest-lookup-result-icon">🎉</div>
+        <h3>Approved!</h3>
+        <p className="guest-lookup-refnum">{referenceNumber}</p>
+        <p>
+          Congratulations! Your parent app login details have been sent to the email address
+          you provided.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="guest-lookup-result">
+      <p className="guest-lookup-refnum">{referenceNumber}</p>
+      <p>Status: {status}</p>
     </div>
   );
 }

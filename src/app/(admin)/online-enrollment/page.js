@@ -1,5 +1,5 @@
 "use client";
-
+// src/app/%28admin%29/online-enrollment/page
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import "./online-enrollment.css";
@@ -68,6 +68,7 @@ function normalizeItem(raw) {
 
   const submittedAt = get(raw, ["submitted_at"]) || get(raw, ["created_at"]) || "";
   const status = get(raw, ["status"]) || "pending";
+  const referenceNumber = get(raw, ["referenceNumber"]) || get(raw, ["reference_number"]) || "";
 
   return {
     id: String(raw.id),
@@ -75,6 +76,7 @@ function normalizeItem(raw) {
     phone, address, birthDate, gender, email,
     parentFullName, parentRel, parentEmail, parentPhone,
     grade, section, previousSchool,
+    referenceNumber,
     files,
     status,
     submittedAt,
@@ -235,7 +237,7 @@ export default function OnlineEnrollmentListPage() {
         <div className="oe-card-header">
           <input
             className="oe-filter-input"
-            placeholder="Search by student name, parent name, email, previous school…"
+            placeholder="Search by student name, parent name, email, or reference number…"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
@@ -288,7 +290,11 @@ export default function OnlineEnrollmentListPage() {
                           <Link href={`/online-enrollment/${it.id}`} className="oe-name-link">
                             {it.studentFullName || "Unnamed Student"}
                           </Link>
+                          {it.referenceNumber && (
+                            <div className="oe-refnum">{it.referenceNumber}</div>
+                          )}
                           <div className="oe-meta-row">
+                            {/* unchanged */}
                             {it.birthDate && (
                               <span className="oe-pill oe-pill-muted">🎂 {formatDate(it.birthDate)}</span>
                             )}

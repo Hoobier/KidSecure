@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-
+// src/middleware.js
 export function middleware(request) {
     console.log("MIDDLEWARE RAN:", request.nextUrl.pathname);
   const token = request.cookies.get("kidsecure_token");

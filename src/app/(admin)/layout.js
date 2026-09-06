@@ -1,5 +1,5 @@
 "use client";
-
+// src/app/%28admin%29/layout.js
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -72,6 +72,9 @@ export default function AdminLayout({ children }) {
 
           <div className="sidebar-footer">
             <hr className="sidebar-divider" />
+            <Link className={linkClass("/settings/term")} href="/settings/term">
+              School Term
+            </Link>
             <button className="sidebar-link sidebar-logout" onClick={() => setShowLogoutConfirm(true)}>
               Log Out
             </button>
