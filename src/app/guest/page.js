@@ -46,6 +46,7 @@ function getInitialFormState() {
     student: { firstName: "", lastName: "", birthDate: "", gender: "", address: "", phone: "", email: "" },
     parent: { firstName: "", lastName: "", relationship: "", phone: "", email: "" },
     academic: { gradeLevel: "", previousSchool: "" },
+    isTransferee: false,
     signature: "",
   };
 }
@@ -66,14 +67,52 @@ export default function GuestEnrollmentPage() {
   const [copied, setCopied] = useState(false);
 
   const canvasRef = useRef(null);
-  const signaturePadRef = useRef({ drawing: false, ctx: null, lastX: 0, lastY: 0 });
+  const signaturePadRef = useRef({ drawing: false, lastX: 0, lastY: 0 });
 
   const [dobOpen, setDobOpen] = useState(false);
   const [dobPicker, setDobPicker] = useState(() => {
     const today = new Date();
-    return { y: today.getFullYear(), m: today.getMonth() };
+    const defaultYear = today.getFullYear() - 8;
+    return { y: defaultYear, m: today.getMonth() };
   });
   const dobWrapRef = useRef(null);
+
+  const MIN_AGE = 3;
+  const MAX_AGE = 15;
+
+  function getAgeRangeBoundaries() {
+    const today = new Date();
+    const maxBirth = new Date(
+      today.getFullYear() - MIN_AGE,
+      today.getMonth(),
+      today.getDate()
+    );
+    const minBirth = new Date(
+      today.getFullYear() - MAX_AGE - 1,
+      today.getMonth(),
+      today.getDate() + 1
+    );
+    return {
+      minYear: minBirth.getFullYear(),
+      maxYear: maxBirth.getFullYear(),
+      minDate: new Date(minBirth.getFullYear(), minBirth.getMonth(), minBirth.getDate()),
+      maxDate: new Date(maxBirth.getFullYear(), maxBirth.getMonth(), maxBirth.getDate()),
+    };
+  }
+
+  function computeAge(iso) {
+    if (!iso) return null;
+    const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+    if (!y || !m || !d) return null;
+    const birth = new Date(y, m - 1, d);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  }
 
   useEffect(() => {
     function onDocClick(e) {
@@ -116,29 +155,35 @@ export default function GuestEnrollmentPage() {
 
   function stepDobMonth(dir) {
     setDobPicker((prev) => {
+      const { minYear, maxYear } = getAgeRangeBoundaries();
       let y = prev.y;
       let m = prev.m + dir;
       if (m < 0) { m = 11; y -= 1; }
       if (m > 11) { m = 0; y += 1; }
+      if (y < minYear) { y = minYear; m = 0; }
+      if (y > maxYear) { y = maxYear; m = 11; }
       return { y, m };
     });
   }
 
   function dobDayGrid() {
     const { y, m } = dobPicker;
+    const { minDate, maxDate } = getAgeRangeBoundaries();
     const firstDOW = new Date(y, m, 1).getDay();
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const prevMonthDays = new Date(y, m, 0).getDate();
     const cells = [];
     for (let i = 0; i < firstDOW; i++) {
-      cells.push({ d: prevMonthDays - firstDOW + 1 + i, inMonth: false });
+      cells.push({ d: prevMonthDays - firstDOW + 1 + i, inMonth: false, disabled: true });
     }
     for (let d = 1; d <= daysInMonth; d++) {
-      cells.push({ d, inMonth: true });
+      const dayDate = new Date(y, m, d);
+      const disabled = dayDate < minDate || dayDate > maxDate;
+      cells.push({ d, inMonth: true, disabled });
     }
     let tail = 1;
     while (cells.length % 7 !== 0) {
-      cells.push({ d: tail, inMonth: false });
+      cells.push({ d: tail, inMonth: false, disabled: true });
       tail++;
     }
     return cells;
@@ -178,7 +223,7 @@ export default function GuestEnrollmentPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    if (!signaturePadRef.current.ctx) signaturePadRef.current.ctx = ctx;
+    if (!ctx) return;
     signaturePadRef.current.drawing = true;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -190,7 +235,9 @@ export default function GuestEnrollmentPage() {
   function onSignatureMouseMove(e) {
     if (!signaturePadRef.current.drawing) return;
     const canvas = canvasRef.current;
-    const ctx = signaturePadRef.current.ctx;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -275,6 +322,17 @@ export default function GuestEnrollmentPage() {
       errs.parent = errs.parent || {};
       errs.parent.phone = "Enter a valid PH mobile number (09XXXXXXXXX — 11 digits)";
     }
+    if (form.student.birthDate) {
+      const age = computeAge(form.student.birthDate);
+      if (age !== null && (age < MIN_AGE || age > MAX_AGE)) {
+        errs.student = errs.student || {};
+        errs.student.birthDate = `Student must be between ${MIN_AGE} and ${MAX_AGE} years old on enrollment date`;
+      }
+    }
+    if (form.isTransferee && !form.academic.previousSchool.trim()) {
+      errs.academic = errs.academic || {};
+      errs.academic.previousSchool = "Previous School Name is required for transferees";
+    }
     if (!form.signature) errs.signature = "Please sign the declaration";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -294,11 +352,13 @@ export default function GuestEnrollmentPage() {
         student: form.student,
         parent: form.parent,
         academic: form.academic,
+        isTransferee: !!form.isTransferee,
         signature: form.signature || null,
       };
       fd.append("data", JSON.stringify(payload));
       if (files.birth_certificate) fd.append("birth_certificate", files.birth_certificate);
       if (files.id_picture_1x1) fd.append("id_picture_1x1", files.id_picture_1x1);
+      if (form.isTransferee && files.form_137) fd.append("form_137", files.form_137);
 
       const res = await fetch("/api/guest/enrollments", {
         method: "POST",
@@ -558,9 +618,9 @@ export default function GuestEnrollmentPage() {
                             onChange={(e) => setDobPicker((p) => ({ ...p, y: Number(e.target.value) }))}
                           >
                             {(() => {
-                              const curY = new Date().getFullYear();
+                              const { minYear, maxYear } = getAgeRangeBoundaries();
                               const out = [];
-                              for (let y = curY; y >= curY - 25; y--) out.push(y);
+                              for (let y = maxYear; y >= minYear; y--) out.push(y);
                               return out.map((y) => (
                                 <option key={y} value={y}>{y}</option>
                               ));
@@ -595,8 +655,8 @@ export default function GuestEnrollmentPage() {
                                   (isSelected ? " selected" : "") +
                                   (isToday ? " today" : "")
                                 }
-                                onClick={() => { if (cell.inMonth) selectDobDay(cell.d); }}
-                                disabled={!cell.inMonth}
+                                onClick={() => { if (cell.inMonth && !cell.disabled) selectDobDay(cell.d); }}
+                                disabled={!cell.inMonth || cell.disabled}
                               >
                                 {cell.d}
                               </button>
@@ -739,7 +799,7 @@ export default function GuestEnrollmentPage() {
                     value={form.parent.relationship}
                     onChange={(e) => updateForm("parent", "relationship", e.target.value)}
                   >
-                    <option value="">Ex- Father/Mother</option>
+                    <option value="">— Select Relationship —</option>
                     {RELATIONSHIP_OPTIONS.map((r) => (
                       <option key={r} value={r}>
                         {r}
@@ -803,7 +863,7 @@ export default function GuestEnrollmentPage() {
                     value={form.academic.gradeLevel}
                     onChange={(e) => updateForm("academic", "gradeLevel", e.target.value)}
                   >
-                    <option value="">Ex- 8th Grade</option>
+                    <option value="">— Select Grade —</option>
                     {GRADE_OPTIONS.map((g) => (
                       <option key={g} value={g}>
                         {g}
@@ -902,6 +962,137 @@ export default function GuestEnrollmentPage() {
                   );
                 })}
               </div>
+
+              <div style={{ marginTop: "1.25rem" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    fontSize: "0.95rem",
+                    fontWeight: 600,
+                    color: "#1b2a4a",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!form.isTransferee}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, isTransferee: e.target.checked }))
+                    }
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      accentColor: "#1b2a4a",
+                      margin: 0,
+                      colorScheme: "light",
+                      flexShrink: 0,
+                    }}
+                  />
+                  This student is transferring from another school
+                </label>
+              </div>
+
+              {form.isTransferee && (
+                <div
+                  className="guest-requirements"
+                  style={{
+                    marginTop: "1rem",
+                    borderTop: "1px dashed #d5dae2",
+                    paddingTop: "1rem",
+                  }}
+                >
+                  {(() => {
+                    const req = { type: "form_137", label: "Form 137", icon: "📄" };
+                    const file = files[req.type];
+                    const hasFile = !!file;
+                    const inputId = `req-${req.type}`;
+                    return (
+                      <div
+                        key={req.type}
+                        className={
+                          "guest-requirement " +
+                          (hasFile ? "guest-requirement-uploaded" : "")
+                        }
+                      >
+                        <div className="guest-requirement-info">
+                          <span className="guest-requirement-icon">{req.icon}</span>
+                          <div>
+                            <h3 className="guest-requirement-name">{req.label}</h3>
+                            {hasFile ? (
+                              <p className="guest-requirement-status guest-status-ok">
+                                ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                              </p>
+                            ) : (
+                              <p className="guest-requirement-status guest-status-pending">
+                                ⚠ Not uploaded
+                              </p>
+                            )}
+                            {hasFile && preview[req.type] && (
+                              <img
+                                src={preview[req.type]}
+                                alt={req.label}
+                                className="guest-requirement-preview"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="guest-requirement-actions">
+                          {hasFile ? (
+                            <button
+                              type="button"
+                              className="guest-btn guest-btn-secondary"
+                              onClick={() => removeFile(req.type)}
+                            >
+                              Remove
+                            </button>
+                          ) : (
+                            <>
+                              <label
+                                htmlFor={inputId}
+                                className="guest-btn guest-btn-primary guest-btn-upload"
+                              >
+                                Upload
+                              </label>
+                              <input
+                                id={inputId}
+                                type="file"
+                                className="guest-file-input"
+                                accept="application/pdf,image/*"
+                                onChange={(e) =>
+                                  handleFileUpload(req.type, e.target.files?.[0] || null)
+                                }
+                              />
+                            </>
+                          )}
+                          {hasFile && (
+                            <label
+                              htmlFor={`replace-${req.type}`}
+                              className="guest-btn guest-btn-secondary"
+                              style={{ marginLeft: "0.5rem" }}
+                            >
+                              Replace
+                            </label>
+                          )}
+                          {hasFile && (
+                            <input
+                              id={`replace-${req.type}`}
+                              type="file"
+                              className="guest-file-input"
+                              accept="application/pdf,image/*"
+                              onChange={(e) =>
+                                handleFileUpload(req.type, e.target.files?.[0] || null)
+                              }
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </section>
 
             {/* Consent */}
@@ -1027,11 +1218,44 @@ function LookupResultView({ result }) {
     return (
       <div className="guest-lookup-result guest-lookup-result-pending">
         <div className="guest-lookup-result-icon">⏳</div>
-        <h3>Application Pending</h3>
-        <p className="guest-lookup-refnum">{referenceNumber}</p>
-        <p>
-          {studentFirstName ? `${studentFirstName}'s` : "This"} application is still being
-          reviewed by the school. Please check back later.
+        <h3 style={{ fontWeight: 800 }}>Application Pending</h3>
+        <p className="guest-lookup-refnum" style={{ fontSize: "1.35rem", letterSpacing: "2px" }}>{referenceNumber}</p>
+
+        <p style={{ lineHeight: 1.7, margin: "0.5rem 0 0.75rem", textAlign: "center" }}>
+          <strong>Enrollment Submitted Successfully!</strong>
+          <br />
+          <strong>This</strong> enrollment application has been submitted and is currently pending approval.
+        </p>
+
+        <p style={{ lineHeight: 1.7, margin: "0 0 1rem", textAlign: "center" }}>
+          To complete the enrollment process and be accepted for enrollment,
+          please proceed with the <strong>on-site payment of ₱6,000</strong>.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "2.5rem",
+            flexWrap: "wrap",
+            marginTop: "0.5rem",
+            paddingTop: "1rem",
+            borderTop: "1px dashed #d5dae2",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontWeight: 700, color: "#1b2a4a", marginBottom: "0.3rem" }}>Status:</div>
+            <div style={{ color: "#854d0e" }}>Pending Payment / Pending Enrollment</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontWeight: 700, color: "#1b2a4a", marginBottom: "0.3rem" }}>Upon Enrollment:</div>
+            <div style={{ color: "#1e824c", fontWeight: 600 }}>₱6,000</div>
+          </div>
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: "0.925rem", color: "#475569", marginTop: "1rem", marginBottom: 0 }}>
+          Please visit the school/admissions office to make the payment and finalize your enrollment.
         </p>
       </div>
     );

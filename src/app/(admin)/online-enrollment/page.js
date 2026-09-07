@@ -293,22 +293,6 @@ export default function OnlineEnrollmentListPage() {
                           {it.referenceNumber && (
                             <div className="oe-refnum">{it.referenceNumber}</div>
                           )}
-                          <div className="oe-meta-row">
-                            {/* unchanged */}
-                            {it.birthDate && (
-                              <span className="oe-pill oe-pill-muted">🎂 {formatDate(it.birthDate)}</span>
-                            )}
-                            {it.gender && (
-                              <span className="oe-pill oe-pill-muted">
-                                {it.gender === "Male" ? "♂ Male" : it.gender === "Female" ? "♀ Female" : it.gender}
-                              </span>
-                            )}
-                          </div>
-                          {it.email && <div className="oe-muted">📧 {it.email}</div>}
-                          {it.phone && <div className="oe-muted">📞 {it.phone}</div>}
-                          {it.address && (
-                            <div className="oe-muted oe-address" title={it.address}>📍 {it.address}</div>
-                          )}
                         </td>
                         <td className="oe-cell-parent">
                           <div className="oe-parent-name">
@@ -319,8 +303,11 @@ export default function OnlineEnrollmentListPage() {
                               </span>
                             )}
                           </div>
-                          {it.parentEmail && <div className="oe-muted">📧 {it.parentEmail}</div>}
-                          {it.parentPhone && <div className="oe-muted">📞 {it.parentPhone}</div>}
+                          {it.parentEmail && <div className="oe-muted">{it.parentEmail}</div>}
+                          {it.parentPhone && <div className="oe-muted">{it.parentPhone}</div>}
+                          {it.address && (
+                            <div className="oe-muted oe-address" title={it.address}>{it.address}</div>
+                          )}
                         </td>
                         <td className="oe-cell-academic">
                           {it.grade || it.section ? (
@@ -382,7 +369,7 @@ export default function OnlineEnrollmentListPage() {
 function DocChip({ label, uploaded }) {
   return (
     <span className={`oe-doc-chip oe-doc-${uploaded ? "ok" : "miss"}`}>
-      {uploaded ? "✅" : "⚠️"} {label}
+      {label}
     </span>
   );
 }

@@ -100,6 +100,10 @@ function normalizeItem(raw) {
       "id_picture_1x1_url", "id_picture_1x1_path",
       "id_picture",
     ]),
+    form_137: getFile([
+      "form_137", "form137",
+      "form_137_url", "form_137_path",
+    ]),
   };
 
   const submittedAt = get(raw, ["submitted_at"]) || get(raw, ["created_at"]) || "";
@@ -184,13 +188,23 @@ export default function OnlineEnrollmentDetailPage() {
     setError("");
     try {
       const res = await fetch(`/api/guest/enrollments/${id}`, { credentials: "include" });
-      if (!res.ok) throw new Error();
-      const json = await res.json();
+      const rawText = await res.text().catch(() => "");
+      let json = null;
+      try { json = rawText ? JSON.parse(rawText) : {}; } catch { json = {}; }
+      if (!res.ok) {
+        throw new Error(
+          `Server returned ${res.status} ${res.statusText} — ` +
+          (json?.message || json?.error || rawText.slice(0, 300) || "(no response body)")
+        );
+      }
       const raw = json?.data ?? json;
-      if (!raw || (!raw.id && id)) throw new Error();
+      if (!raw || (!raw.id && id)) {
+        throw new Error("Backend returned empty/unknown shape — raw: " + JSON.stringify(json).slice(0, 250));
+      }
       setData(normalizeItem(raw));
-    } catch {
-      setError("Unable to load this online enrollment submission.");
+    } catch (err) {
+      const msg = err?.message ? String(err.message) : String(err);
+      setError("⚠️ Unable to load this online enrollment submission.\n\nDebug info: " + msg);
     } finally {
       setLoading(false);
     }
@@ -414,6 +428,12 @@ export default function OnlineEnrollmentDetailPage() {
             label="1x1 ID Picture"
             data={it.files.id_picture_1x1}
           />
+          {it.files.form_137 && (
+            <DocCard
+              label="Form 137"
+              data={it.files.form_137}
+            />
+          )}
         </div>
       </section>
 

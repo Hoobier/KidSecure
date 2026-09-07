@@ -330,27 +330,42 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
             <div
               key={type}
               className="rfid-manual-entry"
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1.25rem", marginBottom: "0.75rem" }}
             >
-              <div>
-                <div style={{ fontWeight: 600, color: "#1b2a4a" }}>
-                  {icon} {label}
+              <div className="enrollment-doc-info" style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem", flex: 1, minWidth: 0 }}>
+                <span className="enrollment-doc-icon" style={{
+                  width: "46px",
+                  height: "46px",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.4rem",
+                  background: "#1b2a4a",
+                  color: "#ffffff",
+                  flexShrink: 0,
+                  boxShadow: "0 4px 10px rgba(27,42,74,0.22)"
+                }}>{icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "1.025rem", fontWeight: 700, color: "#1b2a4a", margin: "0.1rem 0 0.25rem" }}>
+                    {label}
+                  </div>
+                  {uploaded ? (
+                    <div style={{ fontSize: "0.85rem", color: "#166534", marginTop: "0.2rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      ✅ {uploaded.original_filename}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "0.85rem", color: "#854d0e", marginTop: "0.2rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      ⚠ Not uploaded
+                    </div>
+                  )}
+                  {uploadError[type] && (
+                    <p className="enrollment-field-error">{uploadError[type]}</p>
+                  )}
                 </div>
-                {uploaded ? (
-                  <div style={{ fontSize: "0.85rem", color: "#166534", marginTop: "0.2rem" }}>
-                    ✅ {uploaded.original_filename}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: "0.85rem", color: "#854d0e", marginTop: "0.2rem" }}>
-                    ⚠ Not uploaded
-                  </div>
-                )}
-                {uploadError[type] && (
-                  <p className="enrollment-field-error">{uploadError[type]}</p>
-                )}
               </div>
 
-              <label className="enrollment-btn enrollment-btn-secondary" style={{ cursor: "pointer", margin: 0 }}>
+              <label className="enrollment-btn enrollment-btn-secondary" style={{ cursor: "pointer", margin: 0, flexShrink: 0 }}>
                 {isUploading ? "Uploading..." : uploaded ? "Replace" : "Upload"}
                 <input
                   type="file"

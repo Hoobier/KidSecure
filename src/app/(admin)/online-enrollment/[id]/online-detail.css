@@ -73,7 +73,7 @@
   top: 0;
   width: 5px;
   height: 100%;
-  background: linear-gradient(180deg, #c9a227 0%, #1b2a4a 100%);
+  background: #1b2a4a;
 }
 
 .oed-back-link {
@@ -139,7 +139,7 @@
   cursor: not-allowed;
 }
 .oed-btn-convert {
-  background: linear-gradient(135deg, #1e824c 0%, #2fb067 100%);
+  background: #1e824c;
   color: #ffffff;
   box-shadow: 0 10px 24px rgba(30,130,76,0.28);
 }
@@ -154,7 +154,7 @@
   box-shadow: 0 2px 6px rgba(192,57,43,0.06);
 }
 .oed-btn-reject:hover:not(:disabled) {
-  background: linear-gradient(135deg, #c0392b 0%, #e05245 100%);
+  background: #c0392b;
   color: #ffffff;
   border-color: transparent;
   transform: translateY(-1px);
@@ -166,14 +166,14 @@
   align-items: center;
   padding: 8px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #e9f7ef 0%, #dff4e6 100%);
+  background: #e9f7ef;
   color: #1e824c;
   border: 1.5px solid #bde4c7;
   font-weight: 700;
   font-size: 13px;
 }
 .oed-done-reject {
-  background: linear-gradient(135deg, #fdecea 0%, #f9d7d3 100%);
+  background: #fdecea;
   color: #c0392b;
   border-color: #f5c1bc;
 }
@@ -190,12 +190,12 @@
   gap: 8px;
 }
 .oed-banner-ok {
-  background: linear-gradient(135deg, #e9f7ef 0%, #dff4e6 100%);
+  background: #e9f7ef;
   color: #1e824c;
   border: 1.5px solid #bde4c7;
 }
 .oed-banner-err {
-  background: linear-gradient(135deg, #fdecea 0%, #f9d7d3 100%);
+  background: #fdecea;
   color: #c0392b;
   border: 1.5px solid #f5c1bc;
 }
@@ -223,7 +223,7 @@
   top: 0;
   height: 100%;
   width: 4px;
-  background: linear-gradient(180deg, #c9a227 0%, #1b2a4a 100%);
+  background: #1b2a4a;
   opacity: 0.9;
 }
 
@@ -245,7 +245,7 @@
   width: 4px;
   height: 16px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #c9a227 0%, #1b2a4a 100%);
+  background: #1b2a4a;
 }
 
 .oed-grid {
@@ -316,11 +316,11 @@
   box-shadow: 0 14px 30px -16px rgba(27,42,74,0.24);
 }
 .oed-doc-missing {
-  background: linear-gradient(180deg, #fffcf0 0%, #fff 100%);
+  background: #fffcf0;
   border-color: #f1d97e;
 }
 .oed-doc-uploaded {
-  background: linear-gradient(180deg, #f1faf4 0%, #fff 100%);
+  background: #f1faf4;
   border-color: #bde4c7;
 }
 
@@ -349,19 +349,19 @@
   letter-spacing: 0.01em;
 }
 .oed-doc-status.miss {
-  background: linear-gradient(135deg, #fff6e1 0%, #fef1c7 100%);
+  background: #fff6e1;
   color: #854d0e;
   border: 1px solid #f1d97e;
 }
 .oed-doc-status.ok {
-  background: linear-gradient(135deg, #e9f7ef 0%, #dff4e6 100%);
+  background: #e9f7ef;
   color: #1e824c;
   border: 1px solid #bde4c7;
 }
 .oed-doc-btn {
   padding: 8px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1b2a4a 0%, #253a68 100%);
+  background: #1b2a4a;
   color: #ffffff;
   text-decoration: none;
   font-size: 12.5px;
@@ -433,7 +433,7 @@
   color: #1b2a4a;
   padding: 12px 16px;
   border-radius: 12px;
-  background: linear-gradient(90deg, rgba(201,162,39,0.1) 0%, rgba(30,130,76,0.05) 100%);
+  background: #fff9e6;
   border-left: 4px solid #c9a227;
   line-height: 1.6;
 }
@@ -470,8 +470,7 @@
   border-radius: 10px;
   object-fit: contain;
   border: 1.5px solid #e2e8f0;
-  background:
-    repeating-linear-gradient(-45deg, #fbfcfe 0 10px, #f6f8fc 10px 20px);
+  background: #f8f9fc;
 }
 .oed-signature-empty {
   width: 100%;
@@ -485,8 +484,7 @@
   font-size: 13.5px;
   border-radius: 10px;
   border: 2px dashed #d5dae2;
-  background:
-    repeating-linear-gradient(-45deg, #fbfcfe 0 10px, #f6f8fc 10px 20px);
+  background: #f8f9fc;
 }
 
 .oed-seal-wrap {
@@ -504,7 +502,7 @@
   padding: 14px 18px;
   border-radius: 18px;
   border: 2px solid #1b2a4a;
-  background: linear-gradient(180deg, #ffffff 0%, #f6f8fc 100%);
+  background: #ffffff;
   box-shadow: 0 8px 22px rgba(27,42,74,0.18);
   position: relative;
   overflow: hidden;
@@ -523,10 +521,7 @@
   font-size: 1.75rem;
   font-weight: 900;
   line-height: 1;
-  background: linear-gradient(135deg, #1b2a4a 0%, #c9a227 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #1b2a4a;
   letter-spacing: 0.03em;
 }
 .oed-seal-school {
@@ -581,10 +576,10 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #1e824c 0%, #c9a227 100%);
+  background: #1e824c;
 }
 .oed-modal-reject::before {
-  background: linear-gradient(90deg, #c0392b 0%, #ef6e63 100%);
+  background: #c0392b;
 }
 .oed-modal h3 {
   margin: 0;
@@ -641,7 +636,7 @@
   color: #1b2a4a;
 }
 .oed-modal-primary {
-  background: linear-gradient(135deg, #1e824c 0%, #2fb067 100%);
+  background: #1e824c;
   color: #ffffff;
   box-shadow: 0 8px 20px rgba(30,130,76,0.26);
 }
@@ -650,7 +645,7 @@
   box-shadow: 0 12px 26px rgba(30,130,76,0.38);
 }
 .oed-modal-danger {
-  background: linear-gradient(135deg, #c0392b 0%, #e05245 100%);
+  background: #c0392b;
   color: #ffffff;
   box-shadow: 0 8px 20px rgba(192,57,43,0.26);
 }
