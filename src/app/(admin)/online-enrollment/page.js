@@ -124,6 +124,18 @@ function hasFile(item, key) {
       ["_raw","id_picture_1x1_path"], ["_raw","id_picture_1x1_url"],
       ["_raw","id_picture"], ["_raw","idPicture1x1"],
     ],
+    form_138: [
+      ["files","form_138"], ["files","form138"],
+      ["files","form_138_url"], ["files","form_138_path"],
+      ["_raw","form_138"], ["_raw","form_138_path"],
+      ["_raw","form_138_url"], ["_raw","form138"],
+    ],
+    good_moral: [
+      ["files","good_moral"], ["files","goodMoral"],
+      ["files","good_moral_url"], ["files","good_moral_path"],
+      ["_raw","good_moral"], ["_raw","good_moral_path"],
+      ["_raw","good_moral_url"], ["_raw","goodMoral"],
+    ],
   };
   const paths = keyMap[key] || [];
   return paths.some((path) => {
@@ -326,8 +338,16 @@ export default function OnlineEnrollmentListPage() {
                           )}
                         </td>
                         <td className="oe-cell-docs">
-                          <DocChip label="Birth Certificate" uploaded={hasFile(it, "birth_certificate")} />
-                          <DocChip label="1x1 ID Picture" uploaded={hasFile(it, "id_picture_1x1")} />
+                          <div className="oe-doc-chip-group">
+                            <DocChip label="Birth Certificate" uploaded={hasFile(it, "birth_certificate")} />
+                            <DocChip label="1x1 ID Picture" uploaded={hasFile(it, "id_picture_1x1")} />
+                            {hasFile(it, "form_138") && (
+                              <DocChip label="Form 138" uploaded={true} />
+                            )}
+                            {hasFile(it, "good_moral") && (
+                              <DocChip label="Good Moral" uploaded={true} />
+                            )}
+                          </div>
                         </td>
                         <td className="oe-cell-date">{formatDateLong(it.submittedAt)}</td>
                         <td className="oe-cell-status">

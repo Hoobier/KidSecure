@@ -17,6 +17,7 @@ export default function StudentsPage() {
   const [grade, setGrade] = useState("");
   const [section, setSection] = useState("");
   const [status, setStatus] = useState("active,inactive");
+  const [transferee, setTransferee] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState(""); // "" | "name" | "studentId"
   const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
@@ -38,6 +39,7 @@ export default function StudentsPage() {
       ...(grade ? { grade } : {}),
       ...(section ? { section } : {}),
       ...(status ? { status } : {}),
+      ...(transferee ? { transferee } : {}),
       ...(sort ? { sort_by: sort, sort_dir: sortDir } : {}),
     });
 
@@ -61,7 +63,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, grade, section, status, sort, sortDir]);
+  }, [page, search, grade, section, status, transferee, sort, sortDir]);
 
   useEffect(() => {
     fetchStudents();
@@ -69,19 +71,20 @@ export default function StudentsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, grade, section, status, sort, sortDir]);
+  }, [search, grade, section, status, transferee, sort, sortDir]);
 
   useEffect(() => {
     setSelectedIds(new Set());
   }, [students]);
 
-  const hasAnyFilter = Boolean(search || grade || section || status);
+  const hasAnyFilter = Boolean(search || grade || section || status || transferee);
 
   function handleClearFilters() {
     setSearch("");
     setGrade("");
     setSection("");
     setStatus("");
+    setTransferee("");
     setSort("");
     setSortDir("asc");
     setPage(1);
@@ -269,6 +272,12 @@ export default function StudentsPage() {
           <option value="active,inactive">Active &amp; Inactive (default)</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
+          <option value="graduated">Graduated</option>
+        </select>
+        <select value={transferee} onChange={(e) => setTransferee(e.target.value)} className="students-filter">
+          <option value="">All Student Types</option>
+          <option value="true">Transferees</option>
+          <option value="false">Regular Students</option>
         </select>
         <select
           value={sort ? `${sort}:${sortDir}` : ""}
@@ -325,6 +334,7 @@ export default function StudentsPage() {
               <th>Section</th>
               <th>RFID Tag</th>
               <th>Parent</th>
+              <th>Student Type</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -341,12 +351,13 @@ export default function StudentsPage() {
                   <td><div className="students-skeleton-cell" /></td>
                   <td><div className="students-skeleton-cell" /></td>
                   <td><div className="students-skeleton-cell" /></td>
+                  <td><div className="students-skeleton-cell" /></td>
                 </tr>
               ))}
 
             {!loading && students.length === 0 && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <div className="students-empty">
                     No students found. Try adjusting your search or filters.
                   </div>
@@ -387,6 +398,11 @@ export default function StudentsPage() {
                     )}
                   </td>
                   <td>
+                    <span className={`students-type students-type-${s.isTransferee ? "transferee" : "regular"}`}>
+                      {s.isTransferee ? "Transferee" : "Regular"}
+                    </span>
+                  </td>
+                  <td>
                     <span
                       className={
                         "students-status " +
@@ -394,13 +410,17 @@ export default function StudentsPage() {
                           ? "students-status-active"
                           : s.status === "inactive"
                             ? "students-status-inactive"
+                            : s.status === "graduated"
+                              ? "students-status-graduated"
                             : s.status === "deleted"
                               ? "students-status-deleted"
                               : "students-status-neutral")
                       }
                     >
                       {s.status
-                        ? s.status.charAt(0).toUpperCase() + s.status.slice(1)
+                        ? s.status === "graduated"
+                          ? "Graduated"
+                          : s.status.charAt(0).toUpperCase() + s.status.slice(1)
                         : "Active"}
                     </span>
                   </td>

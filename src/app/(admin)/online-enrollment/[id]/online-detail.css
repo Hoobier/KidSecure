@@ -741,3 +741,45 @@
   border-color: #1b2a4a;
   color: #1b2a4a;
 }
+
+/* ---------- Reject Reason Textarea ---------- */
+
+.oed-reject-textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px 14px;
+  background-color: #ffffff;
+  color: #1b2a4a;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1.5px solid #d5dae2;
+  border-radius: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.oed-reject-textarea::placeholder {
+  color: #9aa3ad;
+}
+
+.oed-reject-textarea:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.12);
+}
+
+.oed-reject-textarea:disabled {
+  background-color: #f8f9fc;
+  color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.oed-reject-textarea-invalid {
+  border-color: #c0392b;
+}
+.oed-reject-textarea-invalid:focus {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.14);
+}

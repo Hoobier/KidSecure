@@ -171,15 +171,15 @@
 
 /* ---------- Date Filter (React Datepicker) ---------- */
 
-.rfid-datepicker-wrapper {
+.rfid-page .rfid-datepicker-wrapper {
   flex-shrink: 0;
 }
 
-.react-datepicker-wrapper {
+.rfid-page .react-datepicker-wrapper {
   width: auto;
 }
 
-.react-datepicker__input-container input.filter-date {
+.rfid-page .react-datepicker__input-container input.filter-date {
   min-width: 160px;
   width: 160px;
 }

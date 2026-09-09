@@ -385,7 +385,7 @@
   margin-right: 2px;
 }
 
-.oe-cell-docs {
+.oe-doc-chip-group {
   display: flex;
   flex-direction: column;
   gap: 6px;

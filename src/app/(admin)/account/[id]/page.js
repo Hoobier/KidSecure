@@ -116,6 +116,13 @@ export default function ParentDetailPage({ params }) {
             <span>{parent.email || "No email on file"}</span>
             <span>•</span>
             <span>{parent.phone || "No phone on file"}</span>
+            <span className={`detail-account-status detail-account-status-${parent.accountStatus || "unknown"}`}>
+              {parent.accountStatus === "frozen"
+                ? "Frozen"
+                : parent.accountStatus === "active"
+                  ? "Active"
+                  : "Unknown"}
+            </span>
           </div>
         </div>
         <div className="detail-header-actions">
@@ -186,12 +193,21 @@ export default function ParentDetailPage({ params }) {
         <div className="detail-login-block">
           <p className="detail-login-label">Parent Portal Sign In</p>
           <p className="detail-login-email">{parent.email || "—"}</p>
+          {parent.accountStatus === "frozen" && (
+            <p className="detail-login-frozen-note">
+              This account is frozen because all linked students have left the school.
+            </p>
+          )}
           <button
             className="detail-btn-secondary"
             onClick={() => setShowResendConfirm(true)}
-            disabled={resending || !parent.email}
+            disabled={resending || !parent.email || parent.accountStatus === "frozen"}
           >
-            {resending ? "Resending…" : "Resend Parent Credentials"}
+            {parent.accountStatus === "frozen"
+              ? "Account Frozen"
+              : resending
+                ? "Resending…"
+                : "Resend Parent Credentials"}
           </button>
         </div>
       </section>
@@ -207,18 +223,24 @@ export default function ParentDetailPage({ params }) {
               const statusClass =
                 c.status === "deleted"
                   ? "parents-child-pill-deleted"
+                  : c.status === "graduated"
+                  ? "parents-child-pill-graduated"
                   : c.status === "inactive"
                   ? "parents-child-pill-inactive"
                   : "";
               const statusLabel =
                 c.status === "deleted"
                   ? " (Deleted)"
+                  : c.status === "graduated"
+                  ? " (Graduated)"
                   : c.status === "inactive"
                   ? " (Inactive)"
                   : "";
               const statusLabelClass =
                 c.status === "deleted"
                   ? "parents-child-deleted-label"
+                  : c.status === "graduated"
+                  ? "parents-child-graduated-label"
                   : c.status === "inactive"
                   ? "parents-child-inactive-label"
                   : "";

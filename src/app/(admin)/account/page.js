@@ -168,16 +168,17 @@ export default function ParentDirectoryPage() {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Linked Student(s)</th>
+                <th>Account Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="parents-empty-state">Loading parent accounts...</td></tr>
+                <tr><td colSpan={7} className="parents-empty-state">Loading parent accounts...</td></tr>
               ) : error ? (
-                <tr><td colSpan={6} className="parents-empty-state parents-error-text">{error}</td></tr>
+                <tr><td colSpan={7} className="parents-empty-state parents-error-text">{error}</td></tr>
               ) : parents.length === 0 ? (
-                <tr><td colSpan={6} className="parents-empty-state">No parent accounts found.</td></tr>
+                <tr><td colSpan={7} className="parents-empty-state">No parent accounts found.</td></tr>
               ) : (
                 parents.map((p) => {
                   const rel = formatRelationship(p.relationship || "");
@@ -209,18 +210,24 @@ export default function ParentDirectoryPage() {
                             const statusClass =
                               c.status === "deleted"
                                 ? "parents-child-pill-deleted"
+                                : c.status === "graduated"
+                                ? "parents-child-pill-graduated"
                                 : c.status === "inactive"
                                 ? "parents-child-pill-inactive"
                                 : "";
                             const statusLabel =
                               c.status === "deleted"
                                 ? " (Deleted)"
+                                : c.status === "graduated"
+                                ? " (Graduated)"
                                 : c.status === "inactive"
                                 ? " (Inactive)"
                                 : "";
                             const statusLabelClass =
                               c.status === "deleted"
                                 ? "parents-child-deleted-label"
+                                : c.status === "graduated"
+                                ? "parents-child-graduated-label"
                                 : c.status === "inactive"
                                 ? "parents-child-inactive-label"
                                 : "";
@@ -241,11 +248,22 @@ export default function ParentDirectoryPage() {
                       )}
                     </td>
                     <td>
+                      <span className={`parents-account-status parents-account-status-${p.accountStatus || "unknown"}`}>
+                        {p.accountStatus === "frozen"
+                          ? "Frozen"
+                          : p.accountStatus === "active"
+                            ? "Active"
+                            : "Unknown"}
+                      </span>
+                    </td>
+                    <td>
                       <button
                         className="parents-resend-btn"
                         onClick={() => setResendTarget({ id: p.id, name: p.name, email: p.email })}
+                        disabled={p.accountStatus === "frozen"}
+                        title={p.accountStatus === "frozen" ? "This account is frozen." : undefined}
                       >
-                        Resend Credentials
+                        {p.accountStatus === "frozen" ? "Account Frozen" : "Resend Credentials"}
                       </button>
                     </td>
                   </tr>

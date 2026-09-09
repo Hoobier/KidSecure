@@ -27,6 +27,33 @@
   max-width: 480px;
 }
 
+.oe-card {
+  background: #ffffff;
+  border: 1px solid #e2e5ea;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(16, 24, 40, 0.06);
+  padding: 16px;
+}
+
+.oe-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.oe-banner-error {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.oe-empty {
+  padding: 32px 16px;
+  color: #718096;
+  font-size: 14px;
+  text-align: center;
+}
+
 .ts-form {
   display: flex;
   flex-direction: column;
@@ -49,9 +76,16 @@
 }
 
 .ts-save-btn {
-  align-self: flex-start;
+  align-self: center;
   background: #1b2a4a;
   color: #ffffff;
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 18px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
 .ts-save-btn:hover:not(:disabled) {
   background: #253a68;
@@ -153,4 +187,126 @@
     gap: 14px;
   }
   .ts-card { max-width: 100%; }
+}
+
+.ts-form-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ts-year-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+.ts-year-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.ts-year-input {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b2a4a;
+  background: #ffffff;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 160px;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+.ts-term-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.ts-term-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ts-term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ts-term-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+
+.ts-term-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.ts-badge-active { background: #1e824c; color: #ffffff; }
+.ts-badge-completed { background: #e8eee9; color: #1e824c; }
+.ts-badge-upcoming { background: #f3f0e6; color: #8a7530; }
+.ts-badge-not-set { background: #f1f4f9; color: #6c7b95; }
+
+.ts-term-active { border: 2px solid #1e824c; }
+
+.ts-rollover-card {
+  display: flex;
+  background: #fdf9ee;
+  border-color: #c9a227;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.ts-rollover-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+
+.ts-rollover-status {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.ts-rollover-btn {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .ts-term-grid { grid-template-columns: 1fr; }
+  .ts-rollover-card { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 640px) {
+  .ts-year-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ts-year-input {
+    width: 100%;
+  }
+
+  .ts-save-btn {
+    align-self: flex-start;
+  }
 }

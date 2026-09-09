@@ -129,6 +129,19 @@
   font-weight: 500;
 }
 
+.parents-child-pill-graduated {
+  background: #f0f8f3;
+  border-color: #b7dec4;
+  color: #167044;
+}
+.parents-child-pill-graduated:hover { background: #e4f3e9; }
+
+.parents-child-graduated-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #167044;
+}
+
 .parents-child-pill-deleted {
   background: #fff5f5;
   border-color: #fed7d7;
@@ -139,6 +152,31 @@
 .parents-child-deleted-label {
   font-size: 11px;
   font-weight: 500;
+}
+
+.parents-account-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.parents-account-status-active {
+  background: #eef8f1;
+  color: #167044;
+}
+
+.parents-account-status-frozen {
+  background: #fff5e5;
+  color: #9a6700;
+  border: 1px solid #f1d08a;
+}
+
+.parents-account-status-unknown {
+  background: #eef0f4;
+  color: #6b7485;
 }
 
 .parents-resend-btn {
@@ -154,6 +192,7 @@
   transition: all 0.15s ease;
 }
 .parents-resend-btn:hover { background: #f5f7fa; border-color: #1b2a4a; }
+.parents-resend-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .parents-feedback {
   padding: 0.85rem 1.1rem;

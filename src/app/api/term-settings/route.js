@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-
+// src/app/api/term-settings/route.js
 export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get("kidsecure_token")?.value;

@@ -79,4 +79,35 @@ export async function PATCH(request, { params }) {
       { status: 500 }
     );
   }
+
+  
+}
+
+export async function DELETE(request, { params }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("kidsecure_token")?.value;
+  if (!token) return needsAuth();
+
+  const id = (await params).id;
+  try {
+    const res = await fetch(
+      `${process.env.LARAVEL_API_URL}/api/guest/enrollments/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      }
+    );
+    const data = await res.json().catch(() => ({ message: "Request failed" }));
+    return Response.json(data, { status: res.status });
+  } catch (err) {
+    console.error("Guest enrollment delete error:", err);
+    return Response.json(
+      { message: "Unable to reach the server. Please try again." },
+      { status: 500 }
+    );
+  }
 }

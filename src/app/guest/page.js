@@ -8,6 +8,11 @@ const REQUIREMENTS = [
   { type: "id_picture_1x1", label: "1x1 ID Picture", icon: "🖼️" },
 ];
 
+const TRANSFEREE_REQUIREMENTS = [
+  { type: "form_138", label: "Form 138", icon: "📄" },
+  { type: "good_moral", label: "Good Moral", icon: "📄" },
+];
+
 const GRADE_OPTIONS = [
   "Kindergarten",
   "Grade 1",
@@ -43,7 +48,7 @@ const SCHOOL_SEAL_SVG = (
 
 function getInitialFormState() {
   return {
-    student: { firstName: "", lastName: "", birthDate: "", gender: "", address: "", phone: "", email: "" },
+    student: { firstName: "", lastName: "", birthDate: "", gender: "", address: "" },
     parent: { firstName: "", lastName: "", relationship: "", phone: "", email: "" },
     academic: { gradeLevel: "", previousSchool: "" },
     isTransferee: false,
@@ -51,11 +56,65 @@ function getInitialFormState() {
   };
 }
 
+/** Shared upload block used for every document requirement (main + transferee). */
+function RequirementItem({ req, file, previewUrl, onUpload, onRemove, error }) {
+  const hasFile = !!file;
+  const inputId = `req-${req.type}`;
+  return (
+    <div className={"guest-requirement " + (hasFile ? "guest-requirement-uploaded" : "")}>
+      <div className="guest-requirement-info">
+        <span className="guest-requirement-icon">{req.icon}</span>
+        <div>
+          <h3 className="guest-requirement-name">{req.label}</h3>
+          {hasFile ? (
+            <p className="guest-requirement-status guest-status-ok">
+              ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
+            </p>
+          ) : (
+            <p className="guest-requirement-status guest-status-pending">
+              ⚠ Not uploaded
+            </p>
+          )}
+          {hasFile && previewUrl && (
+            <img src={previewUrl} alt={req.label} className="guest-requirement-preview" />
+          )}
+          {error && <p className="guest-field-error">{error}</p>}
+        </div>
+      </div>
+      <div className="guest-requirement-actions">
+        {hasFile ? (
+          <button
+            type="button"
+            className="guest-btn guest-btn-secondary"
+            onClick={() => onRemove(req.type)}
+          >
+            Remove
+          </button>
+        ) : (
+          <>
+            <label htmlFor={inputId} className="guest-btn guest-btn-primary guest-btn-upload">
+              Upload
+            </label>
+            <input
+              id={inputId}
+              type="file"
+              className="guest-file-input"
+              accept={req.type === "id_picture_1x1" ? "image/*" : "application/pdf,image/*"}
+              onChange={(e) => onUpload(req.type, e.target.files?.[0] || null)}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function GuestEnrollmentPage() {
   const [form, setForm] = useState(getInitialFormState);
   const [errors, setErrors] = useState({});
   const [files, setFiles] = useState({});
   const [preview, setPreview] = useState({});
+  const [followUpDocuments, setFollowUpDocuments] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [submittedApplication, setSubmittedApplication] = useState(null); // { referenceNumber }
@@ -263,11 +322,17 @@ export default function GuestEnrollmentPage() {
     }
   }
 
-  function clearSignature() {
+  /** Wipes only the visible canvas pixels — does not touch form.signature by itself. */
+  function clearSignatureCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function clearSignature() {
+    clearSignatureCanvas();
     setForm((prev) => ({ ...prev, signature: "" }));
   }
 
@@ -276,6 +341,12 @@ export default function GuestEnrollmentPage() {
     setFiles((prev) => ({ ...prev, [type]: file }));
     const url = URL.createObjectURL(file);
     setPreview((prev) => ({ ...prev, [type]: url }));
+    if (errors?.documents?.[type]) {
+      setErrors((prev) => ({
+        ...prev,
+        documents: { ...prev.documents, [type]: undefined },
+      }));
+    }
   }
 
   function removeFile(type) {
@@ -286,9 +357,24 @@ export default function GuestEnrollmentPage() {
     });
     setPreview((prev) => {
       const copy = { ...prev };
+      if (copy[type]) URL.revokeObjectURL(copy[type]);
       delete copy[type];
       return copy;
     });
+  }
+
+  /** Full reset: form fields, files, previews, signature, errors — used by both the
+   *  "Reset Form" button and after a successful submission ("Submit Another Application"). */
+  function handleResetForm() {
+    setForm(getInitialFormState());
+    setErrors({});
+    Object.values(preview).forEach((url) => URL.revokeObjectURL(url));
+    setFiles({});
+    setPreview({});
+    setFollowUpDocuments(false);
+    clearSignatureCanvas();
+    setFeedback(null);
+    setDobOpen(false);
   }
 
   function validate() {
@@ -299,8 +385,6 @@ export default function GuestEnrollmentPage() {
       ["student", "birthDate", "Birth Date is required"],
       ["student", "gender", "Gender is required"],
       ["student", "address", "Student Address is required"],
-      ["student", "phone", "Student Contact Number is required"],
-      ["student", "email", "Email Address is required"],
       ["parent", "firstName", "Parent/Guardian First Name is required"],
       ["parent", "lastName", "Parent/Guardian Last Name is required"],
       ["parent", "relationship", "Relationship is required"],
@@ -314,10 +398,6 @@ export default function GuestEnrollmentPage() {
         errs[section][field] = message;
       }
     });
-    if (form.student.phone && !isValidPHPhone(form.student.phone)) {
-      errs.student = errs.student || {};
-      errs.student.phone = "Enter a valid PH mobile number (09XXXXXXXXX — 11 digits)";
-    }
     if (form.parent.phone && !isValidPHPhone(form.parent.phone)) {
       errs.parent = errs.parent || {};
       errs.parent.phone = "Enter a valid PH mobile number (09XXXXXXXXX — 11 digits)";
@@ -333,6 +413,21 @@ export default function GuestEnrollmentPage() {
       errs.academic = errs.academic || {};
       errs.academic.previousSchool = "Previous School Name is required for transferees";
     }
+
+    // Documents: required unless the parent opted to follow up documents on enrollment day.
+    if (!followUpDocuments) {
+      const requiredDocs = [
+        ...REQUIREMENTS,
+        ...(form.isTransferee ? TRANSFEREE_REQUIREMENTS : []),
+      ];
+      requiredDocs.forEach((req) => {
+        if (!files[req.type]) {
+          errs.documents = errs.documents || {};
+          errs.documents[req.type] = `Please upload ${req.label}`;
+        }
+      });
+    }
+
     if (!form.signature) errs.signature = "Please sign the declaration";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -353,12 +448,14 @@ export default function GuestEnrollmentPage() {
         parent: form.parent,
         academic: form.academic,
         isTransferee: !!form.isTransferee,
+        documentsFollowUp: !!followUpDocuments,
         signature: form.signature || null,
       };
       fd.append("data", JSON.stringify(payload));
       if (files.birth_certificate) fd.append("birth_certificate", files.birth_certificate);
       if (files.id_picture_1x1) fd.append("id_picture_1x1", files.id_picture_1x1);
-      if (form.isTransferee && files.form_137) fd.append("form_137", files.form_137);
+      if (form.isTransferee && files.form_138) fd.append("form_138", files.form_138);
+      if (form.isTransferee && files.good_moral) fd.append("good_moral", files.good_moral);
 
       const res = await fetch("/api/guest/enrollments", {
         method: "POST",
@@ -391,11 +488,7 @@ export default function GuestEnrollmentPage() {
 
   function startNewApplication() {
     setSubmittedApplication(null);
-    setForm(getInitialFormState());
-    setErrors({});
-    Object.keys(files).forEach((k) => removeFile(k));
-    clearSignature();
-    setFeedback(null);
+    handleResetForm();
   }
 
   async function handleLookupSubmit(e) {
@@ -711,44 +804,6 @@ export default function GuestEnrollmentPage() {
                   )}
                 </div>
               </div>
-
-              <div className="guest-row guest-row-2">
-                <div className="guest-field">
-                  <label htmlFor="studentPhone">
-                    Contact Number: <span className="guest-required">*</span>
-                    <span className="guest-field-hint">(PH: 09XXXXXXXXX)</span>
-                  </label>
-                  <input
-                    id="studentPhone"
-                    type="tel"
-                    className={inputInvalid("student", "phone")}
-                    placeholder="09XXXXXXXXX"
-                    inputMode="numeric"
-                    maxLength={11}
-                    value={form.student.phone}
-                    onChange={(e) => updatePhone("student", "phone", e.target.value)}
-                  />
-                  {errors?.student?.phone && (
-                    <p className="guest-field-error">{errors.student.phone}</p>
-                  )}
-                </div>
-                <div className="guest-field">
-                  <label htmlFor="studentEmail">
-                    Email Address: <span className="guest-required">*</span>
-                  </label>
-                  <input
-                    id="studentEmail"
-                    type="email"
-                    className={inputInvalid("student", "email")}
-                    placeholder="name@example.com"
-                    value={form.student.email}
-                    onChange={(e) => updateForm("student", "email", e.target.value)}
-                  />
-                  {errors?.student?.email && (
-                    <p className="guest-field-error">{errors.student.email}</p>
-                  )}
-                </div>
-              </div>
             </section>
 
             {/* Parent / Guardian */}
@@ -889,78 +944,21 @@ export default function GuestEnrollmentPage() {
 
             {/* Document Uploads */}
             <section className="guest-section">
-              <h2 className="guest-section-title">Required Documents</h2>
+              <h2 className="guest-section-title">
+                Required Documents{!followUpDocuments && <span className="guest-required"> *</span>}
+              </h2>
               <div className="guest-requirements">
-                {REQUIREMENTS.map((req) => {
-                  const file = files[req.type];
-                  const hasFile = !!file;
-                  const inputId = `req-${req.type}`;
-                  return (
-                    <div
-                      key={req.type}
-                      className={
-                        "guest-requirement " +
-                        (hasFile ? "guest-requirement-uploaded" : "")
-                      }
-                    >
-                      <div className="guest-requirement-info">
-                        <span className="guest-requirement-icon">{req.icon}</span>
-                        <div>
-                          <h3 className="guest-requirement-name">{req.label}</h3>
-                          {hasFile ? (
-                            <p className="guest-requirement-status guest-status-ok">
-                              ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </p>
-                          ) : (
-                            <p className="guest-requirement-status guest-status-pending">
-                              ⚠ Not uploaded
-                            </p>
-                          )}
-                          {hasFile && preview[req.type] && (
-                            <img
-                              src={preview[req.type]}
-                              alt={req.label}
-                              className="guest-requirement-preview"
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <div className="guest-requirement-actions">
-                        {hasFile ? (
-                          <button
-                            type="button"
-                            className="guest-btn guest-btn-secondary"
-                            onClick={() => removeFile(req.type)}
-                          >
-                            Remove
-                          </button>
-                        ) : (
-                          <>
-                            <label
-                              htmlFor={inputId}
-                              className="guest-btn guest-btn-primary guest-btn-upload"
-                            >
-                              Upload
-                            </label>
-                            <input
-                              id={inputId}
-                              type="file"
-                              className="guest-file-input"
-                              accept={
-                                req.type === "id_picture_1x1"
-                                  ? "image/*"
-                                  : "application/pdf,image/*"
-                              }
-                              onChange={(e) =>
-                                handleFileUpload(req.type, e.target.files?.[0] || null)
-                              }
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {REQUIREMENTS.map((req) => (
+                  <RequirementItem
+                    key={req.type}
+                    req={req}
+                    file={files[req.type]}
+                    previewUrl={preview[req.type]}
+                    onUpload={handleFileUpload}
+                    onRemove={removeFile}
+                    error={errors?.documents?.[req.type]}
+                  />
+                ))}
               </div>
 
               <div style={{ marginTop: "1.25rem" }}>
@@ -1004,95 +1002,64 @@ export default function GuestEnrollmentPage() {
                     paddingTop: "1rem",
                   }}
                 >
-                  {(() => {
-                    const req = { type: "form_137", label: "Form 137", icon: "📄" };
-                    const file = files[req.type];
-                    const hasFile = !!file;
-                    const inputId = `req-${req.type}`;
-                    return (
-                      <div
-                        key={req.type}
-                        className={
-                          "guest-requirement " +
-                          (hasFile ? "guest-requirement-uploaded" : "")
-                        }
-                      >
-                        <div className="guest-requirement-info">
-                          <span className="guest-requirement-icon">{req.icon}</span>
-                          <div>
-                            <h3 className="guest-requirement-name">{req.label}</h3>
-                            {hasFile ? (
-                              <p className="guest-requirement-status guest-status-ok">
-                                ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                              </p>
-                            ) : (
-                              <p className="guest-requirement-status guest-status-pending">
-                                ⚠ Not uploaded
-                              </p>
-                            )}
-                            {hasFile && preview[req.type] && (
-                              <img
-                                src={preview[req.type]}
-                                alt={req.label}
-                                className="guest-requirement-preview"
-                              />
-                            )}
-                          </div>
-                        </div>
-                        <div className="guest-requirement-actions">
-                          {hasFile ? (
-                            <button
-                              type="button"
-                              className="guest-btn guest-btn-secondary"
-                              onClick={() => removeFile(req.type)}
-                            >
-                              Remove
-                            </button>
-                          ) : (
-                            <>
-                              <label
-                                htmlFor={inputId}
-                                className="guest-btn guest-btn-primary guest-btn-upload"
-                              >
-                                Upload
-                              </label>
-                              <input
-                                id={inputId}
-                                type="file"
-                                className="guest-file-input"
-                                accept="application/pdf,image/*"
-                                onChange={(e) =>
-                                  handleFileUpload(req.type, e.target.files?.[0] || null)
-                                }
-                              />
-                            </>
-                          )}
-                          {hasFile && (
-                            <label
-                              htmlFor={`replace-${req.type}`}
-                              className="guest-btn guest-btn-secondary"
-                              style={{ marginLeft: "0.5rem" }}
-                            >
-                              Replace
-                            </label>
-                          )}
-                          {hasFile && (
-                            <input
-                              id={`replace-${req.type}`}
-                              type="file"
-                              className="guest-file-input"
-                              accept="application/pdf,image/*"
-                              onChange={(e) =>
-                                handleFileUpload(req.type, e.target.files?.[0] || null)
-                              }
-                            />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {TRANSFEREE_REQUIREMENTS.map((req) => (
+                    <RequirementItem
+                      key={req.type}
+                      req={req}
+                      file={files[req.type]}
+                      previewUrl={preview[req.type]}
+                      onUpload={handleFileUpload}
+                      onRemove={removeFile}
+                      error={errors?.documents?.[req.type]}
+                    />
+                  ))}
                 </div>
               )}
+
+              <div
+                style={{
+                  marginTop: "1.25rem",
+                  paddingTop: "1rem",
+                  borderTop: "1px dashed #d5dae2",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    fontSize: "0.95rem",
+                    fontWeight: 600,
+                    color: "#1b2a4a",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={followUpDocuments}
+                    onChange={(e) => setFollowUpDocuments(e.target.checked)}
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      accentColor: "#1b2a4a",
+                      margin: 0,
+                      colorScheme: "light",
+                      flexShrink: 0,
+                    }}
+                  />
+                  Check this box if you want to follow up the documents upon enrollment
+                </label>
+                <p
+                  style={{
+                    margin: "0.35rem 0 0 2rem",
+                    fontSize: "0.85rem",
+                    color: "#6c7b95",
+                  }}
+                >
+                  You can submit your application now and bring the physical documents on your enrollment day.
+                </p>
+              </div>
             </section>
 
             {/* Consent */}
@@ -1157,12 +1124,7 @@ export default function GuestEnrollmentPage() {
               <button
                 type="reset"
                 className="guest-btn guest-btn-ghost"
-                onClick={() => {
-                  setFeedback(null);
-                  setErrors({});
-                  Object.keys(files).forEach((k) => removeFile(k));
-                  clearSignature();
-                }}
+                onClick={handleResetForm}
                 disabled={submitting}
               >
                 Reset Form

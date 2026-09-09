@@ -119,6 +119,10 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
 
     if (data.isTransferee && !(data.previousSchool || "").trim()) {
       newErrors.previousSchool = "Please enter the student's previous school.";
+
+    if (!(data.address || "").trim()) {
+      newErrors.address = "Student address is required.";
+    }
     }
 
     setErrors(newErrors);
@@ -285,6 +289,21 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
           </select>
           {errors.section && <p className="enrollment-field-error">{errors.section}</p>}
         </div>
+      </div>
+
+      <div className="enrollment-form-group">
+        <label htmlFor="address">
+          Student Address<span className="required">*</span>
+        </label>
+        <input
+          id="address"
+          type="text"
+          placeholder="Full Address"
+          value={data.address || ""}
+          onChange={(e) => handleFieldChange("address", e.target.value)}
+          className={errors.address ? "input-invalid" : ""}
+        />
+        {errors.address && <p className="enrollment-field-error">{errors.address}</p>}
       </div>
 
       <div className="enrollment-form-group">

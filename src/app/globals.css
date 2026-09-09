@@ -1,3 +1,5 @@
+/* src/app/globals.css */
+
 :root {
   --background: #F5F7FA;
   --foreground: #1B2A4A;
@@ -209,6 +211,13 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+select,
+input[type="checkbox"],
+input[type="radio"] {
+  background-color: #ffffff;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {

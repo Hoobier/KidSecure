@@ -100,9 +100,13 @@ function normalizeItem(raw) {
       "id_picture_1x1_url", "id_picture_1x1_path",
       "id_picture",
     ]),
-    form_137: getFile([
-      "form_137", "form137",
-      "form_137_url", "form_137_path",
+    form_138: getFile([
+      "form_138", "form138",
+      "form_138_url", "form_138_path",
+    ]),
+    good_moral: getFile([
+    "good_moral", "goodMoral",
+    "good_moral_url", "good_moral_path",
     ]),
   };
 
@@ -181,6 +185,7 @@ export default function OnlineEnrollmentDetailPage() {
   const [showRfidApproval, setShowRfidApproval] = useState(false);
   const [busy, setBusy] = useState(""); // "convert" | "reject" | ""
   const [refCopied, setRefCopied] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -273,10 +278,42 @@ export default function OnlineEnrollmentDetailPage() {
     }
   }
 
+  function openDeleteModal() {
+    setConfirmDeleteOpen(true);
+  }
+
+  function closeDeleteModal() {
+    if (busy !== "") return;
+    setConfirmDeleteOpen(false);
+  }
+
+  async function handleDelete() {
+    if (!data) return;
+    setBusy("delete");
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/guest/enrollments/${data.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.message || "Could not delete this application.");
+      router.push("/online-enrollment");
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: "⚠️ " + (err?.message || "Unable to delete this application."),
+      });
+      setConfirmDeleteOpen(false);
+    } finally {
+      setBusy("");
+    }
+  }
+
   function handleCopyReference() {
     if (!data?.referenceNumber) return;
     navigator.clipboard
-      .writeText(it.referenceNumber)
+      .writeText(data.referenceNumber)
       .then(() => {
         setRefCopied(true);
         setTimeout(() => setRefCopied(false), 2000);
@@ -376,8 +413,6 @@ export default function OnlineEnrollmentDetailPage() {
           <ReadRow label="Last Name" value={it.lastName || (it.studentFullName.split(" ").slice(1).join(" "))} />
           <ReadRow label="Birth Date" value={it.birthDate ? formatDate(it.birthDate) : ""} />
           <ReadRow label="Gender" value={it.gender} />
-          <ReadRow label="Contact Number" value={it.phone} />
-          <ReadRow label="Email Address" value={it.email} full />
           <ReadRow label="Student Address" value={it.address} full />
         </div>
       </section>
@@ -428,11 +463,11 @@ export default function OnlineEnrollmentDetailPage() {
             label="1x1 ID Picture"
             data={it.files.id_picture_1x1}
           />
-          {it.files.form_137 && (
-            <DocCard
-              label="Form 137"
-              data={it.files.form_137}
-            />
+          {it.files.form_138 && (
+            <DocCard label="Form 138" data={it.files.form_138} />
+          )}
+          {it.files.good_moral && (
+            <DocCard label="Good Moral" data={it.files.good_moral} />
           )}
         </div>
       </section>
@@ -466,6 +501,21 @@ export default function OnlineEnrollmentDetailPage() {
         </div>
       </section>
 
+      {/* Danger Zone */}
+        <section className="oed-section oed-danger-zone">
+          <h2 className="oed-section-title">Danger Zone</h2>
+          <p className="oed-danger-desc">
+            Permanently delete this application. This action cannot be undone.
+          </p>
+          <button
+            className="oed-btn oed-btn-reject"
+            onClick={openDeleteModal}
+            disabled={busy !== ""}
+          >
+            🗑 Delete Application
+          </button>
+        </section>
+
       {/* Confirmation modals */}
       {showRfidApproval && (
         <div className="oed-modal-overlay" onClick={() => setShowRfidApproval(false)}>
@@ -495,13 +545,13 @@ export default function OnlineEnrollmentDetailPage() {
               <textarea
                 id="rejectReason"
                 rows={4}
-                placeholder="Example: The uploaded birth certificate is unreadable. Please resubmit a clearer copy."
+                placeholder="Example: Duplicate account, incomplete requirements, spam, etc."
                 value={rejectReason}
                 onChange={(e) => {
                   setRejectReason(e.target.value);
                   if (rejectReasonError) setRejectReasonError("");
                 }}
-                className={rejectReasonError ? "input-invalid" : ""}
+                className={`oed-reject-textarea${rejectReasonError ? " oed-reject-textarea-invalid" : ""}`}
                 disabled={busy !== ""}
               />
               {rejectReasonError && (
@@ -521,6 +571,32 @@ export default function OnlineEnrollmentDetailPage() {
                 disabled={busy !== ""}
               >
                 {busy === "reject" ? "Rejecting…" : "Yes — Reject submission"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteOpen && (
+        <div className="oed-modal-overlay" onClick={closeDeleteModal}>
+          <div className="oed-modal oed-modal-reject" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete this application?</h3>
+            <p>
+              Are you sure you want to delete this application? Doing so will delete it{" "}
+              <strong>forever</strong>.
+            </p>
+            <div className="oed-modal-actions">
+              <button
+                className="oed-modal-btn oed-modal-ghost"
+                onClick={closeDeleteModal}
+                disabled={busy !== ""}
+              >No</button>
+              <button
+                className="oed-modal-btn oed-modal-danger"
+                onClick={handleDelete}
+                disabled={busy !== ""}
+              >
+                {busy === "delete" ? "Deleting…" : "Yes"}
               </button>
             </div>
           </div>

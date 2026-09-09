@@ -51,6 +51,43 @@
   overflow: hidden;
 }
 
+.dashboard-calendar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 16px;
+  align-content: center;
+  max-width: 300px;
+  color: #1b2a4a;
+}
+
+.calendar-month {
+  grid-column: 1 / -1;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  grid-row: 2 / 4;
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 0.95;
+}
+
+.calendar-weekday {
+  align-self: end;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.calendar-year {
+  color: #718096;
+  font-size: 13px;
+}
+
 .dashboard-top::before {
   content: "";
   position: absolute;
@@ -597,13 +634,7 @@
 }
 
 .btn-cta-online::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 50px;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(201,162,39,0.28) 0%, rgba(201,162,39,0.04) 100%);
+  display: none;
 }
 
 .btn-cta-online-icon {
@@ -785,6 +816,87 @@
   font-size: 14.5px;
 }
 
+.attention-feedback {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef8f1;
+  color: #167044;
+  font-size: 13px;
+}
+
+.rejected-applications-widget {
+  margin-left: 4px;
+  padding-top: 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+.rejected-applications-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rejected-applications-header h3 {
+  color: #1b2a4a;
+  font-size: 15px;
+}
+
+.rejected-applications-header p {
+  color: #718096;
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+
+.rejected-delete-btn {
+  padding: 7px 10px;
+  border: 1px solid #fed7d7;
+  border-radius: 7px;
+  background: #fff5f5;
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rejected-delete-btn:hover:not(:disabled) { background: #ffe8e8; }
+.rejected-delete-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.rejected-applications-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rejected-application-item a {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid #f1d6d3;
+  border-radius: 8px;
+  background: #fffafa;
+  color: #1b2a4a;
+  text-decoration: none;
+}
+
+.rejected-application-item a:hover { background: #fff3f1; }
+.rejected-application-item span,
+.rejected-application-item small {
+  color: #718096;
+  font-size: 12px;
+}
+
+.rejected-application-item small {
+  color: #9b4b43;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 620px) {
   .dashboard-fit {
     height: auto;
@@ -797,5 +909,9 @@
 
   .dashboard-top {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-calendar {
+    max-width: none;
   }
 }

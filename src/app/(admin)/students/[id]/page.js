@@ -63,10 +63,8 @@ function computeAverage(subjectGrades) {
   const vals = [];
   TERMS.forEach((t) => {
     const term = (subjectGrades && subjectGrades[t.key]) || {};
-    ["midterm", "finals"].forEach((f) => {
-      const n = Number(term[f]);
-      if (term[f] !== "" && term[f] !== undefined && !isNaN(n) && n > 0) vals.push(n);
-    });
+    const n = Number(term.grade);
+    if (term.grade !== "" && term.grade !== undefined && !isNaN(n) && n > 0) vals.push(n);
   });
   if (vals.length === 0) return "—";
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -79,7 +77,7 @@ const TERMS = [
   { key: "T3", label: "T3" },
 ];
 
-  const DEFAULT_TERM = () => ({ midterm: "", finals: "" });
+  const DEFAULT_TERM = () => ({ grade: "" });
   const DEFAULT_GRADES = () => {
     const g = {};
     TERMS.forEach((t) => { g[t.key] = DEFAULT_TERM(); });
@@ -93,8 +91,7 @@ const TERMS = [
       grades[code] = {};
       TERMS.forEach((t) => {
         grades[code][t.key] = {
-          midterm: savedTerm[t.key]?.midterm ?? "",
-          finals: savedTerm[t.key]?.finals ?? "",
+          grade: savedTerm[t.key]?.grade ?? "",
         };
       });
     };
@@ -144,11 +141,11 @@ export default function StudentDetailPage({ params }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showReportCard, student?.id]);
 
-  function updateGrade(code, term, field, value) {
+  function updateGrade(code, term, value) {
     const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
     setReportGrades((prev) => ({
       ...prev,
-      [code]: { ...prev[code], [term]: { ...prev[code]?.[term], [field]: sanitized } },
+      [code]: { ...prev[code], [term]: { grade: sanitized } },
     }));
   }
 
@@ -423,6 +420,24 @@ export default function StudentDetailPage({ params }) {
             <dd>{fullName}</dd>
           </div>
           <div className="detail-field">
+            <dt>Address</dt>
+            <dd>{student.address || "—"}</dd>
+          </div>
+          <div className="detail-field">
+            <dt>Student Type</dt>
+            <dd>
+              <span className={`detail-student-type ${student.isTransferee ? "detail-student-type-transferee" : "detail-student-type-regular"}`}>
+                {student.isTransferee ? "Transferee" : "Regular Student"}
+              </span>
+            </dd>
+          </div>
+          {student.isTransferee && (
+            <div className="detail-field">
+              <dt>Previous School</dt>
+              <dd>{student.previousSchool || "—"}</dd>
+            </div>
+          )}
+          <div className="detail-field">
             <dt>Enrolled On</dt>
             <dd>{new Date(student.enrolledAt).toLocaleDateString()}</dd>
           </div>
@@ -638,26 +653,17 @@ export default function StudentDetailPage({ params }) {
                 {s.code && !isGroupChild && <span className="report-card-code">{s.code}</span>}
                 <span>{s.name}</span>
               </td>
-              {TERMS.flatMap((t) => ([
-                <td key={`${s.code}-${t.key}-mid`} className="report-card-grade">
+              {TERMS.map((t) => (
+                <td key={`${s.code}-${t.key}`} className="report-card-grade">
                   <input
                     type="text"
                     inputMode="decimal"
                     placeholder="—"
-                    value={g[t.key]?.midterm ?? ""}
-                    onChange={(e) => updateGrade(s.code, t.key, "midterm", e.target.value)}
+                    value={g[t.key]?.grade ?? ""}
+                    onChange={(e) => updateGrade(s.code, t.key, e.target.value)}
                   />
-                </td>,
-                <td key={`${s.code}-${t.key}-fin`} className="report-card-grade">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="—"
-                    value={g[t.key]?.finals ?? ""}
-                    onChange={(e) => updateGrade(s.code, t.key, "finals", e.target.value)}
-                  />
-                </td>,
-              ]))}
+                </td>
+              ))}
               <td className="report-card-avg">{avg}</td>
             </tr>
           );
@@ -728,17 +734,11 @@ export default function StudentDetailPage({ params }) {
                   <table className="detail-report-card-table">
                     <thead>
                       <tr>
-                        <th className="report-card-subject report-card-th-subject" rowSpan={2}>Subjects</th>
+                        <th className="report-card-subject report-card-th-subject">Subjects</th>
                         {TERMS.map((t) => (
-                          <th key={t.key} className="report-card-th-term-group" colSpan={2}>{t.label}</th>
+                          <th key={t.key} className="report-card-th-term">{t.label}</th>
                         ))}
-                        <th className="report-card-th-avg" rowSpan={2}>Average</th>
-                      </tr>
-                      <tr>
-                        {TERMS.flatMap((t) => ([
-                          <th key={`${t.key}-mid`} className="report-card-th-subterm">Midterm</th>,
-                          <th key={`${t.key}-fin`} className="report-card-th-subterm">Finals</th>,
-                        ]))}
+                        <th className="report-card-th-avg">Average</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -746,7 +746,7 @@ export default function StudentDetailPage({ params }) {
                         s.isGroup ? (
                           <React.Fragment key={s.code}>
                             <tr className="report-card-row report-card-row-group">
-                              <td colSpan={8} className="report-card-subject report-card-subject-group">
+                              <td colSpan={5} className="report-card-subject report-card-subject-group">
                                 <span className="report-card-code">{s.code}</span>
                                 <span>{s.name}</span>
                               </td>
@@ -761,7 +761,7 @@ export default function StudentDetailPage({ params }) {
                     <tfoot>
                       <tr className="report-card-row report-card-row-overall">
                         <td className="report-card-subject report-card-overall-label">Overall Average</td>
-                        <td colSpan={6}></td>
+                        <td colSpan={3}></td>
                         <td className="report-card-avg report-card-overall-value">{overall}</td>
                       </tr>
                     </tfoot>

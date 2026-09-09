@@ -75,6 +75,31 @@
   color: #8a94a6;
 }
 
+.detail-account-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-account-status-active {
+  background: #eef8f1;
+  color: #167044;
+}
+
+.detail-account-status-frozen {
+  background: #fff5e5;
+  color: #9a6700;
+  border: 1px solid #f1d08a;
+}
+
+.detail-account-status-unknown {
+  background: #eef0f4;
+  color: #6b7485;
+}
+
 .detail-btn-primary {
   padding: 0.8rem 1.8rem;
   border-radius: 8px;
@@ -191,6 +216,12 @@
   margin-bottom: 0.85rem;
 }
 
+.detail-login-frozen-note {
+  color: #9a6700;
+  font-size: 0.85rem;
+  margin: -0.25rem 0 0.85rem;
+}
+
 .detail-linked-students {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -221,6 +252,11 @@
   border-color: #fed7d7;
 }
 
+.detail-student-card.parents-child-pill-graduated {
+  background: #f0f8f3;
+  border-color: #b7dec4;
+}
+
 .detail-student-name {
   font-size: 0.95rem;
   font-weight: 600;
@@ -230,6 +266,7 @@
 
 .detail-student-card.parents-child-pill-inactive .detail-student-name { color: #8a94a6; }
 .detail-student-card.parents-child-pill-deleted .detail-student-name { color: #c53030; }
+.detail-student-card.parents-child-pill-graduated .detail-student-name { color: #167044; }
 
 .detail-student-meta {
   display: flex;
@@ -247,6 +284,7 @@
 }
 .parents-child-inactive-label { color: #8a94a6; }
 .parents-child-deleted-label { color: #c53030; }
+.parents-child-graduated-label { color: #167044; }
 
 .detail-modal-overlay {
   position: fixed;

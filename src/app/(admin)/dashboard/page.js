@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import "./admin.css";
 
-const principalName = "Mrs. Juana J. Ramos";
-
 const ATTENTION_ITEM_LABELS = {
   missing_rfid: (count) => ({
     icon: "🔔",
@@ -17,12 +15,45 @@ const ATTENTION_ITEM_LABELS = {
     title: `${count} student${count === 1 ? "" : "s"} ${count === 1 ? "has" : "have"} no linked parent account yet`,
     detail: "Add a parent account so the family can receive attendance notifications.",
   }),
+  pending_online_enrollment: (count) => ({
+    icon: "📋",
+    title: `${count} online application${count === 1 ? "" : "s"} waiting for review`,
+    detail: "Review new enrollment submissions from families.",
+  }),
+  rejected_online_enrollment: (count) => ({
+    icon: "⚠️",
+    title: `${count} rejected online application${count === 1 ? "" : "s"}`,
+    detail: "Review the rejected applications before clearing them from the dashboard.",
+  }),
+  frozen_parent_accounts: (count) => ({
+    icon: "🔒",
+    title: `${count} frozen parent account${count === 1 ? "" : "s"}`,
+    detail: "These accounts cannot receive login credentials while frozen.",
+  }),
 };
+
+function formatCalendarDate(date) {
+  return {
+    day: date.toLocaleDateString("en-US", { day: "numeric" }),
+    weekday: date.toLocaleDateString("en-US", { weekday: "long" }),
+    month: date.toLocaleDateString("en-US", { month: "long" }),
+    year: date.toLocaleDateString("en-US", { year: "numeric" }),
+  };
+}
+
+function formatRejectedDate(value) {
+  if (!value) return "Date unavailable";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
 
 export default function AdminPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingRejected, setDeletingRejected] = useState(false);
+  const [attentionMessage, setAttentionMessage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +111,11 @@ export default function AdminPage() {
   ];
 
   const pendingGuestEnrollments = Number(summary.pendingGuestEnrollments ?? 0);
+  const rejectedApplications = Array.isArray(summary.rejectedApplications)
+    ? summary.rejectedApplications
+    : [];
+  const rejectedCount = Number(summary.rejectedGuestEnrollments ?? rejectedApplications.length);
+  const calendarDate = formatCalendarDate(new Date());
 
   const attentionItems = summary.attentionItems.map((item) => {
     const build = ATTENTION_ITEM_LABELS[item.type];
@@ -87,6 +123,38 @@ export default function AdminPage() {
     const rendered = build(item.count);
     return { type: item.type, ...rendered };
   }).filter(Boolean);
+
+  const quickTip = pendingGuestEnrollments > 0
+    ? "Review pending online applications before the next enrollment appointment."
+    : rejectedCount > 0
+      ? "Review rejected applications and keep the dashboard clear of old records."
+      : "Attendance updates automatically once RFID scans are recorded at the school entrance.";
+
+  async function handleDeleteRejected() {
+    if (deletingRejected || rejectedCount === 0) return;
+    if (!window.confirm(`Delete all ${rejectedCount} rejected applications? This cannot be undone.`)) return;
+
+    setDeletingRejected(true);
+    setAttentionMessage(null);
+    try {
+      const res = await fetch("/api/guest/enrollments", { method: "DELETE", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Unable to delete rejected applications.");
+      setSummary((current) => ({
+        ...current,
+        rejectedGuestEnrollments: 0,
+        rejectedApplications: [],
+        attentionItems: (current.attentionItems || []).filter(
+          (item) => item.type !== "rejected_online_enrollment"
+        ),
+      }));
+      setAttentionMessage(data.message || "Rejected applications deleted.");
+    } catch (err) {
+      setAttentionMessage(err.message || "Unable to delete rejected applications.");
+    } finally {
+      setDeletingRejected(false);
+    }
+  }
 
   return (
     <div className="dashboard-fit">
@@ -105,10 +173,11 @@ export default function AdminPage() {
       </div>
 
       <section className="dashboard-top">
-        <div className="dashboard-greeting">
-          <p className="greeting-pretitle">Good Morning,</p>
-          <h2>{principalName}!</h2>
-          <p className="greeting-note">Here is what you need to know right now.</p>
+        <div className="dashboard-calendar">
+          <div className="calendar-month">{calendarDate.month}</div>
+          <div className="calendar-day">{calendarDate.day}</div>
+          <div className="calendar-weekday">{calendarDate.weekday}</div>
+          <div className="calendar-year">{calendarDate.year}</div>
         </div>
         <div className="overview-cards">
           {overviewData.map((item) => (
@@ -123,7 +192,7 @@ export default function AdminPage() {
       <section className="attendance-section">
         <div className="section-header">
           <div>
-            <h2>Today's attendance</h2>
+            <h2>Today&apos;s attendance</h2>
             <p className="section-subtitle">Attendance breakdown for the current school day.</p>
           </div>
         </div>
@@ -162,7 +231,12 @@ export default function AdminPage() {
           {attentionItems.length > 0 ? (
             <ul className="attention-list">
               {attentionItems.map((item) => {
-                const isMissingRfid = item.type === "missing_rfid";
+                const linkedTypes = [
+                  "missing_rfid",
+                  "pending_online_enrollment",
+                  "rejected_online_enrollment",
+                  "frozen_parent_accounts",
+                ];
                 const listInner = (
                   <>
                     <span className="attention-icon">{item.icon}</span>
@@ -174,9 +248,9 @@ export default function AdminPage() {
                 );
                 return (
                   <li key={item.title} className="attention-item">
-                    {isMissingRfid ? (
+                    {linkedTypes.includes(item.type) ? (
                       <Link
-                        href="/dashboard/list"
+                        href={item.type === "missing_rfid" ? "/dashboard/list" : item.type === "frozen_parent_accounts" ? "/account" : "/online-enrollment"}
                         className="attention-item-link"
                       >
                         {listInner}
@@ -191,12 +265,43 @@ export default function AdminPage() {
           ) : (
             <p className="attention-empty">Nothing needs your attention right now. 🎉</p>
           )}
+          {attentionMessage && <p className="attention-feedback">{attentionMessage}</p>}
+          {rejectedApplications.length > 0 && (
+            <div className="rejected-applications-widget">
+              <div className="rejected-applications-header">
+                <div>
+                  <h3>Rejected applications</h3>
+                  <p>Recent applications marked for rejection.</p>
+                </div>
+                <button
+                  type="button"
+                  className="rejected-delete-btn"
+                  onClick={handleDeleteRejected}
+                  disabled={deletingRejected}
+                >
+                  {deletingRejected ? "Deleting…" : "Delete All"}
+                </button>
+              </div>
+              <ul className="rejected-applications-list">
+                {rejectedApplications.map((application) => (
+                  <li key={application.id} className="rejected-application-item">
+                    <Link href={`/online-enrollment/${application.id}`}>
+                      <strong>{application.studentName || "Unnamed student"}</strong>
+                      <span>{application.parentName || "Parent unavailable"}</span>
+                      <small>
+                        {formatRejectedDate(application.rejectedAt || application.submittedAt)}
+                        {application.rejectionReason ? ` · ${application.rejectionReason}` : ""}
+                      </small>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <div className="secondary-card secondary-card-stack">
           <h3>Quick Tip</h3>
-          <p>
-            Attendance updates automatically once RFID scans are recorded at the school entrance.
-          </p>
+          <p>{quickTip}</p>
           <Link href="/online-enrollment" className="online-cta-card">
             <div className="online-cta-card-icon">📋</div>
             <div className="online-cta-card-body">

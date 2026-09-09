@@ -149,6 +149,26 @@
   color: #8a94a6;
 }
 
+.detail-student-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.detail-student-type-transferee {
+  background: #e8efff;
+  color: #1e40af;
+  border: 1px solid #c7d4f5;
+}
+
+.detail-student-type-regular {
+  background: #f1f4f9;
+  color: #6c7b95;
+}
+
 /* ---------- Feedback Banner ---------- */
 
 .detail-feedback {
@@ -618,24 +638,18 @@
   border-top-right-radius: 10px;
 }
 
-.report-card-th-term-group {
+/* was .report-card-th-term-group */
+.report-card-th-term {
   text-align: center;
   border-left: 1px solid rgba(255, 255, 255, 0.15);
+  width: 110px;
 }
 
-.report-card-th-subterm,
-.report-card-grade {
-  width: 68px;
-  text-align: center;
-}
-
-.report-card-th-subterm {
-  font-size: 0.68rem;
-}
+/* .report-card-th-subterm rule block can be deleted entirely — no longer used */
 
 .report-card-th-avg,
 .report-card-avg {
-  width: 100px;
+  width: 110px;
   text-align: center;
 }
 
@@ -789,8 +803,8 @@
     max-height: 92vh;
   }
   .report-card-th-subject { min-width: 240px; }
-  .report-card-th-subterm,
-  .report-card-grade { width: 72px; }
+  .report-card-th-term,
+  .report-card-grade { width: 84px; }
   .report-card-row-indented.report-card-row-child td:first-child {
     padding-left: 2rem;
   }
@@ -810,8 +824,8 @@
     margin-right: 0;
     width: fit-content;
   }
-  .report-card-th-subterm,
-  .report-card-grade { width: 60px; }
+  .report-card-th-term,
+  .report-card-grade { width: 68px; }
   .report-card-overall-value {
     font-size: 1.05rem;
   }

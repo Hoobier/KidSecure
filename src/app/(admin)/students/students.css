@@ -337,6 +337,12 @@
   color: #6b7485;
 }
 
+.students-status-graduated {
+  background: rgba(30, 130, 76, 0.12);
+  color: #167044;
+  border: 1px solid rgba(30, 130, 76, 0.25);
+}
+
 .students-status-deleted {
   background: rgba(192, 57, 43, 0.1);
   color: #c0392b;
@@ -345,6 +351,26 @@
 .students-status-neutral {
   background: #eef0f4;
   color: #8a94a6;
+}
+
+.students-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.students-type-transferee {
+  background: #e8efff;
+  color: #1e40af;
+  border: 1px solid #c7d4f5;
+}
+
+.students-type-regular {
+  background: #f1f4f9;
+  color: #6c7b95;
 }
 
 /* ---------- Empty / Loading States ---------- */

@@ -84,7 +84,9 @@ function validateForm(form) {
   if (!form.dateOfBirth) {
   errors.dateOfBirth = ["Date of birth is required."];
   }
-
+  if (!form.address.trim()) {
+    errors.address = ["Student address is required."];
+  }
   if (!form.gradeLevel) errors.gradeLevel = ["Please select a grade level."];
   if (!form.section) errors.section = ["Please select a section."];
 
@@ -107,6 +109,7 @@ export default function EditStudentPage({ params }) {
     middleName: "",
     lastName: "",
     dateOfBirth: "",
+    address: "",
     gradeLevel: "",
     section: "",
   });
@@ -148,6 +151,7 @@ export default function EditStudentPage({ params }) {
           middleName: json.data.middleName || "",
           lastName: json.data.lastName || "",
           dateOfBirth: json.data.dateOfBirth || "",
+          address: json.data.address || "",
           gradeLevel: json.data.gradeLevel || "",
           section: json.data.section || "",
         });
@@ -464,6 +468,17 @@ export default function EditStudentPage({ params }) {
               {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+        </div>
+
+        <div className="edit-form-group">
+          <label>Address<span className="required">*</span></label>
+          <input
+            type="text"
+            value={form.address}
+            onChange={(e) => updateField("address", e.target.value)}
+            className={errors.address ? "input-invalid" : ""}
+          />
+          {errors.address && <div className="edit-field-error">{errors.address[0]}</div>}
         </div>
 
         <div className="edit-actions">

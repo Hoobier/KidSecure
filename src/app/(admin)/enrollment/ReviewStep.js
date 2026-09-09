@@ -146,6 +146,7 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
     (student.middleName || "").trim() !== "" ||
     (student.lastName || "").trim() !== "" ||
     (student.dateOfBirth || "").trim() !== "" ||
+    (student.address || "").trim() !== "" ||
     (student.gradeLevel || "").trim() !== "" ||
     (student.section || "").trim() !== "";
 
@@ -195,6 +196,10 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
                   <span className="enrollment-review-empty">—</span>
                 )}
               </span>
+            </div>
+            <div className="enrollment-review-row">
+              <span>Full Address</span>
+              <span className="enrollment-review-value">{student.address || "—"}</span>
             </div>
             {student.isTransferee && (
               <div className="enrollment-review-row">

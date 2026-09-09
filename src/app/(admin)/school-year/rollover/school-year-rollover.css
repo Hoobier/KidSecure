@@ -1,0 +1,262 @@
+/* ---------- School Year Rollover ---------- */
+/* src/app/(admin)/school-year/rollover/school-year-rollover.css */
+.syr-page {
+  width: 100%;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.oe-card {
+  background: #ffffff;
+  border: 1px solid #e2e5ea;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(16, 24, 40, 0.06);
+  padding: 16px;
+}
+
+.oe-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.oe-banner-error {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.oe-empty {
+  padding: 32px 16px;
+  color: #718096;
+  font-size: 14px;
+  text-align: center;
+}
+
+.oe-loading {
+  background: transparent;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #1b2a4a;
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #253a68;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border-color: #d5dae2;
+  color: #718096;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.syr-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+.syr-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.syr-step-active,
+.syr-step-done {
+  color: #1b2a4a;
+}
+
+.syr-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.syr-step-active .syr-step-num,
+.syr-step-done .syr-step-num {
+  background: #1b2a4a;
+  color: #ffffff;
+}
+
+.syr-step-line {
+  flex: 1 1 60px;
+  height: 1px;
+  background: #d1d5db;
+}
+
+.syr-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.syr-summary-card {
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.syr-summary-promote { background: #f0f5f1; }
+.syr-summary-retain { background: #faf6ea; }
+.syr-summary-graduate { background: #eef0f6; }
+
+.syr-summary-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.syr-summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin-top: 2px;
+}
+
+.syr-search-input {
+  width: 100%;
+  max-width: none;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  color: #1b2a4a;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.syr-search-input:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.syr-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.syr-group-header {
+  background: #f4f5f7;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1b2a4a;
+  border-top: 1px solid #eee;
+}
+
+.syr-group:first-child .syr-group-header {
+  border-top: none;
+}
+
+.syr-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.8fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid #eee;
+}
+
+.syr-row-overridden {
+  background: #fdf9ee;
+}
+
+.syr-row-name {
+  font-size: 14px;
+  color: #1b2a4a;
+}
+
+.syr-row-grade {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.syr-row-select {
+  padding: 6px 8px;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.syr-row-overridden .syr-row-select {
+  border-color: #c9a227;
+  color: #8a7530;
+  font-weight: 600;
+}
+
+.syr-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.syr-confirm-card {
+  max-width: 560px;
+}
+
+.syr-confirm-text {
+  font-size: 14px;
+  color: #1b2a4a;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .syr-steps {
+    align-items: flex-start;
+  }
+
+  .syr-step {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .syr-step-line {
+    margin-top: 12px;
+  }
+
+  .syr-summary { grid-template-columns: 1fr; }
+  .syr-row { grid-template-columns: 1fr; gap: 4px; }
+}
