@@ -1,0 +1,50 @@
+.delp-page { width: 100%; }
+.delp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; }
+.delp-header h1 { font-size: 1.75rem; font-weight: 700; color: #1b2a4a; }
+.delp-header-actions, .delp-row-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.delp-btn { padding: 0.7rem 1.5rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; background: #1b2a4a; color: #ffffff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: opacity 0.15s ease, background 0.15s ease; }
+.delp-btn:hover:not(:disabled) { opacity: 0.9; }
+.delp-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.delp-btn-secondary { background: #ffffff; color: #33415c; border: 1px solid #d5dae2; }
+.delp-btn-secondary:hover:not(:disabled) { background: #f5f7fa; opacity: 1; }
+.delp-btn-restore { background: #1e824c; color: #ffffff; }
+.delp-btn-restore:hover:not(:disabled) { background: #186a3d; opacity: 1; }
+.delp-btn-danger { background: #c0392b; color: #ffffff; }
+.delp-btn-danger:hover:not(:disabled) { background: #a93226; opacity: 1; }
+.delp-notice { border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.9rem; font-weight: 500; margin-bottom: 1.5rem; border: 1px solid transparent; }
+.delp-notice-success { background: rgba(30, 130, 76, 0.1); color: #1e824c; border-color: rgba(30, 130, 76, 0.3); }
+.delp-notice-error { background: rgba(192, 57, 43, 0.1); color: #c0392b; border-color: rgba(192, 57, 43, 0.3); }
+.delp-toolbar { display: flex; gap: 0.625rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.delp-search { flex: 1; min-width: 220px; padding: 9px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #ffffff; font-size: 13.5px; font-family: inherit; color: #1a1f3a; outline: none; }
+.delp-search:focus { border-color: #1a1f3a; box-shadow: 0 0 0 3px rgba(26, 31, 58, 0.08); }
+.delp-table-wrap { background: #ffffff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); border: 1px solid #e9ecf2; overflow-x: auto; margin-bottom: 1.25rem; }
+.delp-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.delp-table th { text-align: left; padding: 0.85rem 1.1rem; font-size: 0.75rem; font-weight: 600; color: #8a94a6; text-transform: uppercase; letter-spacing: 0.03em; }
+.delp-table td { padding: 0.85rem 1.1rem; border-top: 1px solid #eef0f4; color: #33415c; vertical-align: top; }
+.delp-table tbody tr:hover { background: #f5f7fa; }
+.delp-empty { text-align: center; padding: 3rem 1rem !important; color: #8a94a6; font-size: 0.9rem; }
+.delp-children-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.delp-child-pill { display: inline-block; padding: 3px 10px; border-radius: 6px; background: #f5f7fa; border: 1px solid #d5dae2; color: #1b2a4a; font-size: 12.5px; text-decoration: none; }
+.delp-child-pill:hover { background: #eef0f4; }
+.delp-no-children { color: #a0aec0; font-size: 12.5px; }
+.delp-child-pill-inactive { background: #f7f7f7; border-color: #d5dae2; color: #8a94a6; }
+.delp-child-pill-graduated { background: #f0f8f3; border-color: #b7dec4; color: #167044; }
+.delp-child-pill-deleted { background: #fff5f5; border-color: #fed7d7; color: #c53030; }
+.delp-child-inactive-label, .delp-child-deleted-label { font-size: 11px; font-weight: 500; }
+.delp-child-graduated-label { font-size: 11px; font-weight: 600; color: #167044; }
+.delp-pagination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; font-size: 0.9rem; color: #5b6474; flex-wrap: wrap; }
+.delp-pagination-controls { display: flex; gap: 0.5rem; }
+.delp-pagination-btn { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #d5dae2; background: #ffffff; color: #33415c; font-size: 0.9rem; cursor: pointer; }
+.delp-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.delp-modal-overlay { position: fixed; inset: 0; background: rgba(27, 42, 74, 0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
+.delp-modal { background: #ffffff; border-radius: 14px; padding: 1.5rem 1.5rem 1.25rem; max-width: 420px; width: 100%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
+.delp-modal h3 { font-size: 1.35rem; font-weight: 700; color: #1b2a4a; margin: 0 0 0.75rem; line-height: 1.15; }
+.delp-modal p { font-size: 0.95rem; color: #33415c; line-height: 1.5; margin: 0 0 1rem; }
+.delp-modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+.delp-modal-btn { padding: 0.65rem 1.4rem; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; border: none; min-width: 110px; }
+.delp-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.delp-modal-btn-cancel { background: transparent; color: #8a94a6; }
+.delp-modal-btn-restore { background: #1e824c; color: #ffffff; }
+.delp-modal-btn-danger { background: #c0392b; color: #ffffff; }
+.delp-confirm-input { width: 100%; padding: 0.6rem 0.8rem; border: 1.5px solid #c0392b; border-radius: 8px; font-size: 0.95rem; margin-top: 0.5rem; margin-bottom: 0.5rem; background: #ffffff; color: #1b2a4a; outline: none; box-sizing: border-box; }
+.delp-confirm-input:focus { box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12); }

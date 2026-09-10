@@ -72,6 +72,16 @@
   opacity: 1;
 }
 
+.del-btn-danger {
+  background: #c0392b;
+  color: #ffffff;
+}
+
+.del-btn-danger:hover:not(:disabled) {
+  background: #a93226;
+  opacity: 1;
+}
+
 /* ---------- Notice Banner ---------- */
 
 .del-notice {
@@ -423,4 +433,31 @@
 
 .del-modal-btn-restore:hover:not(:disabled) {
   background: #186a3d;
+}
+
+.del-modal-btn-danger {
+  background: #c0392b;
+  color: #ffffff;
+}
+
+.del-modal-btn-danger:hover:not(:disabled) {
+  background: #a93226;
+}
+
+.del-confirm-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid #c0392b;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  color: #1b2a4a;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.del-confirm-input:focus {
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
 }

@@ -6,6 +6,20 @@
 .parents-page-header h1 { font-size: 24px; font-weight: 700; color: #1b2a4a; margin-bottom: 4px; }
 .parents-page-header p { font-size: 13.5px; color: #718096; }
 
+.parents-deleted-link {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #33415c;
+  border: 1px solid #d5dae2;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.parents-deleted-link:hover { background: #f5f7fa; }
+
 .parents-card {
   background: #ffffff;
   border-radius: 12px;
@@ -179,6 +193,36 @@
   color: #6b7485;
 }
 
+.parents-account-status-deleted {
+  background: #e2e3e5;
+  color: #495057;
+}
+
+.parents-action-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.parents-delete-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1.5px solid #fed7d7;
+  background: #fff5f5;
+  color: #c0392b;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 180px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.parents-delete-btn:hover { background: #ffe8e8; }
+
 .parents-resend-btn {
   padding: 6px 14px;
   border-radius: 6px;
@@ -242,8 +286,18 @@
   font-weight: 600;
   cursor: pointer;
 }
+.parents-modal-btn-danger {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: #c0392b;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
 .parents-modal-btn-cancel:disabled,
-.parents-modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.parents-modal-btn-confirm:disabled,
+.parents-modal-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ---------- Pagination ---------- */
 
@@ -314,6 +368,11 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 180px;
+  box-sizing: border-box;
+  text-align: center;
 }
 .parents-resend-btn:hover { background: #f5f7fa; border-color: #1b2a4a; }
 

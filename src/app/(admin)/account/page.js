@@ -34,6 +34,8 @@ export default function ParentDirectoryPage() {
   const [resendTarget, setResendTarget] = useState(null);
   const [resending, setResending] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletingParent, setDeletingParent] = useState(false);
 
   const fetchParents = useCallback(async (overrides = {}) => {
     const search = overrides.search ?? searchInput;
@@ -126,11 +128,46 @@ export default function ParentDirectoryPage() {
     }
   }
 
+  async function handleDeleteParent() {
+    if (!deleteTarget) return;
+    setDeletingParent(true);
+    try {
+      const res = await fetch(`/api/parents/${deleteTarget.id}/delete`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msg = (data && data.message) || "Unable to delete this parent account. Please try again.";
+        throw new Error(msg);
+      }
+
+      setFeedback({ type: "success", message: "✅ Parent account moved to Deleted Parents." });
+      fetchParents();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message:
+          err && typeof err === "object" && "message" in err
+            ? `⚠️ ${err.message}`
+            : "⚠️ Unable to delete this parent account. Please try again.",
+      });
+    } finally {
+      setDeletingParent(false);
+      setDeleteTarget(null);
+      setTimeout(() => setFeedback(null), 8000);
+    }
+  }
+
   return (
     <main className="parents-page">
       <div className="parents-page-header">
         <h1>Parent Directory</h1>
         <p>All parent and guardian accounts linked to enrolled students.</p>
+        <Link href="/account/deleted" className="parents-deleted-link">
+          🗑 Deleted Parents
+        </Link>
       </div>
 
       {feedback && (
@@ -253,18 +290,31 @@ export default function ParentDirectoryPage() {
                           ? "Frozen"
                           : p.accountStatus === "active"
                             ? "Active"
+                            : p.accountStatus === "deleted"
+                              ? "Deleted"
                             : "Unknown"}
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="parents-resend-btn"
-                        onClick={() => setResendTarget({ id: p.id, name: p.name, email: p.email })}
-                        disabled={p.accountStatus === "frozen"}
-                        title={p.accountStatus === "frozen" ? "This account is frozen." : undefined}
-                      >
-                        {p.accountStatus === "frozen" ? "Account Frozen" : "Resend Credentials"}
-                      </button>
+                      <div className="parents-action-buttons">
+                        <button
+                          className="parents-resend-btn"
+                          onClick={() => setResendTarget({ id: p.id, name: p.name, email: p.email })}
+                          disabled={p.accountStatus === "frozen"}
+                          title={p.accountStatus === "frozen" ? "This account is frozen." : undefined}
+                        >
+                          {p.accountStatus === "frozen" ? "Account Frozen" : "Resend Credentials"}
+                        </button>
+                        {(p.accountStatus === "active" || p.accountStatus === "frozen") && (
+                          <button
+                            type="button"
+                            className="parents-delete-btn"
+                            onClick={() => setDeleteTarget({ id: p.id, name: p.name, email: p.email })}
+                          >
+                            Delete Account
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -326,6 +376,34 @@ export default function ParentDirectoryPage() {
                 disabled={resending}
               >
                 {resending ? "Resending…" : "Resend"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="parents-modal-overlay">
+          <div className="parents-modal">
+            <h3>Delete this parent account?</h3>
+            <p>
+              This will disable {deleteTarget.name}&apos;s login and hide their account from this list.
+              You can restore it later from Deleted Parents.
+            </p>
+            <div className="parents-modal-actions">
+              <button
+                className="parents-modal-btn-cancel"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deletingParent}
+              >
+                Cancel
+              </button>
+              <button
+                className="parents-modal-btn-danger"
+                onClick={handleDeleteParent}
+                disabled={deletingParent}
+              >
+                {deletingParent ? "Deleting..." : "Delete Account"}
               </button>
             </div>
           </div>

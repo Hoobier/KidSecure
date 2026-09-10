@@ -47,6 +47,9 @@ export default function DeletedStudentsPage() {
   const [restoring, setRestoring] = useState(false);
   const [notice, setNotice] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [permanentTarget, setPermanentTarget] = useState(null);
+  const [permanentConfirmText, setPermanentConfirmText] = useState("");
+  const [permanentDeleting, setPermanentDeleting] = useState(false);
 
   const selectedStudents = students.filter((s) => selectedIds.has(s.id));
   const singleSelected =
@@ -213,6 +216,46 @@ export default function DeletedStudentsPage() {
     setTimeout(() => setNotice(null), 5000);
   }
 
+  async function handlePermanentDelete() {
+    if (!permanentTarget || permanentDeleting) return;
+    setPermanentDeleting(true);
+    setNotice(null);
+
+    try {
+      const res = await fetch(`/api/students/${permanentTarget.id}/permanent`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // ignore parse error
+      }
+
+      if (!res.ok) {
+        throw new Error(payload?.message || "Failed to permanently delete student.");
+      }
+
+      setNotice({
+        type: "success",
+        message: `${permanentTarget.fullName} was permanently deleted.`,
+      });
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message: error?.message || "Failed to permanently delete student. Please try again.",
+      });
+    } finally {
+      setPermanentDeleting(false);
+      setPermanentTarget(null);
+      setPermanentConfirmText("");
+      fetchStudents();
+      setTimeout(() => setNotice(null), 5000);
+    }
+  }
+
   return (
     <div className="del-page">
       <div className="del-header">
@@ -316,6 +359,7 @@ export default function DeletedStudentsPage() {
               <th>RFID Tag</th>
               <th>Parent</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -346,12 +390,15 @@ export default function DeletedStudentsPage() {
                   <td>
                     <div className="del-skeleton-cell" />
                   </td>
+                  <td>
+                    <div className="del-skeleton-cell" />
+                  </td>
                 </tr>
               ))}
 
             {!loading && students.length === 0 && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <div className="del-empty">
                     No deleted students. Use Filters or the Students list to
                     soft-delete students here.
@@ -400,6 +447,19 @@ export default function DeletedStudentsPage() {
                     </td>
                     <td>
                       <span className={info.cls}>{info.label}</span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="del-btn del-btn-danger"
+                        onClick={() => {
+                          setPermanentTarget({ id: student.id, fullName: student.fullName });
+                          setPermanentConfirmText("");
+                        }}
+                        disabled={permanentDeleting}
+                      >
+                        🗑 Permanently Delete
+                      </button>
                     </td>
                   </tr>
                 );
@@ -492,6 +552,49 @@ export default function DeletedStudentsPage() {
                 disabled={restoring}
               >
                 {restoring ? "Restoring..." : "Restore"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {permanentTarget && (
+        <div className="del-modal-overlay">
+          <div className="del-modal">
+            <h3>Permanently delete this student?</h3>
+            <p>
+              This will permanently remove {permanentTarget.fullName}&apos;s record, including
+              attendance history and uploaded documents. This cannot be undone.
+            </p>
+            <input
+              type="text"
+              className="del-confirm-input"
+              placeholder={`Type ${permanentTarget.fullName} to confirm`}
+              value={permanentConfirmText}
+              onChange={(e) => setPermanentConfirmText(e.target.value)}
+            />
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-btn del-modal-btn-cancel"
+                onClick={() => {
+                  setPermanentTarget(null);
+                  setPermanentConfirmText("");
+                }}
+                disabled={permanentDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-btn del-modal-btn-danger"
+                onClick={handlePermanentDelete}
+                disabled={
+                  permanentDeleting ||
+                  permanentConfirmText.trim() !== permanentTarget.fullName.trim()
+                }
+              >
+                {permanentDeleting ? "Deleting..." : "Permanently Delete"}
               </button>
             </div>
           </div>
