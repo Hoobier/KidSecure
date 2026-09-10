@@ -6,7 +6,7 @@ import "./students.css";
 
 // src/app/(admin)/students/page.js
 
-const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
+const GRADE_OPTIONS = ["Nursery", "Kindergarten", "Preparatory", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 const SECTION_OPTIONS = ["A", "B", "C"];
 
 export default function StudentsPage() {
@@ -221,6 +221,9 @@ export default function StudentsPage() {
           )}
           <Link href="/students/deleted" className="students-btn-primary students-btn-secondary">
             🗑 Deleted Students
+          </Link>
+          <Link href="/students/transferred" className="students-btn-primary students-btn-secondary">
+            ↪ Transferred Students
           </Link>
           {selectedIds.size > 0 && (
             <button

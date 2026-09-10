@@ -220,6 +220,11 @@
   color: #c0392b;
 }
 
+.del-status-transferred {
+  background: rgba(49, 95, 135, 0.1);
+  color: #315f87;
+}
+
 .del-status-inactive {
   background: rgba(122, 134, 154, 0.15);
   color: #6b7485;

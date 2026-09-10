@@ -3,6 +3,7 @@
 import  React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
+import "../../enrollment/enrollment.css";
 
 // src/app/(admin)/students/[id]/page.js
 
@@ -121,6 +122,10 @@ export default function StudentDetailPage({ params }) {
   const [reportCardReleased, setReportCardReleased] = useState(false);
   const [reportCardReleasedAt, setReportCardReleasedAt] = useState(null);
   const [reportReleasing, setReportReleasing] = useState(false);
+  const [showReEnroll, setShowReEnroll] = useState(false);
+  const [reEnrolling, setReEnrolling] = useState(false);
+  const [reEnrollForm, setReEnrollForm] = useState({ gradeLevel: "", section: "", previousSchool: "" });
+  const [reEnrollErrors, setReEnrollErrors] = useState({});
 
   useEffect(() => {
     if (showReportCard && student) {
@@ -303,6 +308,51 @@ export default function StudentDetailPage({ params }) {
       } finally {
         setReactivating(false);
         setTimeout(() => setFeedback(null), 5000);
+      }
+    }
+
+    function closeReEnroll() {
+      if (reEnrolling) return;
+      setShowReEnroll(false);
+      setReEnrollErrors({});
+    }
+
+    async function handleReEnroll() {
+      const errors = {};
+      if (!reEnrollForm.gradeLevel) errors.gradeLevel = "Please select a grade level.";
+      if (!reEnrollForm.previousSchool.trim()) errors.previousSchool = "Please enter the student's previous school.";
+      setReEnrollErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+
+      setReEnrolling(true);
+      try {
+        const res = await fetch(`/api/students/${id}/re-enroll`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gradeLevel: reEnrollForm.gradeLevel,
+            section: reEnrollForm.section.trim() || null,
+            previousSchool: reEnrollForm.previousSchool.trim(),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Unable to re-enroll student.");
+        setStudent((prev) => ({
+          ...prev,
+          status: "active",
+          isTransferee: true,
+          previousSchool: reEnrollForm.previousSchool.trim(),
+          gradeLevel: reEnrollForm.gradeLevel,
+          section: reEnrollForm.section.trim(),
+        }));
+        setFeedback({ type: "success", message: "✅ Student re-enrolled successfully." });
+        setShowReEnroll(false);
+        setReEnrollErrors({});
+      } catch (err) {
+        setReEnrollErrors({ form: err.message || "Unable to re-enroll student." });
+      } finally {
+        setReEnrolling(false);
       }
     }
 
@@ -609,6 +659,26 @@ export default function StudentDetailPage({ params }) {
             Deactivate Student
           </button>
         </section>
+      ) : student.status === "transferred_out" ? (
+        <section className="detail-danger-zone">
+          <h2>Re-enroll Student</h2>
+          <p>This student previously transferred to another school. Re-enrolling will reactivate their record, RFID tag, and parent account.</p>
+          <button
+            type="button"
+            className="detail-btn-primary"
+            onClick={() => {
+              setReEnrollForm({
+                gradeLevel: student.gradeLevel || "",
+                section: student.section || "",
+                previousSchool: student.previousSchool || "",
+              });
+              setReEnrollErrors({});
+              setShowReEnroll(true);
+            }}
+          >
+            Re-enroll Student
+          </button>
+        </section>
       ) : (
         <section className="detail-danger-zone">
           <h2>Reactivate Student</h2>
@@ -669,6 +739,69 @@ export default function StudentDetailPage({ params }) {
               </button>
               <button className="detail-modal-btn-confirm" onClick={handleReactivate}>
                 Reactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReEnroll && (
+        <div className="detail-modal-overlay" onClick={closeReEnroll}>
+          <div className="detail-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Re-enroll this student?</h3>
+            <p>Enter the student&apos;s current enrollment information.</p>
+            {reEnrollErrors.form && <p className="enrollment-field-error">⚠️ {reEnrollErrors.form}</p>}
+            <div className="enrollment-form-group">
+              <label htmlFor="reEnrollGradeLevel">
+                Grade Level<span className="required">*</span>
+              </label>
+              <select
+                id="reEnrollGradeLevel"
+                value={reEnrollForm.gradeLevel}
+                onChange={(e) => {
+                  setReEnrollForm((prev) => ({ ...prev, gradeLevel: e.target.value }));
+                  setReEnrollErrors((prev) => ({ ...prev, gradeLevel: "", form: "" }));
+                }}
+                className={reEnrollErrors.gradeLevel ? "input-invalid" : ""}
+              >
+                <option value="">Select grade level</option>
+                {[
+                  "Nursery", "Kindergarten", "Preparatory", "Grade 1", "Grade 2",
+                  "Grade 3", "Grade 4", "Grade 5", "Grade 6",
+                ].map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+              </select>
+              {reEnrollErrors.gradeLevel && <p className="enrollment-field-error">{reEnrollErrors.gradeLevel}</p>}
+            </div>
+            <div className="enrollment-form-group">
+              <label htmlFor="reEnrollSection">Section</label>
+              <input
+                id="reEnrollSection"
+                type="text"
+                value={reEnrollForm.section}
+                onChange={(e) => setReEnrollForm((prev) => ({ ...prev, section: e.target.value }))}
+              />
+            </div>
+            <div className="enrollment-form-group">
+              <label htmlFor="reEnrollPreviousSchool">
+                Previous School Name<span className="required">*</span>
+              </label>
+              <input
+                id="reEnrollPreviousSchool"
+                type="text"
+                placeholder="e.g. Bagumbong Elementary School"
+                value={reEnrollForm.previousSchool}
+                onChange={(e) => {
+                  setReEnrollForm((prev) => ({ ...prev, previousSchool: e.target.value }));
+                  setReEnrollErrors((prev) => ({ ...prev, previousSchool: "", form: "" }));
+                }}
+                className={reEnrollErrors.previousSchool ? "input-invalid" : ""}
+              />
+              {reEnrollErrors.previousSchool && <p className="enrollment-field-error">{reEnrollErrors.previousSchool}</p>}
+            </div>
+            <div className="detail-modal-actions">
+              <button className="detail-modal-btn-cancel" onClick={closeReEnroll} disabled={reEnrolling}>Cancel</button>
+              <button className="detail-modal-btn-confirm" onClick={handleReEnroll} disabled={reEnrolling}>
+                {reEnrolling ? "Re-enrolling…" : "Confirm Re-enroll"}
               </button>
             </div>
           </div>

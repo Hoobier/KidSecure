@@ -54,6 +54,10 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [deletingRejected, setDeletingRejected] = useState(false);
   const [attentionMessage, setAttentionMessage] = useState(null);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [loyaltyStudents, setLoyaltyStudents] = useState([]);
+  const [loadingLoyalty, setLoadingLoyalty] = useState(false);
+  const [loyaltyError, setLoyaltyError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +121,9 @@ export default function AdminPage() {
   const rejectedCount = Number(summary.rejectedGuestEnrollments ?? rejectedApplications.length);
   const calendarDate = formatCalendarDate(new Date());
 
+  const transferredOutCount = Number(summary.transferredOutCount ?? 0);
+  const loyaltyAwardEligibleCount = Number(summary.loyaltyAwardEligibleCount ?? 0);
+
   const attentionItems = summary.attentionItems.map((item) => {
     const build = ATTENTION_ITEM_LABELS[item.type];
     if (!build) return null;
@@ -124,12 +131,7 @@ export default function AdminPage() {
     return { type: item.type, ...rendered };
   }).filter(Boolean);
 
-  const quickTip = pendingGuestEnrollments > 0
-    ? "Review pending online applications before the next enrollment appointment."
-    : rejectedCount > 0
-      ? "Review rejected applications and keep the dashboard clear of old records."
-      : "Attendance updates automatically once RFID scans are recorded at the school entrance.";
-
+  
   async function handleDeleteRejected() {
     if (deletingRejected || rejectedCount === 0) return;
     if (!window.confirm(`Delete all ${rejectedCount} rejected applications? This cannot be undone.`)) return;
@@ -153,6 +155,22 @@ export default function AdminPage() {
       setAttentionMessage(err.message || "Unable to delete rejected applications.");
     } finally {
       setDeletingRejected(false);
+    }
+  }
+
+  async function handleOpenLoyaltyModal() {
+    setShowLoyaltyModal(true);
+    setLoadingLoyalty(true);
+    setLoyaltyError("");
+    try {
+      const res = await fetch("/api/dashboard/loyalty-eligible-students", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Unable to load loyalty award eligible students.");
+      setLoyaltyStudents(data.data || []);
+    } catch (err) {
+      setLoyaltyError(err.message || "Unable to reach the server.");
+    } finally {
+      setLoadingLoyalty(false);
     }
   }
 
@@ -300,24 +318,61 @@ export default function AdminPage() {
           )}
         </div>
         <div className="secondary-card secondary-card-stack">
-          <h3>Quick Tip</h3>
-          <p>{quickTip}</p>
-          <Link href="/online-enrollment" className="online-cta-card">
-            <div className="online-cta-card-icon">📋</div>
-            <div className="online-cta-card-body">
-              <p className="online-cta-card-title">Online Enrollment Submissions</p>
-              <p className="online-cta-card-detail">
-                {pendingGuestEnrollments > 0
-                  ? `${pendingGuestEnrollments} new guest submission${pendingGuestEnrollments === 1 ? "" : "s"} to review.`
-                  : "No pending submissions right now. Check here after families submit via /guest."}
-              </p>
-              <span className="online-cta-card-action">
-                View Online Enrollments →
-              </span>
-            </div>
-          </Link>
+          <h3>Year-End Records</h3>
+          <div className="quick-stats-row">
+            <button type="button" className="quick-stat-item" onClick={handleOpenLoyaltyModal}>
+              <span className="quick-stat-icon">🏅</span>
+              <div className="quick-stat-body">
+                <p className="quick-stat-value">{loyaltyAwardEligibleCount}</p>
+                <p className="quick-stat-label">Loyalty Award Eligible</p>
+              </div>
+            </button>
+            <Link href="/students/transferred" className="quick-stat-item">
+              <span className="quick-stat-icon">📤</span>
+              <div className="quick-stat-body">
+                <p className="quick-stat-value">{transferredOutCount}</p>
+                <p className="quick-stat-label">Transferred Out</p>
+              </div>
+            </Link>
+          </div>
         </div>
       </section>
+
+      {showLoyaltyModal && (
+        <div className="modal-overlay" onClick={() => setShowLoyaltyModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🏅 Loyalty Award Eligible Students</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setShowLoyaltyModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {loadingLoyalty && <p className="modal-loading">Loading students…</p>}
+              {!loadingLoyalty && loyaltyError && <p className="modal-error">⚠️ {loyaltyError}</p>}
+              {!loadingLoyalty && !loyaltyError && loyaltyStudents.length === 0 && (
+                <p className="modal-empty">No loyalty award eligible students found.</p>
+              )}
+              {!loadingLoyalty && !loyaltyError && loyaltyStudents.length > 0 && (
+                <ul className="modal-student-list">
+                  {loyaltyStudents.map((student) => (
+                    <li key={student.studentId} className="modal-student-item">
+                      <div>
+                        <strong>{student.name}</strong>
+                        <span>
+                          {student.gradeLevel}
+                          {student.section ? ` · Section ${student.section}` : ""}
+                        </span>
+                      </div>
+                      <span className="modal-student-year">{student.schoolYearLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
+    
   );
 }

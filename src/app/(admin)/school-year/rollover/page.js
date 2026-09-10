@@ -14,6 +14,7 @@ export default function SchoolYearRolloverPage() {
   const [nextSchoolYearLabel, setNextSchoolYearLabel] = useState("");
   const [groups, setGroups] = useState([]);
   const [overrides, setOverrides] = useState({}); // { [studentId]: action }
+  const [transferNotes, setTransferNotes] = useState({});
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -64,14 +65,15 @@ export default function SchoolYearRolloverPage() {
   }
 
   const summary = useMemo(() => {
-    let promoting = 0, retaining = 0, graduating = 0;
+    let promoting = 0, retaining = 0, graduating = 0, transferring = 0;
     for (const student of allStudents) {
       const action = actionFor(student.id, student.suggestedAction);
       if (action === "promote") promoting++;
       else if (action === "retain") retaining++;
       else if (action === "graduate") graduating++;
+      else if (action === "transfer_out") transferring++;
     }
-    return { promoting, retaining, graduating };
+    return { promoting, retaining, graduating, transferring };
   }, [allStudents, overrides]);
 
   const filteredGroups = useMemo(() => {
@@ -95,6 +97,7 @@ export default function SchoolYearRolloverPage() {
     const decisions = allStudents.map((student) => ({
       studentId: student.id,
       action: actionFor(student.id, student.suggestedAction),
+      note: transferNotes[student.id]?.trim() || null,
     }));
 
     try {
@@ -173,6 +176,10 @@ export default function SchoolYearRolloverPage() {
               <div className="syr-summary-label">Graduating</div>
               <div className="syr-summary-value">{summary.graduating} students</div>
             </div>
+            <div className="syr-summary-card syr-summary-transfer">
+              <div className="syr-summary-label">Transferring</div>
+              <div className="syr-summary-value">{summary.transferring} students</div>
+            </div>
           </div>
 
           <div className="syr-search-wrap">
@@ -208,7 +215,14 @@ export default function SchoolYearRolloverPage() {
                         key={student.id}
                         className={`syr-row ${isOverridden ? "syr-row-overridden" : ""}`}
                       >
-                        <span className="syr-row-name">{student.name}</span>
+                        <span className="syr-row-name">
+                          {student.name}
+                          {group.defaultAction === "graduate" && student.loyaltyEligible && (
+                            <span className="syr-loyalty-badge" title="Eligible for Loyalty Award">
+                              🏅 Loyalty Award
+                            </span>
+                          )}
+                        </span>
                         <span className="syr-row-grade">{student.gradeLevel}</span>
                         <select
                           className="syr-row-select"
@@ -219,14 +233,30 @@ export default function SchoolYearRolloverPage() {
                             <>
                               <option value="graduate">Graduate</option>
                               <option value="retain">Retain in {group.gradeLevel}</option>
+                              <option value="transfer_out">Transfer to another school</option>
                             </>
                           ) : (
                             <>
                               <option value="promote">Promote to {group.nextGradeLevel}</option>
                               <option value="retain">Retain in {group.gradeLevel}</option>
+                              <option value="transfer_out">Transfer to another school</option>
                             </>
                           )}
                         </select>
+                        {currentAction === "transfer_out" && (
+                          <textarea
+                            className="syr-transfer-note"
+                            rows={2}
+                            placeholder="Optional: destination school or reason (e.g. moving to another city)"
+                            value={transferNotes[student.id] || ""}
+                            onChange={(e) =>
+                              setTransferNotes((prev) => ({
+                                ...prev,
+                                [student.id]: e.target.value,
+                              }))
+                            }
+                          />
+                        )}
                       </div>
                     );
                   })}

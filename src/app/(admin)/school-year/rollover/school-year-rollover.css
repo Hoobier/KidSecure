@@ -136,6 +136,7 @@
 .syr-summary-promote { background: #f0f5f1; }
 .syr-summary-retain { background: #faf6ea; }
 .syr-summary-graduate { background: #eef0f6; }
+.syr-summary-transfer { background: #f8f1ed; }
 
 .syr-summary-label {
   font-size: 12px;
@@ -195,6 +196,13 @@
   border-top: 1px solid #eee;
 }
 
+.syr-row-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .syr-row-overridden {
   background: #fdf9ee;
 }
@@ -221,6 +229,38 @@
   border-color: #c9a227;
   color: #8a7530;
   font-weight: 600;
+}
+
+.syr-loyalty-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid #e6d59a;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #7a6422;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.syr-transfer-note {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  color: #1b2a4a;
+  background: #ffffff;
+  resize: vertical;
+}
+
+.syr-transfer-note:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
 }
 
 .syr-actions {
