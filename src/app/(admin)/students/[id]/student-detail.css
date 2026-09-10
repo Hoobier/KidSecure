@@ -585,6 +585,25 @@
   font-size: 0.75rem;
 }
 
+.detail-report-card-release-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.detail-report-card-release-status.is-released { color: #1e824c; }
+.detail-report-card-release-status.is-not-released { color: #8a5a00; }
+
+.detail-report-card-release-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .detail-report-card-close {
   width: 32px;
   height: 32px;
@@ -768,6 +787,20 @@
   border-top: 1px solid #eef0f4;
   background: #fafbfc;
 }
+
+.detail-modal-btn-release {
+  padding: 0.65rem 1rem;
+  border: 1px solid #1e824c;
+  border-radius: 8px;
+  background: #1e824c;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detail-modal-btn-release:hover:not(:disabled) { background: #176b3e; }
+.detail-modal-btn-release:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @keyframes detail-fade-in {
   from { opacity: 0; }

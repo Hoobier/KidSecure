@@ -117,7 +117,10 @@ export default function StudentDetailPage({ params }) {
   const [reportGrades, setReportGrades] = useState({});
   const [reportSaving, setReportSaving] = useState(false);
   const [reportFeedback, setReportFeedback] = useState(null);
-  const [reportLoading, setReportLoading] = useState(false); 
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportCardReleased, setReportCardReleased] = useState(false);
+  const [reportCardReleasedAt, setReportCardReleasedAt] = useState(null);
+  const [reportReleasing, setReportReleasing] = useState(false);
 
   useEffect(() => {
     if (showReportCard && student) {
@@ -129,9 +132,14 @@ export default function StudentDetailPage({ params }) {
         try {
           const res = await fetch(`/api/students/${id}/report-card`, { credentials: "include" });
           const json = await res.json();
-          const saved = res.ok ? (json.data || {}) : {};
+          const reportCard = res.ok ? (json.data || {}) : {};
+          const saved = reportCard.grades || {};
+          setReportCardReleased(Boolean(reportCard.reportCardReleased));
+          setReportCardReleasedAt(reportCard.reportCardReleasedAt || null);
           setReportGrades(mergeWithDefaults(subjects, saved));
         } catch {
+          setReportCardReleased(false);
+          setReportCardReleasedAt(null);
           setReportGrades(mergeWithDefaults(subjects, {}));
         } finally {
           setReportLoading(false);
@@ -167,6 +175,37 @@ export default function StudentDetailPage({ params }) {
       setReportFeedback({ type: "error", message: `⚠️ ${err.message || "Unable to save report card."}` });
     } finally {
       setReportSaving(false);
+    }
+  }
+
+  async function handleReportRelease() {
+    if (!reportCardReleased && reportReleasing) return;
+    if (reportCardReleased && !window.confirm("Unrelease this report card? This will remove it from the parent's Firebase view.")) {
+      return;
+    }
+
+    setReportReleasing(true);
+    setReportFeedback(null);
+    const action = reportCardReleased ? "unrelease" : "release";
+    try {
+      const res = await fetch(`/api/students/${id}/report-card/${action}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || `Unable to ${action} report card.`);
+
+      const reportCard = json.data || json;
+      setReportCardReleased(Boolean(reportCard.reportCardReleased));
+      setReportCardReleasedAt(reportCard.reportCardReleasedAt || null);
+      setReportFeedback({
+        type: "success",
+        message: reportCard.reportCardReleased ? "✅ Report card released to the parent." : "✅ Report card unreleased.",
+      });
+    } catch (err) {
+      setReportFeedback({ type: "error", message: `⚠️ ${err.message || "Unable to update report card release status."}` });
+    } finally {
+      setReportReleasing(false);
     }
   }
 
@@ -698,6 +737,12 @@ export default function StudentDetailPage({ params }) {
                     <span className="detail-report-card-sep">·</span>
                     <span className="detail-report-card-level">{levelLabel || "—"} — Section {student.section}</span>
                   </p>
+                  <div className={`detail-report-card-release-status ${reportCardReleased ? "is-released" : "is-not-released"}`}>
+                    <span className="detail-report-card-release-dot" aria-hidden="true" />
+                    {reportCardReleased && reportCardReleasedAt
+                      ? `Released on ${new Date(reportCardReleasedAt).toLocaleDateString()}`
+                      : "Not released"}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -782,6 +827,13 @@ export default function StudentDetailPage({ params }) {
                   disabled={reportSaving || subjects.length === 0}
                 >
                   {reportSaving ? "Saving…" : "Save Report Card"}
+                </button>
+                <button
+                  className={reportCardReleased ? "detail-modal-btn-cancel" : "detail-modal-btn-release"}
+                  onClick={handleReportRelease}
+                  disabled={reportReleasing || subjects.length === 0}
+                >
+                  {reportReleasing ? "Updating…" : reportCardReleased ? "Unrelease" : "Release to Parent"}
                 </button>
               </div>
             </div>
