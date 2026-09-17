@@ -1,0 +1,150 @@
+.teacher-detail-page { 
+    max-width: 1100px; 
+    margin: 0 auto; 
+    padding: 8px 0 32px; 
+    color: #1b2a4a; 
+}
+
+.teacher-detail-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; 
+    gap: 16px; 
+    margin-bottom: 22px; 
+}
+
+.teacher-detail-header a { 
+    color: #1b2a4a; 
+    text-decoration: underline; 
+    font-weight: 600; 
+}
+
+.teacher-detail-header h1 { 
+    margin-top: 
+    16px; 
+    font-size: 30px; 
+}
+
+.teacher-detail-header p { 
+    color: #8a94a6; 
+    margin-top: 6px; 
+}
+
+.teacher-access-chip { 
+    padding: 6px 10px; 
+    border-radius: 999px; 
+    background: #eef0f4; 
+    color: #6b7485; 
+    font-size: 12px; 
+    font-weight: 600; 
+}
+
+.teacher-parent-card, .teacher-report-card { 
+    background: #fff; 
+    border: 1px solid #edf2f7; 
+    border-radius: 12px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,.06); 
+    padding: 22px; 
+    margin-bottom: 20px; 
+}
+
+.teacher-parent-card h2, .teacher-report-card h2 { 
+    font-size: 20px; 
+}
+
+.teacher-parent-grid { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 16px; 
+    margin-top: 18px; 
+}
+
+.teacher-parent-grid span { 
+    color: #33415c; 
+}
+
+.teacher-parent-grid b { 
+    display: block; 
+    color: #8a94a6; 
+    font-size: 12px; 
+    text-transform: uppercase; 
+    margin-bottom: 5px; 
+}
+
+.teacher-report-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+
+.teacher-report-header p { color: #8a94a6; margin-top: 5px; }
+
+.teacher-report-actions button, .teacher-save-button { border: 0; border-radius: 8px; padding: 10px 14px; background: #1b2a4a; color: #fff; font-weight: 600; cursor: pointer; }
+
+.teacher-grade-table { overflow-x: auto; margin: 20px 0; }
+
+.teacher-grade-row { display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(90px, 1fr)) minmax(120px, 1fr); gap: 10px; align-items: center; padding: 12px 0; border-top: 1px solid #eef0f4; min-width: 680px; }
+
+.teacher-grade-heading { color: #8a94a6; font-size: 12px; font-weight: 600; text-transform: uppercase; border-top: 0; }
+
+.teacher-grade-row label input { width: 100%; padding: 8px; border: 1px solid #d5dae2; border-radius: 6px; }
+
+.teacher-grade-row small { display: block; color: #8a94a6; font-size: 11px; margin-top: 3px; }
+
+.teacher-compile-button { display: block; border: 0; background: transparent; color: #1b2a4a; text-decoration: underline; cursor: pointer; font-size: 12px; margin: 3px 0; }
+
+.teacher-note-field { display: block; color: #33415c; font-weight: 600; margin-bottom: 14px; }
+
+.teacher-note-field textarea { display: block; width: 100%; min-height: 76px; margin-top: 7px; padding: 10px; border: 1px solid #d5dae2; border-radius: 8px; font: inherit; }
+
+.teacher-feedback { padding: 12px; border: 1px solid #d5dae2; border-radius: 8px; margin-bottom: 16px; color: #33415c; }
+
+.teacher-detail-message { padding: 50px; text-align: center; color: #8a94a6; }
+
+@media (max-width: 760px) { .teacher-detail-header { flex-direction: column; }
+
+.teacher-parent-grid { grid-template-columns: repeat(2, 1fr); } }
+
+@media (max-width: 560px) { .teacher-parent-grid { grid-template-columns: 1fr; } }
+
+/* Replacement for the removed report-card section */
+.teacher-report-card-link-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e6eaf1;
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  margin-top: 1.5rem;
+}
+
+.teacher-report-card-link-card h2 {
+  margin: 0 0 0.35rem 0;
+  color: #1b2a4a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.teacher-report-card-status {
+  margin: 0 0 0.25rem 0;
+  color: #33415c;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.teacher-report-card-hint {
+  margin: 0;
+  color: #8a94a6;
+  font-size: 0.85rem;
+}
+
+.teacher-report-card-link-btn {
+  background: #1b2a4a;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.teacher-report-card-link-btn:hover { background: #2c4066; }

@@ -1,0 +1,75 @@
+/* src/app/(admin)/teachers/teachers.css */
+/* Mirrors students.css conventions. Tweak colors to match your theme if needed. */
+
+.teachers-page { padding: 1.5rem 2rem; }
+.teachers-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.teachers-header h1 { font-size: 1.6rem; color: #1b2a4a; margin: 0; }
+.teachers-header-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+.teachers-btn-primary {
+  background: #1b2a4a; color: #fff; border: none; padding: 0.55rem 1rem;
+  border-radius: 8px; font-weight: 500; cursor: pointer; text-decoration: none;
+  font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.teachers-btn-primary:hover { background: #2c4066; }
+.teachers-btn-secondary { background: #f0f3fa; color: #1b2a4a; }
+.teachers-btn-secondary:hover { background: #e1e7f5; }
+.teachers-btn-danger { background: #c0392b; }
+.teachers-btn-danger:hover { background: #a83224; }
+
+.teachers-notice {
+  padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;
+}
+.teachers-notice-success { background: #e6f4ea; color: #1e7a3a; }
+.teachers-notice-error { background: #fdecea; color: #a83224; }
+
+.teachers-toolbar {
+  display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap;
+}
+.teachers-search {
+  flex: 1 1 260px; min-width: 220px; padding: 0.55rem 0.75rem;
+  border: 1px solid #d5dae2; border-radius: 8px; font-size: 0.9rem;
+}
+.teachers-filter {
+  padding: 0.55rem 0.75rem; border: 1px solid #d5dae2; border-radius: 8px;
+  background: #fff; font-size: 0.9rem;
+}
+
+.teachers-table-card {
+  background: #fff; border: 1px solid #e6eaf1; border-radius: 12px; overflow: hidden;
+}
+.teachers-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.teachers-table th, .teachers-table td {
+  padding: 0.75rem 0.9rem; text-align: left; border-bottom: 1px solid #eef1f6;
+}
+.teachers-table th { background: #f7f9fc; color: #55617a; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.teachers-table tbody tr:hover { background: #fafbfe; }
+.teachers-row-selected { background: #eef3ff; }
+.teachers-check-col { width: 36px; }
+.teachers-name-link { color: #1b2a4a; font-weight: 600; text-decoration: none; }
+.teachers-name-link:hover { text-decoration: underline; }
+.teachers-empty { padding: 2rem; text-align: center; color: #8a94a6; }
+
+.teachers-status {
+  display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 500;
+}
+.teachers-status-active { background: #e6f4ea; color: #1e7a3a; }
+.teachers-status-deleted { background: #fdecea; color: #a83224; }
+
+.teachers-modal-overlay {
+  position: fixed; inset: 0; background: rgba(20, 28, 48, 0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.teachers-modal {
+  background: #fff; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 460px;
+}
+.teachers-modal h3 { margin-top: 0; color: #1b2a4a; }
+.teachers-modal p { color: #4a5568; font-size: 0.92rem; line-height: 1.5; }
+.teachers-modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+.teachers-modal-btn {
+  padding: 0.55rem 1rem; border-radius: 8px; border: none; cursor: pointer;
+  font-weight: 500; font-size: 0.9rem;
+}
+.teachers-modal-btn-cancel { background: #f0f3fa; color: #1b2a4a; }
+.teachers-modal-btn-danger { background: #c0392b; color: #fff; }

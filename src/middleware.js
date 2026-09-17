@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 // src/middleware.js
 export function middleware(request) {
-    console.log("MIDDLEWARE RAN:", request.nextUrl.pathname);
   const token = request.cookies.get("kidsecure_token");
+  const teacherToken = request.cookies.get("kidsecure_teacher_token");
   const isLoggedIn = Boolean(token);
   const { pathname } = request.nextUrl;
+
+  const isTeacherPath = pathname === "/teacher" || pathname.startsWith("/teacher/");
+  const isTeacherLoginPage = pathname === "/teacher/login";
+
+  if (isTeacherPath) {
+    if (!teacherToken && !isTeacherLoginPage) {
+      return NextResponse.redirect(new URL("/teacher/login", request.url));
+    }
+
+    if (teacherToken && isTeacherLoginPage) {
+      return NextResponse.redirect(new URL("/teacher/dashboard", request.url));
+    }
+
+    return NextResponse.next();
+  }
 
   const isLoginPage = pathname === "/login";
   const isGuestPage = pathname === "/guest";

@@ -1,11 +1,13 @@
 "use client";
-
+// src/app/(admin)/students/deleted/page.js
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import "./deleted-students.css";
 
 const GRADE_OPTIONS = [
+  "Nursery",
   "Kindergarten",
+  "Preparatory",
   "Grade 1",
   "Grade 2",
   "Grade 3",

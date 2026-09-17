@@ -62,8 +62,14 @@ export default function AdminLayout({ children }) {
             <Link className={linkClass("/students")} href="/students">
               Students
             </Link>
+            <Link className={linkClass("/teachers")} href="/teachers">
+              Teachers
+            </Link>
             <Link className={linkClass("/rfid")} href="/rfid">
               Attendance Logs
+            </Link>
+            <Link className={linkClass("/report-cards")} href="/report-cards">
+              Report Cards
             </Link>
             <Link className={linkClass("/account")} href="/account">
               Parent Directory

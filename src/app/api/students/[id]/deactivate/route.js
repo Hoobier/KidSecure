@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-
+// src/app/api/students/[id]/deactivate/route.js
 export async function POST(request, { params }) {
   const { id } = await params;
   const cookieStore = await cookies();

@@ -1,0 +1,9 @@
+.teacher-students-page { padding: 8px 0 32px; color: #1b2a4a; }.teacher-list-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }.teacher-list-header h1 { font-size: 28px; }.teacher-list-header p { color: #8a94a6; margin-top: 6px; }.teacher-list-back { color: #1b2a4a; font-weight: 600; text-decoration: underline; }.teacher-list-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow-x: auto; }.teacher-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: .9rem; }.teacher-table th { padding: 14px 16px; text-align: left; background: #f5f7fa; color: #8a94a6; font-size: .75rem; text-transform: uppercase; }.teacher-table td { padding: 14px 16px; border-top: 1px solid #eef0f4; color: #33415c; }.teacher-table a { color: #1b2a4a; font-weight: 600; text-decoration: underline; }.teacher-chip { display: inline-flex; padding: 4px 9px; border-radius: 999px; background: #eef0f4; color: #6b7485; font-size: .75rem; font-weight: 600; }.teacher-error { color: #c0392b !important; }@media (max-width: 620px) { .teacher-list-header { align-items: flex-start; flex-direction: column; } }
+
+.teacher-chip-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+.teacher-chip-link:hover {
+  background: #e1e7f5;
+}

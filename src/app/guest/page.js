@@ -14,7 +14,9 @@ const TRANSFEREE_REQUIREMENTS = [
 ];
 
 const GRADE_OPTIONS = [
+  "Nursery",
   "Kindergarten",
+  "Preparatory",
   "Grade 1",
   "Grade 2",
   "Grade 3",
@@ -22,6 +24,8 @@ const GRADE_OPTIONS = [
   "Grade 5",
   "Grade 6",
 ];
+
+const TRANSFEREE_GRADES = ["Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 
 const RELATIONSHIP_OPTIONS = ["Mom", "Dad", "Guardian"];
 
@@ -51,7 +55,6 @@ function getInitialFormState() {
     student: { firstName: "", lastName: "", birthDate: "", gender: "", address: "" },
     parent: { firstName: "", lastName: "", relationship: "", phone: "", email: "" },
     academic: { gradeLevel: "", previousSchool: "" },
-    isTransferee: false,
     signature: "",
   };
 }
@@ -111,6 +114,7 @@ function RequirementItem({ req, file, previewUrl, onUpload, onRemove, error }) {
 
 export default function GuestEnrollmentPage() {
   const [form, setForm] = useState(getInitialFormState);
+  const isTransferee = TRANSFEREE_GRADES.includes(form.academic.gradeLevel);
   const [errors, setErrors] = useState({});
   const [files, setFiles] = useState({});
   const [preview, setPreview] = useState({});
@@ -409,7 +413,7 @@ export default function GuestEnrollmentPage() {
         errs.student.birthDate = `Student must be between ${MIN_AGE} and ${MAX_AGE} years old on enrollment date`;
       }
     }
-    if (form.isTransferee && !form.academic.previousSchool.trim()) {
+    if (isTransferee && !form.academic.previousSchool.trim()) {
       errs.academic = errs.academic || {};
       errs.academic.previousSchool = "Previous School Name is required for transferees";
     }
@@ -418,7 +422,7 @@ export default function GuestEnrollmentPage() {
     if (!followUpDocuments) {
       const requiredDocs = [
         ...REQUIREMENTS,
-        ...(form.isTransferee ? TRANSFEREE_REQUIREMENTS : []),
+        ...(isTransferee ? TRANSFEREE_REQUIREMENTS : []),
       ];
       requiredDocs.forEach((req) => {
         if (!files[req.type]) {
@@ -447,15 +451,15 @@ export default function GuestEnrollmentPage() {
         student: form.student,
         parent: form.parent,
         academic: form.academic,
-        isTransferee: !!form.isTransferee,
+        isTransferee,
         documentsFollowUp: !!followUpDocuments,
         signature: form.signature || null,
       };
       fd.append("data", JSON.stringify(payload));
       if (files.birth_certificate) fd.append("birth_certificate", files.birth_certificate);
       if (files.id_picture_1x1) fd.append("id_picture_1x1", files.id_picture_1x1);
-      if (form.isTransferee && files.form_138) fd.append("form_138", files.form_138);
-      if (form.isTransferee && files.good_moral) fd.append("good_moral", files.good_moral);
+      if (isTransferee && files.form_138) fd.append("form_138", files.form_138);  
+      if (isTransferee && files.good_moral) fd.append("good_moral", files.good_moral);
 
       const res = await fetch("/api/guest/enrollments", {
         method: "POST",
@@ -930,14 +934,19 @@ export default function GuestEnrollmentPage() {
                   )}
                 </div>
                 <div className="guest-field">
-                  <label htmlFor="previousSchool">Previous School (if applicable):</label>
+                   <label htmlFor="previousSchool">
+                     Previous School{isTransferee && <span className="guest-required"> *</span>}:
+                    </label>
                   <input
                     id="previousSchool"
-                    className="guest-input"
-                    placeholder="Full Name"
+                    className={inputInvalid("academic", "previousSchool")}
+                    placeholder={isTransferee ? "Full Name" : "Full Name (if applicable)"}
                     value={form.academic.previousSchool}
                     onChange={(e) => updateForm("academic", "previousSchool", e.target.value)}
                   />
+                  {errors?.academic?.previousSchool && (
+                    <p className="guest-field-error">{errors.academic.previousSchool}</p>
+                  )}
                 </div>
               </div>
             </section>
@@ -961,39 +970,20 @@ export default function GuestEnrollmentPage() {
                 ))}
               </div>
 
-              <div style={{ marginTop: "1.25rem" }}>
-                <label
+              {isTransferee && (
+                <p
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.6rem",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    fontSize: "0.95rem",
-                    fontWeight: 600,
-                    color: "#1b2a4a",
+                    margin: "1.25rem 0 0",
+                    fontSize: "0.85rem",
+                    color: "#6c7b95",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={!!form.isTransferee}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, isTransferee: e.target.checked }))
-                    }
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                      accentColor: "#1b2a4a",
-                      margin: 0,
-                      colorScheme: "light",
-                      flexShrink: 0,
-                    }}
-                  />
-                  This student is transferring from another school
-                </label>
-              </div>
+                  <strong style={{ color: "#1b2a4a" }}>{form.academic.gradeLevel}</strong> applicants are
+                  required to submit the transfer documents below.
+                </p>
+              )}
 
-              {form.isTransferee && (
+              {isTransferee && (
                 <div
                   className="guest-requirements"
                   style={{

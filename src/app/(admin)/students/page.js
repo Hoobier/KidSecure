@@ -304,7 +304,7 @@ export default function StudentsPage() {
                   type="checkbox"
                   checked={!loading && students.length > 0 && selectedIds.size === students.length}
                   onChange={toggleSelectAll}
-                  disabled={loading || students.length === 0}
+                  disabled={Boolean(loading || students.length === 0)}
                 />
               </th>
 

@@ -1,0 +1,20 @@
+.teacher-login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px; background: #f5f6fa; font-family: Arial, Helvetica, sans-serif; }
+.teacher-login-container { width: 100%; max-width: 420px; padding: 44px 40px; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(15, 23, 42, .08); }
+.teacher-login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.teacher-login-brand img { border-radius: 10px; }
+.teacher-login-brand strong, .teacher-login-brand span { display: block; }
+.teacher-login-brand strong { color: #1b2a4a; font-size: 17px; }
+.teacher-login-brand span { color: #94a3b8; font-size: 12px; margin-top: 3px; }
+.teacher-login-container h1 { color: #000; font-size: 24px; margin-bottom: 6px; }
+.teacher-login-intro { color: #718096; font-size: 13.5px; margin-bottom: 28px; }
+.teacher-login-container label { display: block; color: #000; font-size: 13.5px; margin-bottom: 8px; }
+.teacher-login-container input { width: 100%; padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14.5px; color: #000; background: #fff; outline: none; }
+.teacher-login-container input:focus { border-color: #1a1f3a; box-shadow: 0 0 0 3px rgba(26, 31, 58, .08); }
+.teacher-login-container .password-input-wrapper { margin-bottom: 0; }
+.teacher-login-error { display: block; min-height: 22px; margin-top: 6px; color: #e53e3e; font-size: 12.5px; }
+.teacher-login-message { font-size: 13px; margin: 4px 0 14px; }
+.teacher-login-message-error { color: #e53e3e; }
+.teacher-login-message-success { color: #1e824c; }
+.teacher-login-container button[type="submit"] { width: 100%; padding: 13px; border: 0; border-radius: 10px; background: #1a1f3a; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+.teacher-login-container button:disabled { opacity: .7; cursor: not-allowed; }
+@media (max-width: 560px) { .teacher-login-page { padding: 20px; } .teacher-login-container { padding: 32px 24px; } }

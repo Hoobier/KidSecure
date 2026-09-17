@@ -1,0 +1,340 @@
+/* src/app/(admin)/teachers/[id]/teacher-detail.css */
+
+.detail-page {
+  padding: 2rem 2.5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ---------------- Header ---------------- */
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.detail-header h1 {
+  margin: 0 0 0.4rem 0;
+  color: #1b2a4a;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.detail-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #667085;
+  font-size: 0.9rem;
+}
+
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f3fa;
+  color: #1b2a4a;
+  text-decoration: none;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+.detail-back-btn:hover { background: #e1e7f5; }
+
+.detail-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  background: #1b2a4a;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+.detail-btn-primary:hover { background: #2c4066; }
+
+.detail-btn-secondary {
+  background: #f0f3fa;
+  color: #1b2a4a;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+.detail-btn-secondary:hover { background: #e1e7f5; }
+.detail-btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.detail-btn-danger-outline {
+  background: #fff;
+  color: #c0392b;
+  border: 1px solid #c0392b;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.detail-btn-danger-outline:hover {
+  background: #c0392b;
+  color: #fff;
+}
+.detail-btn-danger-outline:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---------------- Status badge ---------------- */
+
+.detail-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+.detail-badge-active { background: #e6f4ea; color: #1e7a3a; }
+.detail-badge-inactive { background: #fdecea; color: #a83224; }
+
+/* ---------------- Feedback banner ---------------- */
+
+.detail-feedback {
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.detail-feedback-success { background: #e6f4ea; color: #1e7a3a; }
+.detail-feedback-error { background: #fdecea; color: #a83224; }
+
+/* ---------------- Cards ---------------- */
+
+.detail-section {
+  background: #fff;
+  border: 1px solid #e6eaf1;
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+}
+
+.detail-section h2 {
+  margin: 0 0 1.1rem 0;
+  color: #8a94a6;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ---------------- Field grid ---------------- */
+
+.detail-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem 2rem;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .detail-fields { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .detail-fields { grid-template-columns: 1fr; }
+}
+
+.detail-field dt {
+  color: #8a94a6;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.35rem 0;
+}
+
+.detail-field dd {
+  margin: 0;
+  color: #1b2a4a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ---------------- Login info block ---------------- */
+
+.detail-login-block {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #f7f9fc;
+  border-radius: 10px;
+  border: 1px solid #eef1f6;
+}
+
+.detail-login-label {
+  color: #8a94a6;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 0.4rem 0;
+}
+
+.detail-login-email {
+  color: #1b2a4a;
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin: 0 0 0.85rem 0;
+  word-break: break-all;
+}
+
+/* ---------------- Assignment chips ---------------- */
+
+.detail-assignment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.detail-assignment-list li {
+  background: #eef3ff;
+  color: #1b2a4a;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #dce6fa;
+}
+
+.detail-empty-note {
+  color: #8a94a6;
+  font-size: 0.9rem;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ---------------- Danger zone ---------------- */
+
+.detail-danger-zone {
+  background: #fdf6f5;
+  border: 1px solid #f5d3cf;
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-danger-zone h2 {
+  margin: 0 0 0.5rem 0;
+  color: #a83224;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.detail-danger-zone p {
+  margin: 0 0 1.1rem 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ---------------- Modal ---------------- */
+
+.detail-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 28, 48, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.detail-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 40px rgba(16, 24, 40, 0.15);
+}
+
+.detail-modal h3 {
+  margin: 0 0 0.6rem 0;
+  color: #1b2a4a;
+  font-size: 1.15rem;
+}
+
+.detail-modal p {
+  color: #4a5568;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0 0 1.5rem 0;
+}
+
+.detail-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.detail-modal-btn-cancel {
+  background: #f0f3fa;
+  color: #1b2a4a;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.detail-modal-btn-cancel:hover { background: #e1e7f5; }
+
+.detail-modal-btn-confirm {
+  background: #1b2a4a;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.detail-modal-btn-confirm:hover { background: #2c4066; }
+
+/* ---------------- Skeleton ---------------- */
+
+.detail-skeleton-title {
+  width: 220px;
+  height: 32px;
+  background: #eef1f6;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.detail-skeleton-block {
+  height: 200px;
+  background: #eef1f6;
+  border-radius: 14px;
+}

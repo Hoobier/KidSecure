@@ -1,0 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import "./teacher-attendance.css";
+
+function formatTime(value) { return value ? new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "-"; }
+
+export default function TeacherAttendancePage() {
+  const [logs, setLogs] = useState([]); const [date, setDate] = useState(""); const [open, setOpen] = useState({}); const [error, setError] = useState("");
+  useEffect(() => { const query = date ? `?date=${date}` : ""; fetch(`/api/teacher/attendance-logs${query}`, { credentials: "include" }).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message || "Unable to load attendance logs."); setLogs(data.data || []); }).catch((reason) => setError(reason.message)); }, [date]);
+  return <div className="teacher-attendance-page"><header className="teacher-attendance-header"><div><h1>Attendance Logs</h1><p>Read-only attendance for your home grade.</p></div><Link href="/teacher/dashboard">Back to Dashboard</Link></header><div className="teacher-attendance-toolbar"><label htmlFor="attendance-date">Date</label><input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></div><div className="teacher-attendance-card"><table className="teacher-attendance-table"><thead><tr><th>Last Name</th><th>First Name</th><th>Section</th><th>Time In</th><th>Time Out</th><th>Status</th><th>Tap details</th></tr></thead><tbody>{error ? <tr><td colSpan={7} className="teacher-error">{error}</td></tr> : logs.length === 0 ? <tr><td colSpan={7}>No attendance records found.</td></tr> : logs.map((log) => <tr key={log.studentId}><td>{log.lastName}</td><td>{log.firstName}</td><td>{log.section || "-"}</td><td>{formatTime(log.timeIn)}</td><td>{formatTime(log.timeOut)}</td><td><span className={`teacher-status teacher-status-${log.status}`}>{log.status}</span></td><td>{log.hasExtraTaps ? <><button className="teacher-extra-taps-button" onClick={() => setOpen((current) => ({ ...current, [log.studentId]: !current[log.studentId] }))}>⚠️ Extra taps ({log.extraTaps?.length || 0})</button>{open[log.studentId] && <div className="teacher-extra-taps">{(log.extraTaps || []).map((tap) => <span key={tap}>{formatTime(tap)}</span>)}</div>}</> : <span className="teacher-no-extra-taps">None</span>}</td></tr>)}</tbody></table></div></div>;
+}
