@@ -9,29 +9,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-const SUBJECTS_BY_GRADE = {
-  "Nursery":      ["CL", "COM", "MATH", "SEN"],
-  "Kindergarten": ["CL", "COM", "MATH", "SEN"],
-  "Preparatory":  ["CL", "COM", "MATH", "SEN"],
-  "Grade 1":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 2":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 3":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 4":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 5":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 6":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-};
-
-const SUBJECT_NAMES = {
-  CLVE:  "Christian Living / Values Education",
-  MATH:  "Mathematics",
-  SCI:   "Science",
-  FIL:   "Filipino",
-  MAPEH: "MAPEH",
-  EPP:   "Edukasyong Pantahanan at Praktikal",
-  CL:    "Christian Living / Bible Studies",
-  COM:   "Communication Skills",
-  SEN:   "Sensory-Perceptual & Socio-Emotional",
-};
+import { getSubjectDisplayItems, getSubjectsForGrade, getSubjectsConfig } from "@/lib/subjectsCache";
 
 // ----------------------------------------------------------------------------
 // Per-term lock / release helpers.
@@ -75,6 +53,7 @@ export default function TeacherReportCardsPage() {
   const [term, setTerm] = useState(null); // null until we know the active term
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [subjectsConfig, setSubjectsConfig] = useState(null);
 
   // Load the teacher's classes once.
     useEffect(() => {
@@ -113,6 +92,10 @@ export default function TeacherReportCardsPage() {
         if (!cancelled) setTerm(t);
       })();
       return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+      getSubjectsConfig().then(setSubjectsConfig).catch(() => {});
     }, []);
 
   const selectedClass = classes.find(
@@ -236,6 +219,7 @@ if (term === null) {
                     student={s}
                     term={term}
                     isHomeMode={mode === "home"}
+                    subjectsConfig={subjectsConfig}
                   />
                 </button>
               ))}
@@ -257,6 +241,7 @@ if (term === null) {
                 term={term}
                 onRefresh={fetchStudents}
                 setFeedback={setFeedback}
+                subjectsConfig={subjectsConfig}                
               />
             )}
           </div>
@@ -417,7 +402,7 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
 // Every other subject is read-only UNLESS it has a 'submitted' status from a
 // visiting teacher — in which case the adviser gets a "Compile" button.
 // ----------------------------------------------------------------------------
-function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedback }) {
+function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedback, subjectsConfig }) {
   const student = students.find((s) => s.id === studentId);
   const [busy, setBusy] = useState(false);
   const [rowStates, setRowStates] = useState({}); // { [code]: 'idle' | 'saving' | 'ok' | 'error' }
@@ -432,7 +417,7 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
     return <p className="trc-empty">Select a student to view their report card.</p>;
   }
 
-  const subjects = SUBJECTS_BY_GRADE[student.gradeLevel] || [];
+  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
   const card = student.reportCard || {};
   const forteCode = student.forteSubjectCode || null;
   const locked = isTermLocked(student, term);
@@ -590,7 +575,7 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
             return (
               <tr key={code}>
                 <td>
-                  {SUBJECT_NAMES[code] || code}
+                  {subjectsConfig?.subjects?.[code] || code}
                   {isEditable && <span className="trc-editable-tag">editable</span>}
                 </td>
                 <td>
@@ -696,7 +681,7 @@ function StatusPill({ status, locked }) {
   return <span className={`trc-pill ${info.cls}`}>{info.label}</span>;
 }
 
-function StudentRowBadge({ student, term, isHomeMode }) {
+function StudentRowBadge({ student, term, isHomeMode, subjectsConfig }) {
   // Locked for THIS term → show the lock.
   if (isTermLocked(student, term)) {
     return <span className="trc-row-badge trc-row-badge-locked" title={`${term} is managed by admin`}>🔒</span>;
@@ -719,7 +704,7 @@ function StudentRowBadge({ student, term, isHomeMode }) {
     return <span className="trc-row-badge trc-row-badge-submitted">Submitted</span>;
   }
 
-  const subjects = SUBJECTS_BY_GRADE[student.gradeLevel] || [];
+  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
   if (subjects.length === 0) return null;
 
   const card = student.reportCard || {};

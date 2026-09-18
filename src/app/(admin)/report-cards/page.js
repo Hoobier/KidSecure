@@ -12,29 +12,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-const SUBJECTS_BY_GRADE = {
-  "Nursery":      ["CL", "COM", "MATH", "SEN"],
-  "Kindergarten": ["CL", "COM", "MATH", "SEN"],
-  "Preparatory":  ["CL", "COM", "MATH", "SEN"],
-  "Grade 1":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 2":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 3":      ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 4":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 5":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 6":      ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-};
-
-const SUBJECT_NAMES = {
-  CLVE:  "Christian Living / Values Education",
-  MATH:  "Mathematics",
-  SCI:   "Science",
-  FIL:   "Filipino",
-  MAPEH: "MAPEH",
-  EPP:   "Edukasyong Pantahanan at Praktikal",
-  CL:    "Christian Living / Bible Studies",
-  COM:   "Communication Skills",
-  SEN:   "Sensory-Perceptual & Socio-Emotional",
-};
+import { getSubjectDisplayItems, getSubjectsForGrade, getSubjectsConfig } from "@/lib/subjectsCache";
 
 const STEPS = [
   "Term",
@@ -46,6 +24,11 @@ const STEPS = [
 
 export default function AdminReportCardsPage() {
   const [tab, setTab] = useState("pending"); // "pending" | "released"
+  const [subjectsConfig, setSubjectsConfig] = useState(null);
+
+  useEffect(() => {
+    getSubjectsConfig().then(setSubjectsConfig).catch(() => {});
+  }, []);
 
   return (
     <div className="rc-page">
@@ -73,7 +56,11 @@ export default function AdminReportCardsPage() {
         </button>
       </div>
 
-      {tab === "pending" ? <PendingWizard /> : <ReleasedView />}
+      {tab === "pending" ? (
+        <PendingWizard subjectsConfig={subjectsConfig} />
+      ) : (
+        <ReleasedView subjectsConfig={subjectsConfig} />
+      )}
     </div>
   );
 }
@@ -82,7 +69,7 @@ export default function AdminReportCardsPage() {
 // Pending Release — the 5-step wizard
 // ---------------------------------------------------------------------------
 
-function PendingWizard() {
+function PendingWizard({ subjectsConfig }) {
   const [step, setStep] = useState(1);
   const [term, setTerm] = useState("T1");
   const [termSetting, setTermSetting] = useState(null);
@@ -170,7 +157,7 @@ function PendingWizard() {
   }
 
   const totalCompiledSubjects = (student) => {
-    const subjects = SUBJECTS_BY_GRADE[student.gradeLevel] || [];
+    const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
     const card = student.reportCard || {};
     return subjects.filter((c) => card[c]?.[term]?.status === "compiled").length;
   };
@@ -293,7 +280,13 @@ function PendingWizard() {
             <div className="rc-empty">Loading sections…</div>
           ) : pending.length === 0 ? (
             <div className="rc-empty">
-              No report cards have been submitted for {term} yet.
+              <div className="rc-empty-title">
+                No report cards have been submitted for {term} yet.
+              </div>
+              <div className="rc-empty-hint">
+                When an adviser finishes compiling a student's grades and clicks
+                "Submit to Admin," the student's section will appear here for review.
+              </div>
             </div>
           ) : (
             <div className="rc-section-grid">
@@ -336,13 +329,20 @@ function PendingWizard() {
           {loading ? (
             <div className="rc-empty">Loading students…</div>
           ) : students.length === 0 ? (
-            <div className="rc-empty">No students in this section.</div>
+            <div className="rc-empty">
+              <div className="rc-empty-title">No students in this section.</div>
+              <div className="rc-empty-hint">
+                The section has no active or inactive students. It may have been
+                emptied by a recent transfer or a rollover.
+              </div>
+            </div>
           ) : (
             <ReviewTable
               students={students}
               term={term}
               onEdit={(s) => setEditingStudent(s)}
-              onDownload={(s) => downloadStudentPDF(s, term)}
+              onDownload={(s) => downloadStudentPDF(s, term, subjectsConfig)}
+              subjectsConfig={subjectsConfig}
             />
           )}
           <div className="rc-actions">
@@ -352,7 +352,7 @@ function PendingWizard() {
             <div className="rc-actions-right">
               <button
                 className="rc-btn rc-btn-secondary"
-                onClick={() => downloadSectionPDF(students, selectedSection, term)}
+                onClick={() => downloadSectionPDF(students, selectedSection, term, subjectsConfig)}
                 disabled={students.length === 0}
               >
                 📄 Download section PDF
@@ -385,7 +385,7 @@ function PendingWizard() {
               {students.map((s) => {
                 const ready = s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term;
                 const compiled = totalCompiledSubjects(s);
-                const totalSubjects = (SUBJECTS_BY_GRADE[s.gradeLevel] || []).length;
+                const totalSubjects = (subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || []).length;
                 return (
                   <tr key={s.id} className={!ready ? "rc-row-muted" : ""}>
                     <td>
@@ -490,6 +490,7 @@ function PendingWizard() {
             setEditingStudent(null);
             refreshSection();
           }}
+          subjectsConfig={subjectsConfig}
         />
       )}
     </div>
@@ -500,7 +501,7 @@ function PendingWizard() {
 // Review table (used by Step 3)
 // ---------------------------------------------------------------------------
 
-function ReviewTable({ students, term, onEdit, onDownload }) {
+function ReviewTable({ students, term, onEdit, onDownload, subjectsConfig }) {
   return (
     <div className="rc-table-wrap">
       <table className="rc-table">
@@ -514,7 +515,7 @@ function ReviewTable({ students, term, onEdit, onDownload }) {
         </thead>
         <tbody>
           {students.map((s) => {
-            const subjects = SUBJECTS_BY_GRADE[s.gradeLevel] || [];
+            const subjects = subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || [];
             const card = s.reportCard || {};
             const compiled = subjects.filter((c) => card[c]?.[term]?.status === "compiled").length;
             const submitted = subjects.filter((c) => card[c]?.[term]?.status === "submitted").length;
@@ -523,6 +524,11 @@ function ReviewTable({ students, term, onEdit, onDownload }) {
                 <td>
                   {s.fullName}
                   <span className="rc-row-sub"> · {s.studentId}</span>
+                  {s.reportCardSubmittedAt && (
+                    <span className="rc-row-sub rc-row-sub-block">
+                      Submitted {new Date(s.reportCardSubmittedAt).toLocaleString()}
+                    </span>
+                  )}
                 </td>
                 <td>{compiled} / {subjects.length}</td>
                 <td>
@@ -555,8 +561,8 @@ function ReviewTable({ students, term, onEdit, onDownload }) {
 // Edit modal — admin can edit any subject
 // ---------------------------------------------------------------------------
 
-function EditReportCardModal({ student, term, onClose, onSaved }) {
-  const subjects = SUBJECTS_BY_GRADE[student.gradeLevel] || [];
+function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }) {
+  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
   const [grades, setGrades] = useState(() => {
     const initial = {};
     subjects.forEach((code) => {
@@ -626,7 +632,7 @@ function EditReportCardModal({ student, term, onClose, onSaved }) {
                 const entry = student.reportCard?.[code]?.[term] || {};
                 return (
                   <tr key={code}>
-                    <td>{SUBJECT_NAMES[code] || code}</td>
+                    <td>{subjectsConfig?.subjects?.[code] || code}</td>
                     <td>
                       <input
                         type="text"
@@ -678,7 +684,7 @@ function EditReportCardModal({ student, term, onClose, onSaved }) {
 // Released tab
 // ---------------------------------------------------------------------------
 
-function ReleasedView() {
+function ReleasedView({ subjectsConfig }) {
   const [term, setTerm] = useState(null);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -732,8 +738,15 @@ function ReleasedView() {
     })
       .then((r) => r.json())
       .then((json) => {
-        // Keep only students whose card is released for THIS term.
-        setStudents((json.data || []).filter((s) => s.reportCardReleasedTerm === term));
+        // Include anyone whose card has been through release for THIS term
+        // — either currently released, or pulled back and awaiting re-release.
+        setStudents(
+          (json.data || []).filter(
+            (s) =>
+              s.reportCardReleasedTerm === term ||
+              (s.reportCardLockedTerm === term && !s.reportCardReleasedTerm)
+          )
+        );
       })
       .catch(() => setError("Unable to load released students."))
       .finally(() => setLoading(false));
@@ -746,7 +759,15 @@ function ReleasedView() {
       credentials: "include",
     })
       .then((r) => r.json())
-      .then((json) => setStudents((json.data || []).filter((s) => s.reportCardReleasedTerm === term)));
+      .then((json) =>
+        setStudents(
+          (json.data || []).filter(
+            (s) =>
+              s.reportCardReleasedTerm === term ||
+              (s.reportCardLockedTerm === term && !s.reportCardReleasedTerm)
+          )
+        )
+      );
   }
 
   async function unrelease(id) {
@@ -768,6 +789,23 @@ function ReleasedView() {
     return <div className="rc-empty">Loading…</div>;
   }
 
+  async function reRelease(id) {
+    try {
+      const res = await fetch(`/api/students/${id}/report-card/release`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "Unable to re-release.");
+      setFeedback({ type: "success", message: "Report card re-released." });
+      refreshSection();
+    } catch (e) {
+      setFeedback({ type: "error", message: e.message });
+    }
+  }  
+
   return (
     <div className="rc-card">
       <h2 className="rc-card-title">Released Report Cards ({term})</h2>
@@ -784,7 +822,15 @@ function ReleasedView() {
       {error && <div className="rc-banner rc-banner-error">⚠️ {error}</div>}
 
       {sections.length === 0 && !loading ? (
-        <div className="rc-empty">No sections have released cards for {term}.</div>
+        <div className="rc-empty">
+          <div className="rc-empty-title">
+            No report cards have been released for {term} yet.
+          </div>
+          <div className="rc-empty-hint">
+            Once you release a student's report card from the Pending Release tab,
+            their section will appear here. You can edit or re-release at any time.
+          </div>
+        </div>
       ) : (
         <div className="rc-section-grid">
           {sections.map((sec) => (
@@ -811,42 +857,69 @@ function ReleasedView() {
           {loading ? (
             <div className="rc-empty">Loading…</div>
           ) : students.length === 0 ? (
-            <div className="rc-empty">No released cards in this section for {term}.</div>
+            <div className="rc-empty">
+              <div className="rc-empty-title">
+                No released cards in this section for {term}.
+              </div>
+              <div className="rc-empty-hint">
+                Everyone in this section is still pending or in draft.
+              </div>
+            </div>
           ) : (
             <table className="rc-table">
               <thead>
                 <tr>
                   <th>Student</th>
-                  <th style={{ width: "220px" }}>Released</th>
-                  <th style={{ width: "260px" }}>Actions</th>
+                  <th style={{ width: "180px" }}>Status</th>
+                  <th style={{ width: "160px" }}>Released</th>
+                  <th style={{ width: "300px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {students.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      {s.fullName} <span className="rc-row-sub">· {s.studentId}</span>
-                    </td>
-                    <td>
-                      {s.reportCardReleasedAt
-                        ? new Date(s.reportCardReleasedAt).toLocaleDateString()
-                        : "—"}
-                    </td>
-                    <td>
-                      <div className="rc-row-actions">
-                        <button className="rc-btn-small" onClick={() => setEditingStudent(s)}>
-                          Edit
-                        </button>
-                        <button
-                          className="rc-btn-small rc-btn-small-danger"
-                          onClick={() => setConfirmUnrelease(s)}
-                        >
-                          Unrelease
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {students.map((s) => {
+                  const isLive = s.reportCardReleasedTerm === term;
+                  return (
+                    <tr key={s.id}>
+                      <td>
+                        {s.fullName} <span className="rc-row-sub">· {s.studentId}</span>
+                      </td>
+                      <td>
+                        {isLive ? (
+                          <span className="rc-pill rc-pill-released">Released</span>
+                        ) : (
+                          <span className="rc-pill rc-pill-pending">Unreleased</span>
+                        )}
+                      </td>
+                      <td>
+                        {s.reportCardReleasedAt
+                          ? new Date(s.reportCardReleasedAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td>
+                        <div className="rc-row-actions">
+                          <button className="rc-btn-small" onClick={() => setEditingStudent(s)}>
+                            Edit
+                          </button>
+                          {isLive ? (
+                            <button
+                              className="rc-btn-small rc-btn-small-danger"
+                              onClick={() => setConfirmUnrelease(s)}
+                            >
+                              Unrelease
+                            </button>
+                          ) : (
+                            <button
+                              className="rc-btn-small"
+                              onClick={() => reRelease(s.id)}
+                            >
+                              Re-release
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -862,6 +935,7 @@ function ReleasedView() {
             setEditingStudent(null);
             refreshSection();
           }}
+          subjectsConfig={subjectsConfig}
         />
       )}
 
@@ -898,8 +972,8 @@ function ReleasedView() {
 // PDF helpers
 // ---------------------------------------------------------------------------
 
-function drawReportCardPDF(doc, student, term) {
-  const subjects = SUBJECTS_BY_GRADE[student.gradeLevel] || [];
+function drawReportCardPDF(doc, student, term, subjectsConfig) {
+  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
   const card = student.reportCard || {};
 
   doc.setFontSize(16);
@@ -911,7 +985,7 @@ function drawReportCardPDF(doc, student, term) {
   const rows = subjects.map((code) => {
     const entry = card[code]?.[term] || {};
     return [
-      `${code} — ${SUBJECT_NAMES[code] || ""}`,
+      `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
       entry.grade ?? "—",
       entry.status || "not started",
     ];
@@ -927,16 +1001,16 @@ function drawReportCardPDF(doc, student, term) {
   });
 }
 
-function downloadStudentPDF(student, term) {
+function downloadStudentPDF(student, term, subjectsConfig) {
   const doc = new jsPDF();
-  drawReportCardPDF(doc, student, term);
+  drawReportCardPDF(doc, student, term, subjectsConfig);
   doc.save(`ReportCard_${student.studentId}_${term}.pdf`);
 }
 
-function downloadSectionPDF(students, section, term) {
+function downloadSectionPDF(students, section, term, subjectsConfig) {
   const doc = new jsPDF();
   const releasedAndReady = students.filter(
-    (s) => s.reportCardSubmittedToAdmin || s.reportCardReleased
+    (s) => s.reportCardSubmittedTerm || s.reportCardReleasedTerm
   );
 
   doc.setFontSize(16);
@@ -955,12 +1029,12 @@ function downloadSectionPDF(students, section, term) {
     localDoc.text(`${s.fullName} · ${s.studentId}`, 40, startY);
     localDoc.setFontSize(10);
 
-    const subjects = SUBJECTS_BY_GRADE[s.gradeLevel] || [];
+    const subjects = subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || [];
     const card = s.reportCard || {};
     const rows = subjects.map((code) => {
       const entry = card[code]?.[term] || {};
       return [
-        `${code} — ${SUBJECT_NAMES[code] || ""}`,
+        `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
         entry.grade ?? "—",
         entry.status || "not started",
       ];

@@ -863,3 +863,12 @@
     font-size: 1.05rem;
   }
 }
+
+.report-card-readonly {
+  display: block;
+  padding: 0.7rem 1rem;
+  color: #1b2a4a;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-align: center;
+}

@@ -433,3 +433,27 @@
   font-style: italic;
   font-size: 0.9rem;
 }
+
+.rc-row-sub-block {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #8a94a6;
+}
+
+.rc-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #55617a;
+  margin-bottom: 0.5rem;
+  font-style: normal;
+}
+
+.rc-empty-hint {
+  font-size: 0.85rem;
+  color: #8a94a6;
+  line-height: 1.5;
+  max-width: 520px;
+  margin: 0 auto;
+  font-style: normal;
+}
