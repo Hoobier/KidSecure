@@ -12,7 +12,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal } from "@/lib/subjectsCache";
+import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, computeTermAverage, computeGeneralAverage, getDescriptorFor } from "@/lib/subjectsCache";
 
 const STEPS = [
   "Term",
@@ -341,7 +341,7 @@ function PendingWizard({ subjectsConfig }) {
               students={students}
               term={term}
               onEdit={(s) => setEditingStudent(s)}
-              onDownload={(s) => downloadStudentPDF(s, term, subjectsConfig)}
+              onDownload={(s) => downloadStudentPDF(s, term, subjectsConfig, termSetting?.schoolYearLabel)}
               subjectsConfig={subjectsConfig}
             />
           )}
@@ -352,7 +352,7 @@ function PendingWizard({ subjectsConfig }) {
             <div className="rc-actions-right">
               <button
                 className="rc-btn rc-btn-secondary"
-                onClick={() => downloadSectionPDF(students, selectedSection, term, subjectsConfig)}
+                onClick={() => downloadSectionPDF(students, selectedSection, term, subjectsConfig, termSetting?.schoolYearLabel)}
                 disabled={students.length === 0}
               >
                 📄 Download section PDF
@@ -972,87 +972,225 @@ function ReleasedView({ subjectsConfig }) {
 // PDF helpers
 // ---------------------------------------------------------------------------
 
-function drawReportCardPDF(doc, student, term, subjectsConfig) {
-  const subjects = subjectsConfig?.displayByGrade?.[student.gradeLevel] || [];
-  const card = student.reportCard || {};
+// Cache logos as data URLs after first load.
+let logoCachePromise = null;
+async function loadLogos() {
+  if (logoCachePromise) return logoCachePromise;
+  logoCachePromise = (async () => {
+    try {
+      const [deped, rcac] = await Promise.all([
+        fetch("/pictures/deped.png").then((r) => r.blob()).then(blobToDataURL),
+        fetch("/pictures/rcac.png").then((r) => r.blob()).then(blobToDataURL),
+      ]);
+      return { deped, rcac };
+    } catch {
+      return { deped: null, rcac: null };
+    }
+  })();
+  return logoCachePromise;
+}
 
-  doc.setFontSize(16);
-  doc.text("RCAC Report Card", 40, 40);
+function blobToDataURL(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function drawHeader(doc, logos, pageWidth, schoolYearLabel) {
+  const marginX = 40;
+  let y = 40;
+
+  // Logos (each ~50x50 pt)
+  if (logos?.deped) {
+    try { doc.addImage(logos.deped, "PNG", marginX, y, 50, 50); } catch {}
+  }
+  if (logos?.rcac) {
+    try { doc.addImage(logos.rcac, "PNG", pageWidth - marginX - 50, y, 50, 50); } catch {}
+  }
+
+  // Header text block, centered
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const centerX = pageWidth / 2;
+  doc.text("Republic of the Philippines", centerX, y + 10, { align: "center" });
+  doc.text("DEPARTMENT OF EDUCATION", centerX, y + 22, { align: "center" });
+  doc.text("National Capital Region", centerX, y + 34, { align: "center" });
+  doc.text("Schools Division of Caloocan", centerX, y + 46, { align: "center" });
+  doc.text("District III", centerX, y + 58, { align: "center" });
+
+  y += 72;
+
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text(`${student.fullName} · ${student.studentId}`, 40, 60);
-  doc.text(`${student.gradeLevel} - ${student.section} · ${term}`, 40, 76);
+  doc.text("RAINBOW 5 CHRISTIAN ACADEMY OF CALOOCAN, INC.", centerX, y, { align: "center" });
+  y += 13;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text("Blk. 31 Lot 43-44 Acacia St., Rainbow Village 5, Bagumbayan, Caloocan City", centerX, y, { align: "center" });
+
+  y += 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("ELEMENTARY", centerX, y, { align: "center" });
+  y += 16;
+  doc.text("PROGRESS REPORT CARD", centerX, y, { align: "center" });
+
+  y += 18;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`School Year: ${schoolYearLabel || "____________"}`, centerX, y, { align: "center" });
+
+  return y + 18;
+}
+
+function drawStudentInfo(doc, student, y) {
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const leftX = 40;
+  const rightX = 320;
+
+  doc.text(`Name: ${student.fullName || ""}`, leftX, y);
+  doc.text("LRN: ____________________", rightX, y);
+  y += 14;
+  doc.text(`Level: ${student.gradeLevel || ""}`, leftX, y);
+  doc.text("Age: ____________________", rightX, y);
+  y += 14;
+  doc.text("Gender: __________________", leftX, y);
+
+  return y + 10;
+}
+
+function buildReportCardRows(student, term, subjectsConfig) {
+  const card = student.reportCard || {};
+  const subjects = subjectsConfig?.displayByGrade?.[student.gradeLevel] || [];
 
   const rows = subjects.map((code) => {
     const isComputed = isComputedInConfig(code, subjectsConfig);
-    const entry = card[code]?.[term] || {};
-    const grade = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
-    return [
-      `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
-      grade,
-      entry.status || "not started",
-    ];
+    const label = subjectsConfig?.subjects?.[code] || code;
+
+    const t1 = isComputed
+      ? (computeDisplayGrade(card, code, "T1", subjectsConfig) ?? "—")
+      : (card[code]?.T1?.grade ?? "—");
+    const t2 = isComputed
+      ? (computeDisplayGrade(card, code, "T2", subjectsConfig) ?? "—")
+      : (card[code]?.T2?.grade ?? "—");
+    const t3 = isComputed
+      ? (computeDisplayGrade(card, code, "T3", subjectsConfig) ?? "—")
+      : (card[code]?.T3?.grade ?? "—");
+
+    const final = computeFinalGrade(card, code, subjectsConfig);
+    const descriptor = getDescriptorFor(final, subjectsConfig);
+    const remark = descriptor ? descriptor.remark : "—";
+
+    return [label, t1, t2, t3, final ?? "—", remark];
   });
 
+  // Average per Term
+  const avgT1 = computeTermAverage(card, student.gradeLevel, "T1", subjectsConfig);
+  const avgT2 = computeTermAverage(card, student.gradeLevel, "T2", subjectsConfig);
+  const avgT3 = computeTermAverage(card, student.gradeLevel, "T3", subjectsConfig);
+  rows.push([
+    { content: "Average per Term", styles: { fontStyle: "bold" } },
+    avgT1 ?? "—",
+    avgT2 ?? "—",
+    avgT3 ?? "—",
+    "",
+    "",
+  ]);
+
+  // General Average row (merged across cols 0-4, value in last cell)
+  const general = computeGeneralAverage(card, student.gradeLevel, subjectsConfig);
+  rows.push([
+    { content: "GENERAL AVERAGE", colSpan: 5, styles: { halign: "right", fontStyle: "bold" } },
+    { content: general ?? "—", styles: { fontStyle: "bold" } },
+  ]);
+
+  // Penmanship (placeholder row for manual writing)
+  rows.push(["PENMANSHIP", "", "", "", "", ""]);
+
+  return rows;
+}
+
+function drawDescriptorTable(doc, subjectsConfig, startY, pageWidth) {
+  const descriptors = subjectsConfig?.descriptors || [];
+  const body = descriptors.map((d) => [
+    `${d.label} (${d.letter})`,
+    `${d.max} - ${d.min}`,
+    d.remark,
+  ]);
+
   autoTable(doc, {
-    startY: 90,
-    head: [["Subject", "Grade", "Status"]],
-    body: rows,
-    styles: { fontSize: 10, cellPadding: 4 },
-    headStyles: { fillColor: [27, 42, 74], textColor: 255 },
-    alternateRowStyles: { fillColor: [247, 249, 252] },
+    startY,
+    margin: { left: 40, right: 40 },
+    head: [["Descriptors", "Grading Scale", "Remarks"]],
+    body,
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 160 },
+      1: { cellWidth: 120, halign: "center" },
+      2: { cellWidth: 120, halign: "center" },
+    },
   });
 }
 
-function downloadStudentPDF(student, term, subjectsConfig) {
-  const doc = new jsPDF();
-  drawReportCardPDF(doc, student, term, subjectsConfig);
+async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const logos = await loadLogos();
+
+  let y = drawHeader(doc, logos, pageWidth, schoolYearLabel);
+  y = drawStudentInfo(doc, student, y);
+  y += 6;
+
+  const rows = buildReportCardRows(student, term, subjectsConfig);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 40, right: 40 },
+    head: [[
+      "SUBJECTS",
+      "TERM 1",
+      "TERM 2",
+      "TERM 3",
+      "FINAL GRADE",
+      "REMARKS",
+    ]],
+    body: rows,
+    styles: { fontSize: 9, cellPadding: 5 },
+    headStyles: { fillColor: [27, 42, 74], textColor: 255, halign: "center" },
+    columnStyles: {
+      0: { cellWidth: 200, halign: "left" },
+      1: { cellWidth: 60, halign: "center" },
+      2: { cellWidth: 60, halign: "center" },
+      3: { cellWidth: 60, halign: "center" },
+      4: { cellWidth: 90, halign: "center" },
+      5: { cellWidth: 100, halign: "center" },
+    },
+  });
+
+  const afterTable = doc.lastAutoTable?.finalY ?? y;
+  drawDescriptorTable(doc, subjectsConfig, afterTable + 20, pageWidth);
+}
+
+async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel) {
+  const doc = new jsPDF({ format: "a4" });
+  await drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel);
   doc.save(`ReportCard_${student.studentId}_${term}.pdf`);
 }
 
-function downloadSectionPDF(students, section, term, subjectsConfig) {
-  const doc = new jsPDF();
+async function downloadSectionPDF(students, section, term, subjectsConfig, schoolYearLabel) {
+  const doc = new jsPDF({ format: "a4" });
   const releasedAndReady = students.filter(
     (s) => s.reportCardSubmittedTerm || s.reportCardReleasedTerm
   );
 
-  doc.setFontSize(16);
-  doc.text("RCAC Report Cards", 40, 40);
-  doc.setFontSize(11);
-  doc.text(`${section.gradeLevel} - ${section.section} · ${term}`, 40, 58);
-
-  let startY = 80;
-  releasedAndReady.forEach((s, i) => {
-    if (i > 0) {
-      doc.addPage();
-      startY = 40;
-    }
-    const localDoc = doc;
-    localDoc.setFontSize(13);
-    localDoc.text(`${s.fullName} · ${s.studentId}`, 40, startY);
-    localDoc.setFontSize(10);
-
-    const subjects = subjectsConfig?.displayByGrade?.[s.gradeLevel] || [];
-    const card = s.reportCard || {};
-    const rows = subjects.map((code) => {
-      const isComputed = isComputedInConfig(code, subjectsConfig);
-      const entry = card[code]?.[term] || {};
-      const grade = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
-      return [
-        `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
-        grade,
-        entry.status || "not started",
-      ];
-    });
-
-    autoTable(localDoc, {
-      startY: startY + 10,
-      head: [["Subject", "Grade", "Status"]],
-      body: rows,
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [27, 42, 74], textColor: 255 },
-      alternateRowStyles: { fillColor: [247, 249, 252] },
-    });
-  });
+  for (let i = 0; i < releasedAndReady.length; i++) {
+    if (i > 0) doc.addPage();
+    await drawReportCardPDF(doc, releasedAndReady[i], term, subjectsConfig, schoolYearLabel);
+  }
 
   doc.save(`ReportCards_${section.gradeLevel}_${section.section}_${term}.pdf`);
 }
