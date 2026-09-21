@@ -94,3 +94,85 @@ export function computeDisplayFinal(reportCard, displayCode, config) {
   if (grades.length === 0) return null;
   return Number((grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2));
 }
+
+/**
+ * Descriptor row for a final grade. Brackets come from config.descriptors.
+ * Uses floor so 89.9 stays in Benchmarking (80-89) rather than jumping
+ * to Advancing (90-100).
+ */
+export function getDescriptorFor(grade, config) {
+  if (grade === null || grade === undefined) return null;
+  const g = Math.floor(Number(grade));
+  if (isNaN(g)) return null;
+  const list = config?.descriptors || [];
+  for (const d of list) {
+    if (g >= d.min && g <= d.max) return d;
+  }
+  return null;
+}
+
+/**
+ * Final grade for a display code. Requires ALL THREE terms present.
+ * - Computed subjects (MAPEH): ceiling of the average of the three
+ *   term-level computed values.
+ * - Regular subjects: 2-decimal average of the three term grades.
+ * Returns null if any term is missing.
+ */
+export function computeFinalGrade(reportCard, displayCode, config) {
+  const terms = ["T1", "T2", "T3"];
+
+  if (isComputedInConfig(displayCode, config)) {
+    const values = [];
+    for (const t of terms) {
+      const v = computeDisplayGrade(reportCard, displayCode, t, config);
+      if (v === null) return null;
+      values.push(v);
+    }
+    return Math.ceil(values.reduce((a, b) => a + b, 0) / values.length);
+  }
+
+  const grades = [];
+  for (const t of terms) {
+    const g = reportCard?.[displayCode]?.[t]?.grade;
+    if (g === null || g === undefined || g === "" || isNaN(Number(g))) return null;
+    grades.push(Number(g));
+  }
+  return Number((grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2));
+}
+
+/**
+ * Average of all display subjects for a single term. Uses the computed
+ * value (ceiling) for MAPEH. Returns null if any subject is missing.
+ */
+export function computeTermAverage(reportCard, gradeLevel, term, config) {
+  const codes = config?.displayByGrade?.[gradeLevel] || [];
+  if (codes.length === 0) return null;
+  const values = [];
+  for (const code of codes) {
+    let v;
+    if (isComputedInConfig(code, config)) {
+      v = computeDisplayGrade(reportCard, code, term, config);
+    } else {
+      const g = reportCard?.[code]?.[term]?.grade;
+      v = (g !== null && g !== undefined && g !== "" && !isNaN(Number(g))) ? Number(g) : null;
+    }
+    if (v === null) return null;
+    values.push(v);
+  }
+  return Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2));
+}
+
+/**
+ * Average of the three term averages. Returns null if any term is
+ * incomplete.
+ */
+export function computeGeneralAverage(reportCard, gradeLevel, config) {
+  const terms = ["T1", "T2", "T3"];
+  const values = [];
+  for (const t of terms) {
+    const v = computeTermAverage(reportCard, gradeLevel, t, config);
+    if (v === null) return null;
+    values.push(v);
+  }
+  return Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2));
+}
