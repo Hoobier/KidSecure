@@ -222,8 +222,8 @@ export default function StudentsPage() {
           <Link href="/students/deleted" className="students-btn-primary students-btn-secondary">
             🗑 Deleted Students
           </Link>
-          <Link href="/students/transferred" className="students-btn-primary students-btn-secondary">
-            ↪ Transferred Students
+          <Link href="/students/archived" className="students-btn-primary students-btn-secondary">
+            📁 Archived Students
           </Link>
           {selectedIds.size > 0 && (
             <button
@@ -275,7 +275,6 @@ export default function StudentsPage() {
           <option value="active,inactive">Active &amp; Inactive (default)</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
-          <option value="graduated">Graduated</option>
         </select>
         <select value={transferee} onChange={(e) => setTransferee(e.target.value)} className="students-filter">
           <option value="">All Student Types</option>

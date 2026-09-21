@@ -468,3 +468,7 @@
 .del-confirm-input:focus {
   box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
 }
+
+.del-no-action {
+  color: #8a94a6;
+}

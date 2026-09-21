@@ -144,8 +144,8 @@ export default function TeacherDetailPage({ params }) {
             <dd style={{ textTransform: "capitalize" }}>{teacher.department}</dd>
           </div>
           <div className="detail-field">
-            <dt>Forte Subject</dt>
-            <dd>{teacher.forteSubjectCode || "—"}</dd>
+            <dt>Assigned Subjects</dt>
+            <dd>{(teacher.subjects || []).join(", ") || "—"}</dd>
           </div>
           <div className="detail-field">
             <dt>Status</dt>
@@ -178,15 +178,10 @@ export default function TeacherDetailPage({ params }) {
       {teacher.department === "elementary" && (
         <section className="detail-section">
           <h2>Visiting Classes</h2>
-          {teacher.forteSubjectCode && (
-            <p className="detail-empty-note" style={{ marginTop: 0 }}>
-              Teaching: <strong>{teacher.forteSubjectCode}</strong>
-            </p>
-          )}
           {teacher.visitingAssignments && teacher.visitingAssignments.length > 0 ? (
             <ul className="detail-assignment-list">
               {teacher.visitingAssignments.map((a, i) => (
-                <li key={i}>{a.gradeLevel} - {a.section}</li>
+                <li key={i}>{a.gradeLevel} - {a.section} · {(a.subjects || []).join(", ")}</li>
               ))}
             </ul>
           ) : (

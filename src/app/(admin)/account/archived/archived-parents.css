@@ -1,0 +1,178 @@
+/* src/app/(admin)/account/archived/archived-parents.css */
+
+.archp-page { width: 100%; }
+
+.archp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+.archp-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+.archp-header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.archp-btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #1b2a4a;
+  color: #ffffff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.archp-btn:hover:not(:disabled) { opacity: 0.9; }
+.archp-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.archp-btn-secondary {
+  background: #ffffff;
+  color: #33415c;
+  border: 1px solid #d5dae2;
+}
+.archp-btn-secondary:hover:not(:disabled) { background: #f5f7fa; opacity: 1; }
+
+.archp-btn-small {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+}
+
+.archp-notice {
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  border: 1px solid transparent;
+}
+.archp-notice-success {
+  background: rgba(30, 130, 76, 0.1);
+  color: #1e824c;
+  border-color: rgba(30, 130, 76, 0.3);
+}
+.archp-notice-error {
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+  border-color: rgba(192, 57, 43, 0.3);
+}
+
+.archp-toolbar {
+  display: flex;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+.archp-search {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #1a1f3a;
+  outline: none;
+}
+.archp-search::placeholder { color: #a0aec0; }
+.archp-search:focus {
+  border-color: #1a1f3a;
+  box-shadow: 0 0 0 3px rgba(26, 31, 58, 0.08);
+}
+
+.archp-table-wrap {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e9ecf2;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+.archp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.archp-table th {
+  text-align: left;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.archp-table td {
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid #eef0f4;
+  color: #33415c;
+}
+.archp-table tbody tr:hover { background: #f5f7fa; }
+
+.archp-name-link {
+  color: #1b2a4a;
+  font-weight: 600;
+  text-decoration: none;
+}
+.archp-name-link:hover { text-decoration: underline; }
+
+.archp-no-children { color: #8a94a6; font-style: italic; }
+
+.archp-children-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.archp-child-pill {
+  display: inline-flex;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(27, 42, 74, 0.08);
+  color: #1b2a4a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.archp-child-pill:hover { background: rgba(27, 42, 74, 0.12); }
+
+.archp-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #8a94a6;
+  font-size: 0.9rem;
+}
+
+.archp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #5b6474;
+  flex-wrap: wrap;
+}
+.archp-pagination-controls { display: flex; gap: 0.5rem; }
+.archp-pagination-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #d5dae2;
+  background: #ffffff;
+  color: #33415c;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.archp-pagination-btn:hover:not(:disabled) { background: #f5f7fa; }
+.archp-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }

@@ -1,8 +1,7 @@
 // src/lib/subjectsCache.js
 //
 // Fetches /api/subjects-by-grade once and caches it for the lifetime of
-// the browser tab. Every report-card surface reads from here instead of
-// hardcoding per-grade subject lists.
+// the tab. Every report-card surface reads from here.
 
 let cachePromise = null;
 let cache = null;
@@ -14,24 +13,20 @@ async function loadOnce() {
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.text().catch(() => "");
-          throw new Error(
-            `Failed to load subjects (HTTP ${res.status}): ${body.slice(0, 200)}`
-          );
+          throw new Error(`Failed to load subjects (HTTP ${res.status}): ${body.slice(0, 200)}`);
         }
         const json = await res.json();
-        const data = json.data || {};
+        const d = json.data || {};
         cache = {
-          subjects: data.subjects || {},
-          subjectsByGrade: data.subjects_by_grade || {},
-          subjectGroups: data.subject_groups || {},
+          subjects: d.subjects || {},
+          entryByGrade: d.entry_subjects_by_grade || {},
+          displayByGrade: d.display_subjects_by_grade || {},
+          computed: d.computed_subjects || {},
+          descriptors: d.descriptors || [],
         };
         return cache;
       })
-      .catch((err) => {
-        // Reset so a later caller can retry.
-        cachePromise = null;
-        throw err;
-      });
+      .catch((err) => { cachePromise = null; throw err; });
   }
   return cachePromise;
 }
@@ -40,68 +35,62 @@ export async function getSubjectsConfig() {
   return loadOnce();
 }
 
-/**
- * Returns an ordered array of subject codes for a grade level, e.g.
- * ["CLVE", "MATH", "FIL", "MA", "PE", "H", "EPP"].
- */
-export async function getSubjectsForGrade(gradeLevel) {
-  const { subjectsByGrade } = await loadOnce();
-  return subjectsByGrade[gradeLevel] || [];
+export async function getEntrySubjectsForGrade(gradeLevel) {
+  const c = await loadOnce();
+  return c.entryByGrade[gradeLevel] || [];
+}
+
+export async function getDisplaySubjectsForGrade(gradeLevel) {
+  const c = await loadOnce();
+  return c.displayByGrade[gradeLevel] || [];
+}
+
+export function getSubjectNameFromConfig(code, config) {
+  if (!config) return code;
+  return config.subjects?.[code] || code;
+}
+
+export function isComputedInConfig(code, config) {
+  return Boolean(config?.computed?.[code]);
+}
+
+export function getComponentsFor(code, config) {
+  return config?.computed?.[code]?.components || [];
 }
 
 /**
- * Returns an ordered array of "display items" for a grade. Each item is
- * either a plain subject ({ type: "subject", code, name }) or a group
- * ({ type: "group", label, codes: [...], items: [...] }).
- *
- * Callers render group items by printing the group's label once, then
- * rendering its `items` inline.
+ * Ceiling-rounded average of a computed display code (e.g. MAPEH) for a
+ * given term. Returns null if any component is missing a grade.
  */
-export async function getSubjectDisplayItems(gradeLevel) {
-  const cfg = await loadOnce();
-  const codes = cfg.subjectsByGrade[gradeLevel] || [];
-  const nameOf = (c) => cfg.subjects[c] || c;
-
-  // Map code → group key, if it belongs to one.
-  const groupOfCode = {};
-  for (const [key, group] of Object.entries(cfg.subjectGroups)) {
-    for (const code of group.codes) {
-      groupOfCode[code] = key;
-    }
+export function computeDisplayGrade(reportCard, displayCode, term, config) {
+  const components = getComponentsFor(displayCode, config);
+  if (components.length === 0) return null;
+  const grades = [];
+  for (const code of components) {
+    const g = reportCard?.[code]?.[term]?.grade ?? null;
+    if (g === null || g === "" || isNaN(Number(g))) return null;
+    grades.push(Number(g));
   }
-
-  const items = [];
-  const consumed = new Set();
-
-  for (const code of codes) {
-    if (consumed.has(code)) continue;
-
-    const groupKey = groupOfCode[code];
-    if (!groupKey) {
-      items.push({ type: "subject", code, name: nameOf(code) });
-      continue;
-    }
-
-    const group = cfg.subjectGroups[groupKey];
-    const memberItems = group.codes
-      .filter((c) => codes.includes(c))
-      .map((c) => {
-        consumed.add(c);
-        return { code: c, name: nameOf(c) };
-      });
-
-    items.push({
-      type: "group",
-      label: group.label,
-      codes: group.codes,
-      items: memberItems,
-    });
-  }
-
-  return items;
+  return Math.ceil(grades.reduce((a, b) => a + b, 0) / grades.length);
 }
 
-export function getSubjectName(code, cfg) {
-  if (!cfg) return code;
-  return cfg.subjects[code] || code;
+/**
+ * Final grade for a display row. For regular subjects, this is the average
+ * of the three term grades. For computed subjects, this is the average of
+ * the three computed term values — both rounded with ceiling.
+ */
+export function computeDisplayFinal(reportCard, displayCode, config) {
+  if (isComputedInConfig(displayCode, config)) {
+    const terms = ["T1", "T2", "T3"]
+      .map((t) => computeDisplayGrade(reportCard, displayCode, t, config))
+      .filter((v) => v !== null);
+    if (terms.length === 0) return null;
+    return Math.ceil(terms.reduce((a, b) => a + b, 0) / terms.length);
+  }
+  const grades = ["T1", "T2", "T3"]
+    .map((t) => reportCard?.[displayCode]?.[t]?.grade)
+    .filter((g) => g !== null && g !== "" && !isNaN(Number(g)))
+    .map(Number);
+  if (grades.length === 0) return null;
+  return Number((grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2));
 }

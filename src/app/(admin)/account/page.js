@@ -165,8 +165,8 @@ export default function ParentDirectoryPage() {
       <div className="parents-page-header">
         <h1>Parent Directory</h1>
         <p>All parent and guardian accounts linked to enrolled students.</p>
-        <Link href="/account/deleted" className="parents-deleted-link">
-          🗑 Deleted Parents
+        <Link href="/account/archived" className="parents-deleted-link">
+          📁 Archived Parents
         </Link>
       </div>
 

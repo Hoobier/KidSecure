@@ -1,0 +1,263 @@
+/* src/app/(admin)/students/archived/archived-students.css */
+
+.arch-page {
+  width: 100%;
+}
+
+.arch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.arch-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+
+.arch-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.arch-btn {
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #1b2a4a;
+  color: #ffffff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.arch-btn:hover:not(:disabled) { opacity: 0.9; }
+.arch-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.arch-btn-secondary {
+  background: #ffffff;
+  color: #33415c;
+  border: 1px solid #d5dae2;
+}
+.arch-btn-secondary:hover:not(:disabled) { background: #f5f7fa; opacity: 1; }
+
+.arch-btn-restore {
+  background: #1e824c;
+  color: #ffffff;
+}
+.arch-btn-restore:hover:not(:disabled) { background: #186a3d; opacity: 1; }
+
+.arch-btn-small {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+}
+
+.arch-notice {
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  border: 1px solid transparent;
+}
+.arch-notice-success {
+  background: rgba(30, 130, 76, 0.1);
+  color: #1e824c;
+  border-color: rgba(30, 130, 76, 0.3);
+}
+.arch-notice-error {
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+  border-color: rgba(192, 57, 43, 0.3);
+}
+
+.arch-toolbar {
+  display: flex;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.arch-search,
+.arch-filter {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #1a1f3a;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.arch-search { flex: 1; min-width: 220px; }
+.arch-search::placeholder { color: #a0aec0; }
+.arch-filter { cursor: pointer; min-width: 160px; }
+.arch-search:focus,
+.arch-filter:focus {
+  border-color: #1a1f3a;
+  box-shadow: 0 0 0 3px rgba(26, 31, 58, 0.08);
+}
+
+.arch-table-wrap {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e9ecf2;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+
+.arch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.arch-table th {
+  text-align: left;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.arch-table td {
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid #eef0f4;
+  color: #33415c;
+}
+.arch-table tbody tr:hover { background: #f5f7fa; }
+
+.arch-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.arch-status-graduated {
+  background: rgba(30, 130, 76, 0.1);
+  color: #1e824c;
+}
+.arch-status-transferred {
+  background: rgba(49, 95, 135, 0.1);
+  color: #315f87;
+}
+
+.arch-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.arch-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #8a94a6;
+  font-size: 0.9rem;
+}
+
+.arch-skeleton-cell {
+  width: 100%;
+  height: 1rem;
+  background: #eef0f4;
+  border-radius: 6px;
+  animation: arch-pulse 1.4s ease-in-out infinite;
+}
+@keyframes arch-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.arch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #5b6474;
+  flex-wrap: wrap;
+}
+.arch-pagination-controls { display: flex; gap: 0.5rem; }
+.arch-pagination-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #d5dae2;
+  background: #ffffff;
+  color: #33415c;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.arch-pagination-btn:hover:not(:disabled) { background: #f5f7fa; }
+.arch-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.arch-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 42, 74, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+.arch-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.arch-modal h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin: 0 0 0.75rem;
+}
+.arch-modal p {
+  font-size: 0.95rem;
+  color: #33415c;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+.arch-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.arch-modal-btn {
+  padding: 0.65rem 1.4rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  min-width: 110px;
+}
+.arch-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.arch-modal-btn-cancel {
+  background: transparent;
+  color: #8a94a6;
+}
+.arch-modal-btn-cancel:hover:not(:disabled) { color: #5b6474; }
+.arch-modal-btn-restore {
+  background: #1e824c;
+  color: #ffffff;
+}
+.arch-modal-btn-restore:hover:not(:disabled) { background: #186a3d; }

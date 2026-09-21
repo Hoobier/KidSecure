@@ -9,14 +9,15 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-import { getSubjectDisplayItems, getSubjectsForGrade, getSubjectsConfig } from "@/lib/subjectsCache";
+import { getSubjectsConfig, getDisplaySubjectsForGrade, getEntrySubjectsForGrade, isComputedInConfig, computeDisplayGrade, computeDisplayFinal } from "@/lib/subjectsCache";
 
 // ----------------------------------------------------------------------------
 // Per-term lock / release helpers.
 // Locking is per-term: a student locked for T1 can still be edited for T2.
 // ----------------------------------------------------------------------------
 function isTermLocked(student, term) {
-  return (student?.reportCardLockedTerm ?? null) === term;
+  const locked = student?.reportCardLockedTerms ?? [];
+  return Array.isArray(locked) && locked.includes(term);
 }
 
 function isTermSubmittedToAdmin(student, term) {
@@ -130,7 +131,7 @@ export default function TeacherReportCardsPage() {
     setFeedback(null);
   }, [fetchStudents]);
 
-  const mode = access === "home" ? "home" : "visiting";
+  const mode = selectedClass?.role === "home" ? "home" : "visiting";
   const homeClasses = classes.filter((c) => c.role === "home");
   const visitingClasses = classes.filter((c) => c.role === "visiting");
 
@@ -186,7 +187,7 @@ if (term === null) {
                   key={`v-${c.gradeLevel}-${c.section}`}
                   value={`${c.gradeLevel}|${c.section}|${c.role}`}
                 >
-                  {c.gradeLevel} - {c.section} · {c.forteSubjectCode}
+                  {c.gradeLevel} - {c.section} · {(c.subjects || []).join(", ")}
                 </option>
               ))}
             </optgroup>
@@ -255,20 +256,30 @@ if (term === null) {
 // Visiting: one-column table. Every student in the class, one grade input each.
 // ----------------------------------------------------------------------------
 function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedback }) {
+  const subjectCodes = selectedClass?.subjects || [];
+  // values: { [studentId]: { [subjectCode]: "grade" } }
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const initial = {};
     students.forEach((s) => {
-      initial[s.id] = s.reportCard?.[term]?.grade ?? "";
+      const perSubject = {};
+      subjectCodes.forEach((code) => {
+        perSubject[code] = s.reportCard?.[code]?.[term]?.grade ?? "";
+      });
+      initial[s.id] = perSubject;
     });
     setValues(initial);
-  }, [students, term]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, term, subjectCodes.join(",")]);
 
-  function handleChange(id, value) {
+  function handleChange(studentId, code, value) {
     const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
-    setValues((v) => ({ ...v, [id]: sanitized }));
+    setValues((v) => ({
+      ...v,
+      [studentId]: { ...(v[studentId] || {}), [code]: sanitized },
+    }));
   }
 
   async function saveAll() {
@@ -277,15 +288,18 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
     try {
       for (const s of students) {
         if (isTermLocked(s, term)) continue;
-        const grade = values[s.id];
-        if (grade === "" || grade === undefined) continue;
+        const grades = {};
+        for (const code of subjectCodes) {
+          const grade = values[s.id]?.[code];
+          if (grade === "" || grade === undefined) continue;
+          grades[code] = { [term]: { grade } };
+        }
+        if (Object.keys(grades).length === 0) continue;
         await fetch(`/api/teacher/students/${s.id}/report-card`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            grades: { [selectedClass.forteSubjectCode]: { [term]: { grade } } },
-          }),
+          body: JSON.stringify({ grades }),
         });
       }
       setFeedback({ type: "success", message: "Grades saved." });
@@ -298,36 +312,43 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
   }
 
   async function submitAll() {
-    if (!window.confirm(`Submit all ${selectedClass.forteSubjectCode} ${term} grades to the adviser?`)) return;
+    if (!window.confirm(`Submit your ${subjectCodes.join(", ")} ${term} grades to the adviser?`)) return;
     setSaving(true);
     setFeedback(null);
     try {
       let submitted = 0;
       for (const s of students) {
         if (isTermLocked(s, term)) continue;
-        // Ensure the grade is saved before submitting.
-        const grade = values[s.id];
-        if (grade !== "" && grade !== undefined) {
+        // Save first (bulk, one request per student).
+        const grades = {};
+        for (const code of subjectCodes) {
+          const grade = values[s.id]?.[code];
+          if (grade !== "" && grade !== undefined) {
+            grades[code] = { [term]: { grade } };
+          }
+        }
+        if (Object.keys(grades).length > 0) {
           await fetch(`/api/teacher/students/${s.id}/report-card`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              grades: { [selectedClass.forteSubjectCode]: { [term]: { grade } } },
-            }),
+            body: JSON.stringify({ grades }),
           });
         }
-        const res = await fetch(`/api/teacher/students/${s.id}/report-card/submit`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ term }),
-        });
-        if (res.ok) submitted++;
+        // Then submit each subject individually.
+        for (const code of subjectCodes) {
+          const res = await fetch(`/api/teacher/students/${s.id}/report-card/submit`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ term, subjectCode: code }),
+          });
+          if (res.ok) submitted++;
+        }
       }
       setFeedback({
         type: "success",
-        message: `Submitted ${submitted} of ${students.length} students to the adviser.`,
+        message: `Submitted ${submitted} of ${students.length * subjectCodes.length} subject entries to the adviser.`,
       });
       onRefresh();
     } catch {
@@ -340,34 +361,59 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
   return (
     <div className="trc-table-wrap">
       <h2 className="trc-panel-title">
-        {selectedClass?.forteSubjectCode} — {term}
+        {subjectCodes.join(", ")} — {term}
       </h2>
       <table className="trc-table">
         <thead>
           <tr>
             <th>Student</th>
-            <th style={{ width: "120px" }}>Grade</th>
-            <th style={{ width: "120px" }}>Status</th>
+            {subjectCodes.map((code) => (
+              <th key={code} style={{ width: "120px" }}>{code}</th>
+            ))}
+            <th style={{ width: "180px" }}>Status</th>
           </tr>
         </thead>
         <tbody>
           {students.map((s) => {
-            const entry = s.reportCard?.[term] || {};
+            const locked = isTermLocked(s, term);
             return (
               <tr key={s.id}>
                 <td>{s.fullName}</td>
+                {subjectCodes.map((code) => {
+                  const entry = s.reportCard?.[code]?.[term] || {};
+                  return (
+                    <td key={code}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={values[s.id]?.[code] ?? ""}
+                        onChange={(e) => handleChange(s.id, code, e.target.value)}
+                        disabled={locked}
+                        placeholder="—"
+                      />
+                    </td>
+                  );
+                })}
                 <td>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={values[s.id] ?? ""}
-                    onChange={(e) => handleChange(s.id, e.target.value)}
-                    disabled={isTermLocked(s, term)}
-                    placeholder="—"
-                  />
-                </td>
-                <td>
-                <StatusPill status={entry.status} locked={isTermLocked(s, term)} />
+                  {(() => {
+                    if (locked) return <StatusPill locked={true} />;
+
+                    const statuses = subjectCodes
+                      .map((code) => s.reportCard?.[code]?.[term]?.status)
+                      .filter(Boolean);
+
+                    if (statuses.length === 0) return <StatusPill />;
+                    if (statuses.every((st) => st === "compiled")) {
+                      return <StatusPill status="compiled" />;
+                    }
+                    if (statuses.some((st) => st === "submitted")) {
+                      return <StatusPill status="submitted" />;
+                    }
+                    if (statuses.some((st) => st === "compiled")) {
+                      return <StatusPill status="compiled" />;
+                    }
+                    return <StatusPill status={statuses[0]} />;
+                  })()}
                 </td>
               </tr>
             );
@@ -375,20 +421,10 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
         </tbody>
       </table>
       <div className="trc-actions">
-        <button
-          type="button"
-          className="trc-btn trc-btn-secondary"
-          onClick={saveAll}
-          disabled={saving}
-        >
+        <button type="button" className="trc-btn trc-btn-secondary" onClick={saveAll} disabled={saving}>
           {saving ? "Saving…" : "Save All"}
         </button>
-        <button
-          type="button"
-          className="trc-btn trc-btn-primary"
-          onClick={submitAll}
-          disabled={saving}
-        >
+        <button type="button" className="trc-btn trc-btn-primary" onClick={submitAll} disabled={saving}>
           {saving ? "Submitting…" : "Submit to Adviser"}
         </button>
       </div>
@@ -417,9 +453,9 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
     return <p className="trc-empty">Select a student to view their report card.</p>;
   }
 
-  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
+  const displaySubjects = subjectsConfig?.displayByGrade?.[student.gradeLevel] || [];
   const card = student.reportCard || {};
-  const forteCode = student.forteSubjectCode || null;
+  const assignedSubjects = student.subjects || [];
   const locked = isTermLocked(student, term);
 
   function rowValue(code) {
@@ -547,8 +583,8 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
     }
   }
 
-  const allCompiled = subjects.length > 0 && subjects.every(
-    (code) => (card[code]?.[term]?.status) === "compiled"
+  const allCompiled = displaySubjects.length > 0 && displaySubjects.every(
+    (code) => (card[code]?.[term]?.status) === "compiled" || (isComputedInConfig(code, subjectsConfig) && card[code]?.[term]?.status !== "submitted")
   );
 
   return (
@@ -566,9 +602,11 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
           </tr>
         </thead>
         <tbody>
-          {subjects.map((code) => {
+          {displaySubjects.map((code) => {
             const entry = card[code]?.[term] || {};
-            const isEditable = !locked && code === forteCode;
+            const isComputed = isComputedInConfig(code, subjectsConfig);
+            const gradeValue = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
+            const isEditable = !locked && assignedSubjects.includes(code);
             const isCompilable = !locked && entry.status === "submitted";
             const state = rowStates[code] || "idle";
 
@@ -600,7 +638,7 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
                       {state === "error"  && <span className="trc-row-state trc-row-state-err">⚠️</span>}
                     </div>
                   ) : (
-                    <span className="trc-readonly-value">{entry.grade ?? "—"}</span>
+                    <span className="trc-readonly-value">{gradeValue}</span>
                   )}
                 </td>
                 <td>
@@ -687,14 +725,20 @@ function StudentRowBadge({ student, term, isHomeMode, subjectsConfig }) {
     return <span className="trc-row-badge trc-row-badge-locked" title={`${term} is managed by admin`}>🔒</span>;
   }
 
-  // Visiting mode: the row's reportCard is the teacher's single subject.
+  // Visiting mode: check every subject this teacher grades for this student.
   if (!isHomeMode) {
-    const entry = student.reportCard?.[term] || {};
-    if (entry.status === "submitted") {
-      return <span className="trc-row-badge trc-row-badge-submitted">Submitted</span>;
-    }
-    if (entry.status === "compiled") {
+    const subjectCodes = student.subjects || [];
+    const statuses = subjectCodes
+      .map((code) => student.reportCard?.[code]?.[term]?.status)
+      .filter(Boolean);
+
+    if (statuses.length === 0) return null;
+
+    if (statuses.every((s) => s === "compiled")) {
       return <span className="trc-row-badge trc-row-badge-ready">Ready</span>;
+    }
+    if (statuses.some((s) => s === "submitted" || s === "compiled")) {
+      return <span className="trc-row-badge trc-row-badge-submitted">In progress</span>;
     }
     return null;
   }
@@ -704,7 +748,7 @@ function StudentRowBadge({ student, term, isHomeMode, subjectsConfig }) {
     return <span className="trc-row-badge trc-row-badge-submitted">Submitted</span>;
   }
 
-  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
+  const subjects = subjectsConfig?.entryByGrade?.[student.gradeLevel] || [];
   if (subjects.length === 0) return null;
 
   const card = student.reportCard || {};

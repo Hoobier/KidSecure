@@ -224,7 +224,7 @@ export default function TeachersPage() {
                   </td>
                   <td>{t.email || "—"}</td>
                   <td style={{ textTransform: "capitalize" }}>{t.department || "—"}</td>
-                  <td>{t.forteSubjectCode || "—"}</td>
+                  <td>{(t.subjects || []).join(", ") || "—"}</td>
                   <td>{t.homeAssignmentsCount ?? 0}</td>
                   <td>{t.visitingAssignmentsCount ?? 0}</td>
                   <td>

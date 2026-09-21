@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
 import "../../enrollment/enrollment.css";
-import { getSubjectDisplayItems, getSubjectsConfig } from "@/lib/subjectsCache";
+import { getDisplaySubjectsForGrade, getSubjectsConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, getSubjectNameFromConfig } from "@/lib/subjectsCache";
 
 // src/app/(admin)/students/[id]/page.js
 
@@ -100,8 +100,8 @@ export default function StudentDetailPage({ params }) {
         setReportCardData(rcJson.data || {});
         setSubjectsConfig(cfg);
 
-        const items = await getSubjectDisplayItems(student.gradeLevel);
-        setDisplayItems(items);
+        const displaySubjects = await getDisplaySubjectsForGrade(student.gradeLevel);
+        setDisplayItems(displaySubjects);
       } catch (err) {
         setFeedback({ type: "error", message: `⚠️ ${err.message}` });
       } finally {
@@ -442,27 +442,134 @@ export default function StudentDetailPage({ params }) {
         </div>
       </section>
 
-      {student.status === "active" ? (
+      {student.status === "active" || student.status === "inactive" ? (
         <section className="detail-danger-zone">
           <h2>Deactivate Student</h2>
           <p>This will mark the student as inactive. Their records will be kept, and this can be reversed later.</p>
-          <button className="detail-btn-danger-outline" onClick={() => setShowDeactivateConfirm(true)}>Deactivate Student</button>
+          <div className="detail-danger-actions">
+            <button className="detail-btn-danger-outline" onClick={() => setShowDeactivateConfirm(true)}>
+              Deactivate Student
+            </button>
+            <button
+              className="detail-btn-secondary"
+              onClick={async () => {
+                if (!window.confirm(`Archive ${fullName}? They'll be removed from the active list and appear on the Archived Students page.`)) return;
+                try {
+                  const res = await fetch(`/api/students/${id}/archive`, { method: "POST", credentials: "include" });
+                  if (!res.ok) throw new Error();
+                  setStudent((prev) => ({ ...prev, archivedAt: new Date().toISOString() }));
+                  setFeedback({ type: "success", message: "✅ Student archived." });
+                } catch {
+                  setFeedback({ type: "error", message: "⚠️ Unable to archive. Please try again." });
+                } finally {
+                  setTimeout(() => setFeedback(null), 5000);
+                }
+              }}
+            >
+              Archive Student
+            </button>
+          </div>
         </section>
       ) : student.status === "transferred_out" ? (
         <section className="detail-danger-zone">
           <h2>Re-enroll Student</h2>
           <p>This student previously transferred to another school. Re-enrolling will reactivate their record, RFID tag, and parent account.</p>
-          <button type="button" className="detail-btn-primary" onClick={() => {
-            setReEnrollForm({ gradeLevel: student.gradeLevel || "", section: student.section || "", previousSchool: student.previousSchool || "" });
-            setReEnrollErrors({});
-            setShowReEnroll(true);
-          }}>Re-enroll Student</button>
+          <div className="detail-danger-actions">
+            <button
+              type="button"
+              className="detail-btn-primary"
+              onClick={() => {
+                setReEnrollForm({
+                  gradeLevel: student.gradeLevel || "",
+                  section: student.section || "",
+                  previousSchool: student.previousSchool || "",
+                });
+                setReEnrollErrors({});
+                setShowReEnroll(true);
+              }}
+            >
+              Re-enroll Student
+            </button>
+            {student.archivedAt && (
+              <button
+                type="button"
+                className="detail-btn-secondary"
+                onClick={async () => {
+                  if (!window.confirm(`Unarchive ${fullName}? This keeps their status as Transferred Out.`)) return;
+                  try {
+                    const res = await fetch(`/api/students/${id}/unarchive`, { method: "POST", credentials: "include" });
+                    if (!res.ok) throw new Error();
+                    setStudent((prev) => ({ ...prev, archivedAt: null }));
+                    setFeedback({ type: "success", message: "✅ Student unarchived." });
+                  } catch {
+                    setFeedback({ type: "error", message: "⚠️ Unable to unarchive. Please try again." });
+                  } finally {
+                    setTimeout(() => setFeedback(null), 5000);
+                  }
+                }}
+              >
+                Unarchive Student
+              </button>
+            )}
+          </div>
+        </section>
+      ) : student.status === "graduated" ? (
+        <section className="detail-danger-zone">
+          <h2>Archive Status</h2>
+          <p>
+            {student.archivedAt
+              ? `${fullName} graduated and was archived on ${new Date(student.archivedAt).toLocaleDateString()}.`
+              : `${fullName} is a graduate but is not currently archived.`}
+          </p>
+          {student.archivedAt ? (
+            <button
+              type="button"
+              className="detail-btn-secondary"
+              onClick={async () => {
+                if (!window.confirm(`Unarchive ${fullName}? This keeps their status as Graduated.`)) return;
+                try {
+                  const res = await fetch(`/api/students/${id}/unarchive`, { method: "POST", credentials: "include" });
+                  if (!res.ok) throw new Error();
+                  setStudent((prev) => ({ ...prev, archivedAt: null }));
+                  setFeedback({ type: "success", message: "✅ Student unarchived." });
+                } catch {
+                  setFeedback({ type: "error", message: "⚠️ Unable to unarchive. Please try again." });
+                } finally {
+                  setTimeout(() => setFeedback(null), 5000);
+                }
+              }}
+            >
+              Unarchive Student
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="detail-btn-secondary"
+              onClick={async () => {
+                if (!window.confirm(`Archive ${fullName}?`)) return;
+                try {
+                  const res = await fetch(`/api/students/${id}/archive`, { method: "POST", credentials: "include" });
+                  if (!res.ok) throw new Error();
+                  setStudent((prev) => ({ ...prev, archivedAt: new Date().toISOString() }));
+                  setFeedback({ type: "success", message: "✅ Student archived." });
+                } catch {
+                  setFeedback({ type: "error", message: "⚠️ Unable to archive. Please try again." });
+                } finally {
+                  setTimeout(() => setFeedback(null), 5000);
+                }
+              }}
+            >
+              Archive Student
+            </button>
+          )}
         </section>
       ) : (
         <section className="detail-danger-zone">
           <h2>Reactivate Student</h2>
           <p>This will mark the student as active again and restore their status in the system.</p>
-          <button className="detail-btn-secondary" onClick={() => setShowReactivateConfirm(true)}>Reactivate Student</button>
+          <button className="detail-btn-secondary" onClick={() => setShowReactivateConfirm(true)}>
+            Reactivate Student
+          </button>
         </section>
       )}
 
@@ -554,7 +661,7 @@ export default function StudentDetailPage({ params }) {
                 </p>
                 {reportCardData && (() => {
                   const releasedTerm = reportCardData.reportCardReleasedTerm;
-                  const lockedTerm = reportCardData.reportCardLockedTerm;
+                  const lockedTerms = reportCardData.reportCardLockedTerms ?? [];
                   const releasedAt = reportCardData.reportCardReleasedAt;
 
                   let statusClass, statusText;
@@ -562,9 +669,9 @@ export default function StudentDetailPage({ params }) {
                   if (releasedTerm && releasedAt) {
                     statusClass = "is-released";
                     statusText = `Released for ${releasedTerm} on ${new Date(releasedAt).toLocaleDateString()}`;
-                  } else if (lockedTerm) {
+                  } else if (lockedTerms.length > 0) {
                     statusClass = "is-not-released";
-                    statusText = `${lockedTerm} was released and then pulled back — locked to teachers until re-released`;
+                    statusText = `${lockedTerms.join(", ")} locked to teachers — awaiting re-release`;
                   } else {
                     statusClass = "is-not-released";
                     statusText = "Not released";
@@ -599,55 +706,24 @@ export default function StudentDetailPage({ params }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayItems.map((item) => {
-                      if (item.type === "subject") {
-                        const grades = reportCardData?.grades?.[item.code] || {};
-                        return (
-                          <tr key={item.code} className="report-card-row">
-                            <td className="report-card-subject">
-                              <span className="report-card-code">{item.code}</span>
-                              <span>{item.name}</span>
-                            </td>
-                            {TERMS.map((t) => (
-                              <td key={t.key} className="report-card-grade">
-                                <span className="report-card-readonly">
-                                  {grades?.[t.key]?.grade ?? "—"}
-                                </span>
-                              </td>
-                            ))}
-                            <td className="report-card-avg">{computeAverage(grades)}</td>
-                          </tr>
-                        );
-                      }
-                      // group
+                    {displayItems.map((code) => {
+                      const isComputed = isComputedInConfig(code, subjectsConfig);
+                      const grades = reportCardData?.grades?.[code] || {};
                       return (
-                        <React.Fragment key={item.label}>
-                          <tr className="report-card-row report-card-row-group">
-                            <td colSpan={5} className="report-card-subject report-card-subject-group">
-                              <span className="report-card-code">{item.label}</span>
-                              <span>{item.label}</span>
+                        <tr key={code} className="report-card-row">
+                          <td className="report-card-subject">
+                            <span className="report-card-code">{code}</span>
+                            <span>{getSubjectNameFromConfig(code, subjectsConfig)}</span>
+                          </td>
+                          {TERMS.map((t) => (
+                            <td key={t.key} className="report-card-grade">
+                              <span className="report-card-readonly">
+                                {isComputed ? (computeDisplayGrade(reportCardData?.grades || {}, code, t.key, subjectsConfig) ?? "—") : (grades?.[t.key]?.grade ?? "—")}
+                              </span>
                             </td>
-                          </tr>
-                          {item.items.map((child) => {
-                            const grades = reportCardData?.grades?.[child.code] || {};
-                            return (
-                              <tr key={child.code} className="report-card-row report-card-row-indented report-card-row-child">
-                                <td className="report-card-subject">
-                                  <span className="report-card-code">{child.code}</span>
-                                  <span>{child.name}</span>
-                                </td>
-                                {TERMS.map((t) => (
-                                  <td key={t.key} className="report-card-grade">
-                                    <span className="report-card-readonly">
-                                      {grades?.[t.key]?.grade ?? "—"}
-                                    </span>
-                                  </td>
-                                ))}
-                                <td className="report-card-avg">{computeAverage(grades)}</td>
-                              </tr>
-                            );
-                          })}
-                        </React.Fragment>
+                          ))}
+                          <td className="report-card-avg">{isComputed ? (computeDisplayFinal(reportCardData?.grades || {}, code, subjectsConfig) ?? "—") : computeAverage(grades)}</td>
+                        </tr>
                       );
                     })}
                   </tbody>

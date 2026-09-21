@@ -1,34 +1,15 @@
 "use client";
-
-import { useState } from "react";
+// src/app/(admin)/teachers/TeacherForm.js
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getSubjectsConfig } from "@/lib/subjectsCache";
 
 export const GRADE_OPTIONS = [
   "Nursery", "Kindergarten", "Preparatory",
   "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
 ];
 export const SECTION_OPTIONS = ["A", "B", "C"];
-export const SUBJECT_OPTIONS = [
-  { code: "CLVE", label: "CLVE — Christian Living / Values Education" },
-  { code: "MATH", label: "MATH — Mathematics" },
-  { code: "SCI", label: "SCI — Science" },
-  { code: "FIL", label: "FIL — Filipino" },
-  { code: "MAPEH", label: "MAPEH" },
-  { code: "EPP", label: "EPP — Edukasyong Pantahanan at Praktikal" },
-];
-
-const SUBJECTS_BY_GRADE = {
-  "Nursery": ["CL", "COM", "MATH", "SEN"],
-  "Kindergarten": ["CL", "COM", "MATH", "SEN"],
-  "Preparatory": ["CL", "COM", "MATH", "SEN"],
-  "Grade 1": ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 2": ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 3": ["CLVE", "MATH", "FIL", "MAPEH", "EPP"],
-  "Grade 4": ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 5": ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-  "Grade 6": ["CLVE", "MATH", "SCI", "FIL", "MAPEH", "EPP"],
-};
 
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
@@ -36,15 +17,23 @@ export default function TeacherForm({ mode, initial, teacherId }) {
   const router = useRouter();
   const isCreate = mode === "create";
 
+  const [config, setConfig] = useState(null);
   const [form, setForm] = useState({
     firstName: initial?.firstName || "",
     middleName: initial?.middleName || "",
     lastName: initial?.lastName || "",
     email: initial?.email || "",
     department: initial?.department || "elementary",
-    forteSubjectCode: initial?.forteSubjectCode || "",
-    homeAssignments: initial?.homeAssignments || [],
-    visitingAssignments: initial?.visitingAssignments || [],
+    homeAssignments: (initial?.homeAssignments || []).map((a) => ({
+      gradeLevel: a.gradeLevel || "",
+      section: a.section || "",
+      subjects: a.subjects || [],
+    })),
+    visitingAssignments: (initial?.visitingAssignments || []).map((a) => ({
+      gradeLevel: a.gradeLevel || "",
+      section: a.section || "",
+      subjects: a.subjects || [],
+    })),
   });
 
   const [errors, setErrors] = useState({});
@@ -52,37 +41,55 @@ export default function TeacherForm({ mode, initial, teacherId }) {
   const [saving, setSaving] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
+  useEffect(() => {
+    getSubjectsConfig().then(setConfig).catch(() => {});
+  }, []);
+
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  function addHomeRow() {
-    setForm((prev) => ({ ...prev, homeAssignments: [...prev.homeAssignments, { gradeLevel: "", section: "" }] }));
-  }
-  function updateHomeRow(i, key, value) {
-    setForm((prev) => {
-      const next = [...prev.homeAssignments];
-      next[i] = { ...next[i], [key]: value };
-      return { ...prev, homeAssignments: next };
-    });
-  }
-  function removeHomeRow(i) {
-    setForm((prev) => ({ ...prev, homeAssignments: prev.homeAssignments.filter((_, idx) => idx !== i) }));
+  function addRow(kind) {
+    setForm((prev) => ({
+      ...prev,
+      [kind]: [...prev[kind], { gradeLevel: "", section: "", subjects: [] }],
+    }));
   }
 
-  function addVisitingRow() {
-    setForm((prev) => ({ ...prev, visitingAssignments: [...prev.visitingAssignments, { gradeLevel: "", section: "" }] }));
-  }
-  function updateVisitingRow(i, key, value) {
+  function updateRow(kind, i, key, value) {
     setForm((prev) => {
-      const next = [...prev.visitingAssignments];
+      const next = [...prev[kind]];
       next[i] = { ...next[i], [key]: value };
-      return { ...prev, visitingAssignments: next };
+      // Clear subjects if grade changes — they may no longer be valid.
+      if (key === "gradeLevel" && next[i].subjects?.length) {
+        next[i].subjects = [];
+      }
+      return { ...prev, [kind]: next };
     });
   }
-  function removeVisitingRow(i) {
-    setForm((prev) => ({ ...prev, visitingAssignments: prev.visitingAssignments.filter((_, idx) => idx !== i) }));
+
+  function toggleRowSubject(kind, i, code) {
+    setForm((prev) => {
+      const next = [...prev[kind]];
+      const current = next[i].subjects || [];
+      next[i] = {
+        ...next[i],
+        subjects: current.includes(code)
+          ? current.filter((c) => c !== code)
+          : [...current, code],
+      };
+      return { ...prev, [kind]: next };
+    });
+  }
+
+  function removeRow(kind, i) {
+    setForm((prev) => ({ ...prev, [kind]: prev[kind].filter((_, idx) => idx !== i) }));
+  }
+
+  function offeredSubjectsFor(gradeLevel) {
+    if (!config || !gradeLevel) return [];
+    return config.entryByGrade?.[gradeLevel] || [];
   }
 
   function validate() {
@@ -94,6 +101,7 @@ export default function TeacherForm({ mode, initial, teacherId }) {
     if (form.middleName && !NAME_REGEX.test(form.middleName.trim())) {
       e.middleName = ["Invalid format (2–50 letters)."];
     }
+
     if (!form.lastName.trim()) e.lastName = ["Last name is required."];
     else if (!NAME_REGEX.test(form.lastName.trim())) e.lastName = ["Invalid format (2–50 letters)."];
 
@@ -105,25 +113,28 @@ export default function TeacherForm({ mode, initial, teacherId }) {
     const cleanedHome = form.homeAssignments.filter((r) => r.gradeLevel && r.section);
     const cleanedVisiting = form.visitingAssignments.filter((r) => r.gradeLevel && r.section);
 
-    if (form.department === "preschool") {
-      if (form.forteSubjectCode) e.forteSubjectCode = ["Preschool teachers do not have a forte subject."];
-      if (cleanedVisiting.length > 0) e.visitingAssignments = ["Preschool teachers do not have visiting classes."];
+    if (form.department === "preschool" && cleanedVisiting.length > 0) {
+      e.visitingAssignments = ["Preschool teachers do not have visiting classes."];
     }
 
-    if (form.department === "elementary") {
-      if (cleanedVisiting.length > 0 && !form.forteSubjectCode) {
-        e.forteSubjectCode = ["Please select a forte subject before adding visiting classes."];
-      }
-      if (form.forteSubjectCode) {
-        cleanedVisiting.forEach((row, i) => {
-          const offered = SUBJECTS_BY_GRADE[row.gradeLevel] || [];
-          if (!offered.includes(form.forteSubjectCode)) {
-            e[`visiting_${i}`] = `${form.forteSubjectCode} is not offered at ${row.gradeLevel}.`;
-          }
-        });
-      }
-    }
+    // Each row must have at least one subject.
+    cleanedHome.forEach((row, i) => {
+      if (!row.subjects?.length) e[`home_${i}`] = "Pick at least one subject for this class.";
+    });
+    cleanedVisiting.forEach((row, i) => {
+      if (!row.subjects?.length) e[`visiting_${i}`] = "Pick at least one subject for this class.";
+    });
 
+    // Subjects must be offered at that grade.
+    [["home", cleanedHome], ["visiting", cleanedVisiting]].forEach(([kind, rows]) => {
+      rows.forEach((row, i) => {
+        const offered = offeredSubjectsFor(row.gradeLevel);
+        const bad = (row.subjects || []).find((c) => !offered.includes(c));
+        if (bad) e[`${kind}_${i}`] = `${bad} is not offered at ${row.gradeLevel}.`;
+      });
+    });
+
+    // No duplicate grade+section within each list.
     const dupCheck = (rows, fieldKey) => {
       const seen = new Set();
       rows.forEach((row, i) => {
@@ -162,10 +173,13 @@ export default function TeacherForm({ mode, initial, teacherId }) {
       lastName: form.lastName.trim(),
       email: form.email.trim(),
       department: form.department,
-      forteSubjectCode: form.department === "elementary" ? (form.forteSubjectCode || null) : null,
-      homeAssignments: form.homeAssignments.filter((r) => r.gradeLevel && r.section),
+      homeAssignments: form.homeAssignments
+        .filter((r) => r.gradeLevel && r.section && r.subjects?.length)
+        .map((r) => ({ gradeLevel: r.gradeLevel, section: r.section, subjects: r.subjects })),
       visitingAssignments: form.department === "elementary"
-        ? form.visitingAssignments.filter((r) => r.gradeLevel && r.section)
+        ? form.visitingAssignments
+            .filter((r) => r.gradeLevel && r.section && r.subjects?.length)
+            .map((r) => ({ gradeLevel: r.gradeLevel, section: r.section, subjects: r.subjects }))
         : [],
     };
 
@@ -190,6 +204,63 @@ export default function TeacherForm({ mode, initial, teacherId }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function renderAssignmentRow(kind, row, i) {
+    const offered = offeredSubjectsFor(row.gradeLevel);
+    const errorKey = `${kind}_${i}`;
+    return (
+      <div key={i} className="edit-assignment-row">
+        <div className="edit-form-row-3" style={{ alignItems: "flex-end" }}>
+          <div className="edit-form-group">
+            <label>Grade Level</label>
+            <select value={row.gradeLevel} onChange={(e) => updateRow(kind, i, "gradeLevel", e.target.value)}>
+              <option value="">Select</option>
+              {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div className="edit-form-group">
+            <label>Section</label>
+            <select value={row.section} onChange={(e) => updateRow(kind, i, "section", e.target.value)}>
+              <option value="">Select</option>
+              {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="edit-form-group">
+            <button type="button" className="edit-btn edit-btn-secondary" onClick={() => removeRow(kind, i)}>Remove</button>
+          </div>
+        </div>
+
+        <div className="edit-assignment-subjects">
+          <div className="edit-assignment-subjects-label">Subjects for this class</div>
+          {!row.gradeLevel ? (
+            <p className="edit-assignment-subjects-hint">Pick a grade level first.</p>
+          ) : offered.length === 0 ? (
+            <p className="edit-assignment-subjects-hint">No subjects configured for {row.gradeLevel}.</p>
+          ) : (
+            <div className="edit-assignment-subject-grid">
+              {offered.map((code) => {
+                const checked = (row.subjects || []).includes(code);
+                const name = config?.subjects?.[code] || code;
+                return (
+                  <label key={code} className={`edit-assignment-subject ${checked ? "is-checked" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleRowSubject(kind, i, code)}
+                    />
+                    <span className="edit-assignment-subject-code">{code}</span>
+                    <span className="edit-assignment-subject-name">{name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {errors[errorKey] && <div className="edit-field-error" style={{ marginTop: "0.5rem" }}>{errors[errorKey]}</div>}
+      </div>
+    );
   }
 
   return (
@@ -252,21 +323,6 @@ export default function TeacherForm({ mode, initial, teacherId }) {
             {errors.department && <div className="edit-field-error">{errors.department[0]}</div>}
           </div>
         </div>
-
-        {form.department === "elementary" && (
-          <div className="edit-form-group">
-            <label>Forte Subject</label>
-            <select
-              value={form.forteSubjectCode}
-              onChange={(e) => updateField("forteSubjectCode", e.target.value)}
-              className={errors.forteSubjectCode ? "input-invalid" : ""}
-            >
-              <option value="">Select forte subject</option>
-              {SUBJECT_OPTIONS.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
-            </select>
-            {errors.forteSubjectCode && <div className="edit-field-error">{errors.forteSubjectCode[0]}</div>}
-          </div>
-        )}
       </form>
 
       <div className="edit-card" style={{ marginTop: "1.5rem" }}>
@@ -274,77 +330,18 @@ export default function TeacherForm({ mode, initial, teacherId }) {
         <p className="enrollment-help-text" style={{ marginTop: 0 }}>
           Classes where this teacher is the homeroom adviser.
         </p>
-
-        {form.homeAssignments.map((row, i) => (
-          <div key={i} className="edit-form-row-3" style={{ alignItems: "flex-end" }}>
-            <div className="edit-form-group">
-              <label>Grade Level</label>
-              <select value={row.gradeLevel} onChange={(e) => updateHomeRow(i, "gradeLevel", e.target.value)}>
-                <option value="">Select</option>
-                {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div className="edit-form-group">
-              <label>Section</label>
-              <select value={row.section} onChange={(e) => updateHomeRow(i, "section", e.target.value)}>
-                <option value="">Select</option>
-                {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="edit-form-group">
-              <button type="button" className="edit-btn edit-btn-secondary" onClick={() => removeHomeRow(i)}>Remove</button>
-            </div>
-            {errors[`home_${i}`] && <div className="edit-field-error" style={{ width: "100%" }}>{errors[`home_${i}`]}</div>}
-          </div>
-        ))}
-
-        <button type="button" className="edit-btn edit-btn-secondary" onClick={addHomeRow}>+ Add Home Class</button>
+        {form.homeAssignments.map((row, i) => renderAssignmentRow("homeAssignments", row, i))}
+        <button type="button" className="edit-btn edit-btn-secondary" onClick={() => addRow("homeAssignments")}>+ Add Home Class</button>
       </div>
 
       {form.department === "elementary" && (
         <div className="edit-card" style={{ marginTop: "1.5rem" }}>
           <h2>Visiting Classes</h2>
           <p className="enrollment-help-text" style={{ marginTop: 0 }}>
-            Classes where this teacher teaches {form.forteSubjectCode || "their forte subject"} as a visiting specialist.
+            Classes where this teacher teaches as a visiting specialist.
           </p>
-
-          {form.visitingAssignments.map((row, i) => {
-            const offered = SUBJECTS_BY_GRADE[row.gradeLevel] || [];
-            const mismatch = form.forteSubjectCode && row.gradeLevel && !offered.includes(form.forteSubjectCode);
-            return (
-              <div key={i}>
-                <div className="edit-form-row-3" style={{ alignItems: "flex-end" }}>
-                  <div className="edit-form-group">
-                    <label>Grade Level</label>
-                    <select value={row.gradeLevel} onChange={(e) => updateVisitingRow(i, "gradeLevel", e.target.value)}>
-                      <option value="">Select</option>
-                      {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-                  <div className="edit-form-group">
-                    <label>Section</label>
-                    <select value={row.section} onChange={(e) => updateVisitingRow(i, "section", e.target.value)}>
-                      <option value="">Select</option>
-                      {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="edit-form-group">
-                    <button type="button" className="edit-btn edit-btn-secondary" onClick={() => removeVisitingRow(i)}>Remove</button>
-                  </div>
-                </div>
-                {mismatch && (
-                  <div className="edit-field-error" style={{ marginTop: "-0.5rem", marginBottom: "0.75rem" }}>
-                    {form.forteSubjectCode} is not offered at {row.gradeLevel}.
-                  </div>
-                )}
-                {errors[`visiting_${i}`] && (
-                  <div className="edit-field-error" style={{ marginBottom: "0.75rem" }}>{errors[`visiting_${i}`]}</div>
-                )}
-              </div>
-            );
-          })}
-
-          <button type="button" className="edit-btn edit-btn-secondary" onClick={addVisitingRow}>+ Add Visiting Class</button>
+          {form.visitingAssignments.map((row, i) => renderAssignmentRow("visitingAssignments", row, i))}
+          <button type="button" className="edit-btn edit-btn-secondary" onClick={() => addRow("visitingAssignments")}>+ Add Visiting Class</button>
         </div>
       )}
 

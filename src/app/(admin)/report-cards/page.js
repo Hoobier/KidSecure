@@ -12,7 +12,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-import { getSubjectDisplayItems, getSubjectsForGrade, getSubjectsConfig } from "@/lib/subjectsCache";
+import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal } from "@/lib/subjectsCache";
 
 const STEPS = [
   "Term",
@@ -157,7 +157,7 @@ function PendingWizard({ subjectsConfig }) {
   }
 
   const totalCompiledSubjects = (student) => {
-    const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
+    const subjects = subjectsConfig?.entryByGrade?.[student.gradeLevel] || [];
     const card = student.reportCard || {};
     return subjects.filter((c) => card[c]?.[term]?.status === "compiled").length;
   };
@@ -385,7 +385,7 @@ function PendingWizard({ subjectsConfig }) {
               {students.map((s) => {
                 const ready = s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term;
                 const compiled = totalCompiledSubjects(s);
-                const totalSubjects = (subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || []).length;
+                const totalSubjects = (subjectsConfig?.entryByGrade?.[s.gradeLevel] || []).length;
                 return (
                   <tr key={s.id} className={!ready ? "rc-row-muted" : ""}>
                     <td>
@@ -515,7 +515,7 @@ function ReviewTable({ students, term, onEdit, onDownload, subjectsConfig }) {
         </thead>
         <tbody>
           {students.map((s) => {
-            const subjects = subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || [];
+            const subjects = subjectsConfig?.entryByGrade?.[s.gradeLevel] || [];
             const card = s.reportCard || {};
             const compiled = subjects.filter((c) => card[c]?.[term]?.status === "compiled").length;
             const submitted = subjects.filter((c) => card[c]?.[term]?.status === "submitted").length;
@@ -562,7 +562,7 @@ function ReviewTable({ students, term, onEdit, onDownload, subjectsConfig }) {
 // ---------------------------------------------------------------------------
 
 function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }) {
-  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
+  const subjects = subjectsConfig?.entryByGrade?.[student.gradeLevel] || [];
   const [grades, setGrades] = useState(() => {
     const initial = {};
     subjects.forEach((code) => {
@@ -744,7 +744,7 @@ function ReleasedView({ subjectsConfig }) {
           (json.data || []).filter(
             (s) =>
               s.reportCardReleasedTerm === term ||
-              (s.reportCardLockedTerm === term && !s.reportCardReleasedTerm)
+              (s.reportCardLockedTerms ?? []).includes(term) && !s.reportCardReleasedTerm
           )
         );
       })
@@ -764,7 +764,7 @@ function ReleasedView({ subjectsConfig }) {
           (json.data || []).filter(
             (s) =>
               s.reportCardReleasedTerm === term ||
-              (s.reportCardLockedTerm === term && !s.reportCardReleasedTerm)
+              (s.reportCardLockedTerms ?? []).includes(term) && !s.reportCardReleasedTerm
           )
         )
       );
@@ -973,7 +973,7 @@ function ReleasedView({ subjectsConfig }) {
 // ---------------------------------------------------------------------------
 
 function drawReportCardPDF(doc, student, term, subjectsConfig) {
-  const subjects = subjectsConfig?.subjectsByGrade?.[student.gradeLevel] || [];
+  const subjects = subjectsConfig?.displayByGrade?.[student.gradeLevel] || [];
   const card = student.reportCard || {};
 
   doc.setFontSize(16);
@@ -983,10 +983,12 @@ function drawReportCardPDF(doc, student, term, subjectsConfig) {
   doc.text(`${student.gradeLevel} - ${student.section} · ${term}`, 40, 76);
 
   const rows = subjects.map((code) => {
+    const isComputed = isComputedInConfig(code, subjectsConfig);
     const entry = card[code]?.[term] || {};
+    const grade = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
     return [
       `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
-      entry.grade ?? "—",
+      grade,
       entry.status || "not started",
     ];
   });
@@ -1029,13 +1031,15 @@ function downloadSectionPDF(students, section, term, subjectsConfig) {
     localDoc.text(`${s.fullName} · ${s.studentId}`, 40, startY);
     localDoc.setFontSize(10);
 
-    const subjects = subjectsConfig?.subjectsByGrade?.[s.gradeLevel] || [];
+    const subjects = subjectsConfig?.displayByGrade?.[s.gradeLevel] || [];
     const card = s.reportCard || {};
     const rows = subjects.map((code) => {
+      const isComputed = isComputedInConfig(code, subjectsConfig);
       const entry = card[code]?.[term] || {};
+      const grade = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
       return [
         `${code} — ${subjectsConfig?.subjects?.[code] || ""}`,
-        entry.grade ?? "—",
+        grade,
         entry.status || "not started",
       ];
     });

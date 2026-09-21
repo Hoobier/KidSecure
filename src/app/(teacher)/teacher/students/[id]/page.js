@@ -63,8 +63,8 @@ export default function TeacherStudentDetailPage({ params }) {
         <div>
           <h2>Report Card</h2>
           <p className="teacher-report-card-status">
-            {student.reportCardLockedTerm
-              ? `🔒 ${student.reportCardLockedTerm} managed by the school office`
+            {(student?.reportCardLockedTerms ?? []).length > 0
+              ? `🔒 ${(student?.reportCardLockedTerms ?? []).join(", ")} managed by the school office`
               : student.reportCardSubmittedTerm
                 ? `Submitted to admin (${student.reportCardSubmittedTerm})`
                 : student.reportCardReleasedTerm
