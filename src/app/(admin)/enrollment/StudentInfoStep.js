@@ -1,5 +1,5 @@
 "use client";
-
+// src/app/(admin)/enrollment/StudentInfoStep.js
 import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -27,6 +27,8 @@ const TRANSFEREE_DOCUMENTS = [
   { type: "form_138", label: "Form 138 (Report Card)", icon: "📋" },
   { type: "good_moral", label: "Good Moral Certificate", icon: "📜" },
 ];
+
+const TRANSFEREE_GRADES = ["Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 
 // ---- Date helpers: convert between "YYYY-MM-DD" string and real Date objects ----
 
@@ -89,6 +91,42 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
     }
   }
 
+  function handleGradeChange(newGrade) {
+    const wasTransfer = TRANSFEREE_GRADES.includes(data.gradeLevel);
+    const isNowTransfer = TRANSFEREE_GRADES.includes(newGrade);
+
+    const updates = {
+      gradeLevel: newGrade,
+      isTransferee: isNowTransfer,
+    };
+
+    if (isNowTransfer) {
+      updates.hasPreviousSchool = true;
+    } else if (wasTransfer) {
+      updates.hasPreviousSchool = false;
+      updates.previousSchool = "";
+    }
+
+    onChange(updates);
+
+    if (errors.gradeLevel) {
+      setErrors((prev) => ({ ...prev, gradeLevel: "" }));
+    }
+  }
+
+  function handlePreviousSchoolToggle(checked) {
+    onChange({
+      hasPreviousSchool: checked,
+      previousSchool: checked ? (data.previousSchool || "") : "",
+    });
+    if (errors.previousSchool) {
+      setErrors((prev) => ({ ...prev, previousSchool: "" }));
+    }
+  }
+
+  const isTransferGrade = TRANSFEREE_GRADES.includes(data.gradeLevel);
+  const showPreviousSchool = isTransferGrade || (data.hasPreviousSchool || false);
+
   function validate() {
     const newErrors = {};
 
@@ -117,12 +155,12 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
     if (!data.gradeLevel) newErrors.gradeLevel = "Please select a grade level.";
     if (!data.section) newErrors.section = "Please select a section.";
 
-    if (data.isTransferee && !(data.previousSchool || "").trim()) {
+    if (showPreviousSchool && !(data.previousSchool || "").trim()) {
       newErrors.previousSchool = "Please enter the student's previous school.";
+    }
 
     if (!(data.address || "").trim()) {
       newErrors.address = "Student address is required.";
-    }
     }
 
     setErrors(newErrors);
@@ -175,7 +213,7 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
     }
   }
 
-    const documentsToShow = data.isTransferee
+    const documentsToShow = showPreviousSchool
     ? [...BASE_DOCUMENTS, ...TRANSFEREE_DOCUMENTS]
     : BASE_DOCUMENTS;
 
@@ -257,7 +295,7 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
           <select
             id="gradeLevel"
             value={data.gradeLevel}
-            onChange={(e) => handleFieldChange("gradeLevel", e.target.value)}
+            onChange={(e) => handleGradeChange(e.target.value)}
             className={errors.gradeLevel ? "input-invalid" : ""}
           >
             <option value="">Select grade level</option>
@@ -307,18 +345,19 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
       </div>
 
       <div className="enrollment-form-group">
-        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: isTransferGrade ? "default" : "pointer" }}>
           <input
             type="checkbox"
-            checked={data.isTransferee || false}
-            onChange={(e) => handleFieldChange("isTransferee", e.target.checked)}
+            checked={showPreviousSchool}
+            disabled={isTransferGrade}
+            onChange={(e) => handlePreviousSchoolToggle(e.target.checked)}
             style={{ width: "auto" }}
           />
           This student is transferring from another school
         </label>
       </div>
 
-      {data.isTransferee && (
+      {showPreviousSchool && (
         <div className="enrollment-form-group">
           <label htmlFor="previousSchool">
             Previous School Name<span className="required">*</span>

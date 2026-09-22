@@ -21,6 +21,7 @@ const BLANK_FORM_DATA = {
     gradeLevel: "",
     section: "",
     isTransferee: false,
+    hasPreviousSchool: false,
     previousSchool: "",
   },
   parent: {

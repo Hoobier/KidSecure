@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 const GRADE_LEVELS_LABEL = (grade) => grade || "—";
 
+const TRANSFEREE_GRADES = ["Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
+
 export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -141,6 +143,10 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
   // ---- Review screen ----
   const { student, parent, rfidTag } = formData;
 
+  const showPreviousSchool =
+    student.hasPreviousSchool === true ||
+    TRANSFEREE_GRADES.includes(student.gradeLevel);
+
   const hasAnyStudentInfo =
     (student.firstName || "").trim() !== "" ||
     (student.middleName || "").trim() !== "" ||
@@ -201,7 +207,7 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
               <span>Full Address</span>
               <span className="enrollment-review-value">{student.address || "—"}</span>
             </div>
-            {student.isTransferee && (
+            {showPreviousSchool && (
               <div className="enrollment-review-row">
                 <span>Transferring From</span>
                 <span className="enrollment-review-value">{student.previousSchool || "—"}</span>
@@ -315,7 +321,7 @@ export default function ReviewStep({ formData, onBack, onSubmitSuccess }) {
           <h3>Requirements</h3>
         </div>
         <div className="enrollment-review-grid">
-          {(student.isTransferee
+          {(showPreviousSchool
             ? ["birth_certificate", "id_photo", "form_138", "good_moral"]
             : ["birth_certificate", "id_photo"]
           ).map((type) => {
