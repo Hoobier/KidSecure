@@ -115,6 +115,8 @@ function RequirementItem({ req, file, previewUrl, onUpload, onRemove, error }) {
 export default function GuestEnrollmentPage() {
   const [form, setForm] = useState(getInitialFormState);
   const isTransferee = TRANSFEREE_GRADES.includes(form.academic.gradeLevel);
+  const [hasPreviousSchool, setHasPreviousSchool] = useState(false);
+  const showPreviousSchool = isTransferee || hasPreviousSchool;
   const [errors, setErrors] = useState({});
   const [files, setFiles] = useState({});
   const [preview, setPreview] = useState({});
@@ -259,6 +261,20 @@ export default function GuestEnrollmentPage() {
         ...prev,
         [section]: { ...prev[section], [field]: undefined },
       }));
+    }
+  }
+
+  function handleGradeChange(newGrade) {
+    const wasTransfer = TRANSFEREE_GRADES.includes(form.academic.gradeLevel);
+    const isNowTransfer = TRANSFEREE_GRADES.includes(newGrade);
+
+    updateForm("academic", "gradeLevel", newGrade);
+
+    if (isNowTransfer) {
+      setHasPreviousSchool(true);
+    } else if (wasTransfer) {
+      setHasPreviousSchool(false);
+      updateForm("academic", "previousSchool", "");
     }
   }
 
@@ -413,16 +429,16 @@ export default function GuestEnrollmentPage() {
         errs.student.birthDate = `Student must be between ${MIN_AGE} and ${MAX_AGE} years old on enrollment date`;
       }
     }
-    if (isTransferee && !form.academic.previousSchool.trim()) {
+    if (showPreviousSchool && !form.academic.previousSchool.trim()) {
       errs.academic = errs.academic || {};
-      errs.academic.previousSchool = "Previous School Name is required for transferees";
+      errs.academic.previousSchool = "Please enter the student's previous school.";
     }
 
     // Documents: required unless the parent opted to follow up documents on enrollment day.
     if (!followUpDocuments) {
       const requiredDocs = [
         ...REQUIREMENTS,
-        ...(isTransferee ? TRANSFEREE_REQUIREMENTS : []),
+        ...(showPreviousSchool ? TRANSFEREE_REQUIREMENTS : []),
       ];
       requiredDocs.forEach((req) => {
         if (!files[req.type]) {
@@ -458,8 +474,8 @@ export default function GuestEnrollmentPage() {
       fd.append("data", JSON.stringify(payload));
       if (files.birth_certificate) fd.append("birth_certificate", files.birth_certificate);
       if (files.id_picture_1x1) fd.append("id_picture_1x1", files.id_picture_1x1);
-      if (isTransferee && files.form_138) fd.append("form_138", files.form_138);  
-      if (isTransferee && files.good_moral) fd.append("good_moral", files.good_moral);
+      if (showPreviousSchool && files.form_138) fd.append("form_138", files.form_138);
+      if (showPreviousSchool && files.good_moral) fd.append("good_moral", files.good_moral);
 
       const res = await fetch("/api/guest/enrollments", {
         method: "POST",
@@ -920,7 +936,7 @@ export default function GuestEnrollmentPage() {
                     id="gradeLevel"
                     className={inputInvalid("academic", "gradeLevel")}
                     value={form.academic.gradeLevel}
-                    onChange={(e) => updateForm("academic", "gradeLevel", e.target.value)}
+                    onChange={(e) => handleGradeChange(e.target.value)}
                   >
                     <option value="">— Select Grade —</option>
                     {GRADE_OPTIONS.map((g) => (
@@ -934,21 +950,52 @@ export default function GuestEnrollmentPage() {
                   )}
                 </div>
                 <div className="guest-field">
-                   <label htmlFor="previousSchool">
-                     Previous School{isTransferee && <span className="guest-required"> *</span>}:
-                    </label>
-                  <input
-                    id="previousSchool"
-                    className={inputInvalid("academic", "previousSchool")}
-                    placeholder={isTransferee ? "Full Name" : "Full Name (if applicable)"}
-                    value={form.academic.previousSchool}
-                    onChange={(e) => updateForm("academic", "previousSchool", e.target.value)}
-                  />
-                  {errors?.academic?.previousSchool && (
-                    <p className="guest-field-error">{errors.academic.previousSchool}</p>
-                  )}
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: isTransferee ? "default" : "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={showPreviousSchool}
+                      disabled={isTransferee}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setHasPreviousSchool(checked);
+                        if (!checked) {
+                          updateForm("academic", "previousSchool", "");
+                        }
+                      }}
+                      style={{ width: "18px", height: "18px", accentColor: "#1b2a4a", margin: 0, colorScheme: "light", flexShrink: 0 }}
+                    />
+                    This student is transferring from another school
+                  </label>
                 </div>
               </div>
+
+              {showPreviousSchool && (
+                <div className="guest-row">
+                  <div className="guest-field">
+                    <label htmlFor="previousSchool">
+                      Previous School<span className="guest-required"> *</span>:
+                    </label>
+                    <input
+                      id="previousSchool"
+                      className={inputInvalid("academic", "previousSchool")}
+                      placeholder="Full Name"
+                      value={form.academic.previousSchool}
+                      onChange={(e) => updateForm("academic", "previousSchool", e.target.value)}
+                    />
+                    {errors?.academic?.previousSchool && (
+                      <p className="guest-field-error">{errors.academic.previousSchool}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Document Uploads */}
@@ -970,7 +1017,7 @@ export default function GuestEnrollmentPage() {
                 ))}
               </div>
 
-              {isTransferee && (
+              {showPreviousSchool && (
                 <p
                   style={{
                     margin: "1.25rem 0 0",
@@ -978,12 +1025,11 @@ export default function GuestEnrollmentPage() {
                     color: "#6c7b95",
                   }}
                 >
-                  <strong style={{ color: "#1b2a4a" }}>{form.academic.gradeLevel}</strong> applicants are
-                  required to submit the transfer documents below.
+                  Please also submit the transfer documents below.
                 </p>
               )}
 
-              {isTransferee && (
+              {showPreviousSchool && (
                 <div
                   className="guest-requirements"
                   style={{
