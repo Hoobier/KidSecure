@@ -339,3 +339,32 @@
 .trc-row-badge-missing   { background: #fff7e0; color: #8a6b14; }
 .trc-row-badge-submitted { background: #eef3ff; color: #1e40af; }
 .trc-row-badge-locked    { background: transparent; color: #a83224; padding: 0; margin-left: 0.4rem; font-size: 0.9rem; }
+
+.trc-row-computed td {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.trc-row-sub td {
+  background: #fafbfc;
+  font-size: 0.88rem;
+}
+
+.trc-subject-indent {
+  display: inline-block;
+  width: 24px;
+}
+
+.trc-subject-code-mini {
+  display: inline-block;
+  min-width: 36px;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(27, 42, 74, 0.08);
+  color: #1b2a4a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+}

@@ -1,6 +1,6 @@
 "use client";
 // src/app/(teacher)/teacher/report-cards/page.js
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import "./report-cards.css";
 
 const TERMS = [
@@ -603,66 +603,175 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
         </thead>
         <tbody>
           {displaySubjects.map((code) => {
-            const entry = card[code]?.[term] || {};
             const isComputed = isComputedInConfig(code, subjectsConfig);
-            const gradeValue = isComputed ? (computeDisplayGrade(card || {}, code, term, subjectsConfig) ?? "—") : (entry.grade ?? "—");
-            const isEditable = !locked && assignedSubjects.includes(code);
-            const isCompilable = !locked && entry.status === "submitted";
-            const state = rowStates[code] || "idle";
+
+            // ---- Regular subject row ----
+            if (!isComputed) {
+              const entry = card[code]?.[term] || {};
+              const isEditable = !locked && assignedSubjects.includes(code);
+              const isCompilable = !locked && entry.status === "submitted";
+              const state = rowStates[code] || "idle";
+
+              return (
+                <tr key={code}>
+                  <td>
+                    {subjectsConfig?.subjects?.[code] || code}
+                    {isEditable && <span className="trc-editable-tag">editable</span>}
+                  </td>
+                  <td>
+                    {isEditable ? (
+                      <div className="trc-grade-input-wrap">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={rowValue(code)}
+                          onChange={(e) => handleChange(code, e.target.value)}
+                          onBlur={() => saveRow(code)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              e.target.blur();
+                            }
+                          }}
+                          placeholder="—"
+                        />
+                        {state === "saving" && <span className="trc-row-state">Saving…</span>}
+                        {state === "ok" && <span className="trc-row-state trc-row-state-ok">✓</span>}
+                        {state === "error" && <span className="trc-row-state trc-row-state-err">⚠️</span>}
+                      </div>
+                    ) : (
+                      <span className="trc-readonly-value">{entry.grade ?? "—"}</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="trc-status-cell">
+                      <StatusPill status={entry.status} locked={locked} />
+                      {isCompilable && (
+                        <button
+                          type="button"
+                          className="trc-compile-btn"
+                          onClick={() => compileRow(code)}
+                          disabled={state === "saving"}
+                        >
+                          {state === "saving" ? "…" : "Compile"}
+                        </button>
+                      )}
+                      {!isCompilable && state === "ok" && (
+                        <span className="trc-row-state trc-row-state-ok">✓</span>
+                      )}
+                      {!isCompilable && state === "error" && (
+                        <span className="trc-row-state trc-row-state-err">⚠️</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            }
+
+            // ---- Computed subject row (MAPEH) + indented component sub-rows ----
+            const components = subjectsConfig?.computed?.[code]?.components || [];
+            const computedValue = computeDisplayGrade(card, code, term, subjectsConfig);
+            const componentStatuses = components
+              .map((c) => card[c]?.[term]?.status)
+              .filter(Boolean);
+
+            let aggregateStatus = "not_started";
+            if (componentStatuses.length > 0) {
+              if (componentStatuses.every((s) => s === "compiled")) {
+                aggregateStatus = "compiled";
+              } else if (componentStatuses.some((s) => s === "submitted")) {
+                aggregateStatus = "submitted";
+              } else if (componentStatuses.some((s) => s === "compiled")) {
+                aggregateStatus = "compiled";
+              } else {
+                aggregateStatus = "draft";
+              }
+            }
 
             return (
-              <tr key={code}>
-                <td>
-                  {subjectsConfig?.subjects?.[code] || code}
-                  {isEditable && <span className="trc-editable-tag">editable</span>}
-                </td>
-                <td>
-                  {isEditable ? (
-                    <div className="trc-grade-input-wrap">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={rowValue(code)}
-                        onChange={(e) => handleChange(code, e.target.value)}
-                        onBlur={() => saveRow(code)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            e.target.blur();
-                          }
-                        }}
-                        placeholder="—"
-                      />
-                      {state === "saving" && <span className="trc-row-state">Saving…</span>}
-                      {state === "ok"     && <span className="trc-row-state trc-row-state-ok">✓</span>}
-                      {state === "error"  && <span className="trc-row-state trc-row-state-err">⚠️</span>}
+              <Fragment key={code}>
+                {/* MAPEH header row */}
+                <tr key={code} className="trc-row-computed">
+                  <td>
+                    {subjectsConfig?.subjects?.[code] || code}
+                  </td>
+                  <td>
+                    <span className="trc-readonly-value">
+                      {computedValue === null ? "—" : computedValue}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="trc-status-cell">
+                      <StatusPill status={aggregateStatus} locked={locked} />
                     </div>
-                  ) : (
-                    <span className="trc-readonly-value">{gradeValue}</span>
-                  )}
-                </td>
-                <td>
-                  <div className="trc-status-cell">
-                    <StatusPill status={entry.status} locked={locked} />
-                    {isCompilable && (
-                      <button
-                        type="button"
-                        className="trc-compile-btn"
-                        onClick={() => compileRow(code)}
-                        disabled={state === "saving"}
-                      >
-                        {state === "saving" ? "…" : "Compile"}
-                      </button>
-                    )}
-                    {!isCompilable && state === "ok" && (
-                      <span className="trc-row-state trc-row-state-ok">✓</span>
-                    )}
-                    {!isCompilable && state === "error" && (
-                      <span className="trc-row-state trc-row-state-err">⚠️</span>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+
+                {/* Indented component sub-rows */}
+                {components.map((compCode) => {
+                  const entry = card[compCode]?.[term] || {};
+                  const isEditable = !locked && assignedSubjects.includes(compCode);
+                  const isCompilable = !locked && entry.status === "submitted";
+                  const state = rowStates[compCode] || "idle";
+
+                  return (
+                    <tr key={compCode} className="trc-row-sub">
+                      <td>
+                        <span className="trc-subject-indent" />
+                        <span className="trc-subject-code-mini">{compCode}</span>
+                        <span>{subjectsConfig?.subjects?.[compCode] || compCode}</span>
+                        {isEditable && <span className="trc-editable-tag">editable</span>}
+                      </td>
+                      <td>
+                        {isEditable ? (
+                          <div className="trc-grade-input-wrap">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={rowValue(compCode)}
+                              onChange={(e) => handleChange(compCode, e.target.value)}
+                              onBlur={() => saveRow(compCode)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  e.target.blur();
+                                }
+                              }}
+                              placeholder="—"
+                            />
+                            {state === "saving" && <span className="trc-row-state">Saving…</span>}
+                            {state === "ok" && <span className="trc-row-state trc-row-state-ok">✓</span>}
+                            {state === "error" && <span className="trc-row-state trc-row-state-err">⚠️</span>}
+                          </div>
+                        ) : (
+                          <span className="trc-readonly-value">{entry.grade ?? "—"}</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="trc-status-cell">
+                          <StatusPill status={entry.status} locked={locked} />
+                          {isCompilable && (
+                            <button
+                              type="button"
+                              className="trc-compile-btn"
+                              onClick={() => compileRow(compCode)}
+                              disabled={state === "saving"}
+                            >
+                              {state === "saving" ? "…" : "Compile"}
+                            </button>
+                          )}
+                          {!isCompilable && state === "ok" && (
+                            <span className="trc-row-state trc-row-state-ok">✓</span>
+                          )}
+                          {!isCompilable && state === "error" && (
+                            <span className="trc-row-state trc-row-state-err">⚠️</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </Fragment>
             );
           })}
         </tbody>

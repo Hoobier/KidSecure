@@ -1001,27 +1001,34 @@ function blobToDataURL(blob) {
 
 function drawHeader(doc, logos, pageWidth, schoolYearLabel) {
   const marginX = 40;
+  const logoSize = 60;
+  const centerX = pageWidth / 2;
   let y = 40;
 
-  // Logos (each ~50x50 pt)
+  // Logos in the top corners
   if (logos?.deped) {
-    try { doc.addImage(logos.deped, "PNG", marginX, y, 50, 50); } catch {}
+    try { doc.addImage(logos.deped, "PNG", marginX, y, logoSize, logoSize); } catch {}
   }
   if (logos?.rcac) {
-    try { doc.addImage(logos.rcac, "PNG", pageWidth - marginX - 50, y, 50, 50); } catch {}
+    try { doc.addImage(logos.rcac, "PNG", pageWidth - marginX - logoSize, y, logoSize, logoSize); } catch {}
   }
 
-  // Header text block, centered
+  // Header text sits below the logo band
+  y += logoSize + 24;
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  const centerX = pageWidth / 2;
-  doc.text("Republic of the Philippines", centerX, y + 10, { align: "center" });
-  doc.text("DEPARTMENT OF EDUCATION", centerX, y + 22, { align: "center" });
-  doc.text("National Capital Region", centerX, y + 34, { align: "center" });
-  doc.text("Schools Division of Caloocan", centerX, y + 46, { align: "center" });
-  doc.text("District III", centerX, y + 58, { align: "center" });
+  doc.text("Republic of the Philippines", centerX, y, { align: "center" });
+  y += 11;
+  doc.text("DEPARTMENT OF EDUCATION", centerX, y, { align: "center" });
+  y += 11;
+  doc.text("National Capital Region", centerX, y, { align: "center" });
+  y += 11;
+  doc.text("Schools Division of Caloocan", centerX, y, { align: "center" });
+  y += 11;
+  doc.text("District III", centerX, y, { align: "center" });
 
-  y += 72;
+  y += 20;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -1031,7 +1038,7 @@ function drawHeader(doc, logos, pageWidth, schoolYearLabel) {
   doc.setFontSize(8);
   doc.text("Blk. 31 Lot 43-44 Acacia St., Rainbow Village 5, Bagumbayan, Caloocan City", centerX, y, { align: "center" });
 
-  y += 20;
+  y += 22;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("ELEMENTARY", centerX, y, { align: "center" });
@@ -1043,7 +1050,7 @@ function drawHeader(doc, logos, pageWidth, schoolYearLabel) {
   doc.setFontSize(10);
   doc.text(`School Year: ${schoolYearLabel || "____________"}`, centerX, y, { align: "center" });
 
-  return y + 18;
+  return y + 20;
 }
 
 function drawStudentInfo(doc, student, y) {
@@ -1162,12 +1169,12 @@ async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearL
     styles: { fontSize: 9, cellPadding: 5 },
     headStyles: { fillColor: [27, 42, 74], textColor: 255, halign: "center" },
     columnStyles: {
-      0: { cellWidth: 200, halign: "left" },
-      1: { cellWidth: 60, halign: "center" },
-      2: { cellWidth: 60, halign: "center" },
-      3: { cellWidth: 60, halign: "center" },
-      4: { cellWidth: 90, halign: "center" },
-      5: { cellWidth: 100, halign: "center" },
+      0: { cellWidth: 180, halign: "left" },
+      1: { cellWidth: 55, halign: "center" },
+      2: { cellWidth: 55, halign: "center" },
+      3: { cellWidth: 55, halign: "center" },
+      4: { cellWidth: 85, halign: "center" },
+      5: { cellWidth: 85, halign: "center" },
     },
   });
 
@@ -1176,13 +1183,13 @@ async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearL
 }
 
 async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel) {
-  const doc = new jsPDF({ format: "a4" });
+  const doc = new jsPDF({ format: "a4", unit: "pt" });
   await drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel);
   doc.save(`ReportCard_${student.studentId}_${term}.pdf`);
 }
 
 async function downloadSectionPDF(students, section, term, subjectsConfig, schoolYearLabel) {
-  const doc = new jsPDF({ format: "a4" });
+  const doc = new jsPDF({ format: "a4", unit: "pt" });
   const releasedAndReady = students.filter(
     (s) => s.reportCardSubmittedTerm || s.reportCardReleasedTerm
   );
