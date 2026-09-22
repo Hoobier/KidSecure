@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
 import "../../enrollment/enrollment.css";
-import { getDisplaySubjectsForGrade, getSubjectsConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, getSubjectNameFromConfig } from "@/lib/subjectsCache";
+import { getDisplaySubjectsForGrade, getSubjectsConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, getDescriptorFor, getSubjectNameFromConfig } from "@/lib/subjectsCache";
 
 // src/app/(admin)/students/[id]/page.js
 
@@ -702,12 +702,16 @@ export default function StudentDetailPage({ params }) {
                       {TERMS.map((t) => (
                         <th key={t.key} className="report-card-th-term">{t.label}</th>
                       ))}
-                      <th className="report-card-th-avg">Average</th>
+                      <th className="report-card-th-avg">Final Grade</th>
+                      <th className="report-card-th-remark">Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayItems.map((code) => {
+                      const card = reportCardData?.grades || {};
                       const isComputed = isComputedInConfig(code, subjectsConfig);
+                      const finalGrade = computeFinalGrade(card, code, subjectsConfig);
+                      const descriptor = getDescriptorFor(finalGrade, subjectsConfig);
                       const grades = reportCardData?.grades?.[code] || {};
                       return (
                         <tr key={code} className="report-card-row">
@@ -722,7 +726,8 @@ export default function StudentDetailPage({ params }) {
                               </span>
                             </td>
                           ))}
-                          <td className="report-card-avg">{isComputed ? (computeDisplayFinal(reportCardData?.grades || {}, code, subjectsConfig) ?? "—") : computeAverage(grades)}</td>
+                          <td className="report-card-avg">{finalGrade ?? "—"}</td>
+                          <td className="report-card-remark">{descriptor?.remark || "—"}</td>
                         </tr>
                       );
                     })}

@@ -818,6 +818,18 @@
   }
 }
 
+.report-card-th-remark {
+  width: 90px;
+  text-align: center;
+}
+
+.report-card-remark {
+  padding: 0.7rem 0.75rem;
+  text-align: center;
+  color: #33415c;
+  font-weight: 500;
+}
+
 @media (max-width: 780px) {
   .detail-section-header-row {
     flex-direction: column;
