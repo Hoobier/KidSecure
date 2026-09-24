@@ -9,7 +9,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-import { getSubjectsConfig, getDisplaySubjectsForGrade, getEntrySubjectsForGrade, isComputedInConfig, computeDisplayGrade, computeDisplayFinal } from "@/lib/subjectsCache";
+import { getSubjectsConfig, getDisplaySubjectsForGrade, getEntrySubjectsForGrade, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, getObservedValuesConfig } from "@/lib/subjectsCache";
 
 // ----------------------------------------------------------------------------
 // Per-term lock / release helpers.
@@ -52,9 +52,11 @@ export default function TeacherReportCardsPage() {
   const [access, setAccess] = useState(null);
   const [loading, setLoading] = useState(false);
   const [term, setTerm] = useState(null); // null until we know the active term
+  const [activeTerm, setActiveTerm] = useState(null); // the term currently active in TermSetting
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [subjectsConfig, setSubjectsConfig] = useState(null);
+  const [observedValuesConfig, setObservedValuesConfig] = useState(null);
 
   // Load the teacher's classes once.
     useEffect(() => {
@@ -90,13 +92,20 @@ export default function TeacherReportCardsPage() {
       let cancelled = false;
       (async () => {
         const t = await fetchActiveTerm();
-        if (!cancelled) setTerm(t);
+        if (!cancelled) {
+          setTerm(t);
+          setActiveTerm(t);
+        }
       })();
       return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
       getSubjectsConfig().then(setSubjectsConfig).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+      getObservedValuesConfig().then(setObservedValuesConfig).catch(() => {});
     }, []);
 
   const selectedClass = classes.find(
@@ -240,9 +249,11 @@ if (term === null) {
                 studentId={selectedStudentId}
                 students={students}
                 term={term}
+                activeTerm={activeTerm}
                 onRefresh={fetchStudents}
                 setFeedback={setFeedback}
-                subjectsConfig={subjectsConfig}                
+                subjectsConfig={subjectsConfig}
+                observedValuesConfig={observedValuesConfig}
               />
             )}
           </div>
@@ -438,16 +449,27 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
 // Every other subject is read-only UNLESS it has a 'submitted' status from a
 // visiting teacher — in which case the adviser gets a "Compile" button.
 // ----------------------------------------------------------------------------
-function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedback, subjectsConfig }) {
+function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh, setFeedback, subjectsConfig, observedValuesConfig }) {
   const student = students.find((s) => s.id === studentId);
   const [busy, setBusy] = useState(false);
   const [rowStates, setRowStates] = useState({}); // { [code]: 'idle' | 'saving' | 'ok' | 'error' }
   const [edits, setEdits] = useState({});         // { [code]: string }
+  const [valuesEdits, setValuesEdits] = useState({});      // { [coreValueCode]: 'AO' | 'SO' | 'RO' | 'NO' | '' }
+  const [valuesSaving, setValuesSaving] = useState(false);
+  const [valuesStatus, setValuesStatus] = useState(null);  // 'ok' | 'error' | null
 
   useEffect(() => {
     setEdits({});
     setRowStates({});
+    setValuesEdits({});
+    setValuesStatus(null);
   }, [studentId, term]);
+
+  useEffect(() => {
+    if (!student || !term) return;
+    const current = (student.observedValues && student.observedValues[term]) || {};
+    setValuesEdits({ ...current });
+  }, [student?.id, term]);
 
   if (!student) {
     return <p className="trc-empty">Select a student to view their report card.</p>;
@@ -580,6 +602,33 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
       setFeedback({ type: "error", message: e.message });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveObservedValues() {
+    setValuesSaving(true);
+    setValuesStatus(null);
+    try {
+      const res = await fetch(`/api/teacher/students/${student.id}/observed-values`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term, values: valuesEdits }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFeedback({ type: "error", message: json.message || "Unable to save observed values." });
+        setValuesStatus("error");
+        return;
+      }
+      setValuesStatus("ok");
+      onRefresh();
+      setTimeout(() => setValuesStatus(null), 1500);
+    } catch {
+      setFeedback({ type: "error", message: "Unable to reach the server." });
+      setValuesStatus("error");
+    } finally {
+      setValuesSaving(false);
     }
   }
 
@@ -776,6 +825,86 @@ function HomeReportCardViewer({ studentId, students, term, onRefresh, setFeedbac
           })}
         </tbody>
       </table>
+
+      {observedValuesConfig && (
+        <div className="trc-observed-values">
+          <h3 className="trc-observed-title">Report on Learner&apos;s Observed Values</h3>
+
+          <table className="trc-table trc-observed-table">
+            <thead>
+              <tr>
+                <th>Core Values</th>
+                <th style={{ width: "220px" }}>Rating ({term})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(observedValuesConfig.coreValues || {}).map(([code, def]) => {
+                const current = valuesEdits[code] ?? "";
+                const isValuesEditable = !locked && term === activeTerm;
+                return (
+                  <tr key={code}>
+                    <td>
+                      <span className="trc-subject-code-mini">{code}</span>
+                      <span>{def.label}</span>
+                    </td>
+                    <td>
+                      {isValuesEditable ? (
+                        <select
+                          value={current}
+                          onChange={(e) => setValuesEdits((v) => ({ ...v, [code]: e.target.value }))}
+                          className="trc-observed-select"
+                        >
+                          <option value="">—</option>
+                          {Object.entries(observedValuesConfig.ratings || {}).map(([ratingCode, label]) => (
+                            <option key={ratingCode} value={ratingCode}>
+                              {ratingCode} — {label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="trc-readonly-value">
+                          {current ? `${current} — ${observedValuesConfig.ratings?.[current] || ""}` : "—"}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {!locked && term === activeTerm && (
+            <div className="trc-observed-actions">
+              <button
+                type="button"
+                className="trc-btn trc-btn-secondary"
+                onClick={saveObservedValues}
+                disabled={valuesSaving}
+              >
+                {valuesSaving ? "Saving…" : "Save Values"}
+              </button>
+              {valuesStatus === "ok" && (
+                <span className="trc-row-state trc-row-state-ok">✓ Saved</span>
+              )}
+              {valuesStatus === "error" && (
+                <span className="trc-row-state trc-row-state-err">⚠️ Save failed</span>
+              )}
+            </div>
+          )}
+
+          {term !== activeTerm && !locked && (
+            <p className="trc-hint">
+              Only the current active term can be edited. Switch to {activeTerm} to enter values.
+            </p>
+          )}
+
+          {locked && (
+            <p className="trc-hint">
+              🔒 Values for {term} are locked because the card has been released.
+            </p>
+          )}
+        </div>
+      )}
 
         {!allCompiled && !isTermSubmittedToAdmin(student, term) && (
             <p className="trc-hint">

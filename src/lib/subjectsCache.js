@@ -23,6 +23,8 @@ async function loadOnce() {
           displayByGrade: d.display_subjects_by_grade || {},
           computed: d.computed_subjects || {},
           descriptors: d.descriptors || [],
+          observedValues: d.observed_values || {},
+          observedValueRatings: d.observed_value_ratings || {},
         };
         return cache;
       })
@@ -175,4 +177,16 @@ export function computeGeneralAverage(reportCard, gradeLevel, config) {
     values.push(v);
   }
   return Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2));
+}
+
+/**
+ * Returns the observed values config: core values keyed by short code,
+ * plus the rating code → label map.
+ */
+export async function getObservedValuesConfig() {
+  const c = await loadOnce();
+  return {
+    coreValues: c.observedValues,
+    ratings: c.observedValueRatings,
+  };
 }
