@@ -890,3 +890,55 @@
   gap: 0.75rem;
   flex-wrap: wrap;
 }
+
+.report-card-observed-values {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.report-card-observed-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.report-card-observed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.report-card-observed-table thead th {
+  padding: 0.6rem 0.9rem;
+  background: #f7f9fc;
+  color: #55617a;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.report-card-observed-table tbody td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #eef1f6;
+  color: #33415c;
+}
+
+.report-card-observed-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.report-card-observed-rating {
+  text-align: center;
+  font-weight: 600;
+  color: #1b2a4a;
+}

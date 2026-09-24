@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import "./student-detail.css";
 import "../../enrollment/enrollment.css";
-import { getDisplaySubjectsForGrade, getSubjectsConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, getDescriptorFor, getSubjectNameFromConfig } from "@/lib/subjectsCache";
+import { getDisplaySubjectsForGrade, getSubjectsConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, getDescriptorFor, getSubjectNameFromConfig, getObservedValuesConfig } from "@/lib/subjectsCache";
 
 // src/app/(admin)/students/[id]/page.js
 
@@ -60,6 +60,7 @@ export default function StudentDetailPage({ params }) {
   const [reportCardData, setReportCardData] = useState(null);
   const [reportCardLoading, setReportCardLoading] = useState(false);
   const [subjectsConfig, setSubjectsConfig] = useState(null);
+  const [observedValuesConfig, setObservedValuesConfig] = useState(null);
   const [displayItems, setDisplayItems] = useState([]);
 
   const [showReEnroll, setShowReEnroll] = useState(false);
@@ -92,13 +93,15 @@ export default function StudentDetailPage({ params }) {
 
     (async () => {
       try {
-        const [rcRes, cfg] = await Promise.all([
+        const [rcRes, cfg, ovCfg] = await Promise.all([
           fetch(`/api/students/${id}/report-card`, { credentials: "include" }),
           getSubjectsConfig(),
+          getObservedValuesConfig(),
         ]);
         const rcJson = await rcRes.json();
         setReportCardData(rcJson.data || {});
         setSubjectsConfig(cfg);
+        setObservedValuesConfig(ovCfg);
 
         const displaySubjects = await getDisplaySubjectsForGrade(student.gradeLevel);
         setDisplayItems(displaySubjects);
@@ -733,6 +736,41 @@ export default function StudentDetailPage({ params }) {
                     })}
                   </tbody>
                 </table>
+                {observedValuesConfig && (
+                  <div className="report-card-observed-values">
+                    <h4 className="report-card-observed-title">
+                      Report on Learner&apos;s Observed Values
+                    </h4>
+                    <table className="report-card-observed-table">
+                      <thead>
+                        <tr>
+                          <th>Core Values</th>
+                          <th>T1</th>
+                          <th>T2</th>
+                          <th>T3</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(observedValuesConfig.coreValues || {}).map(([code, def]) => (
+                          <tr key={code}>
+                            <td className="report-card-observed-label">
+                              <span className="report-card-code">{code}</span>
+                              <span>{def.label}</span>
+                            </td>
+                            {["T1", "T2", "T3"].map((t) => {
+                              const rating = reportCardData?.observedValues?.[t]?.[code];
+                              return (
+                                <td key={t} className="report-card-observed-rating">
+                                  {rating || "—"}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
