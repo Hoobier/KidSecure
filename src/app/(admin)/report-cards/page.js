@@ -12,7 +12,7 @@ const TERMS = [
   { key: "T3", label: "Term 3" },
 ];
 
-import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, computeTermAverage, computeGeneralAverage, getDescriptorFor } from "@/lib/subjectsCache";
+import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, computeTermAverage, computeGeneralAverage, getDescriptorFor, getObservedValuesConfig } from "@/lib/subjectsCache";
 
 const STEPS = [
   "Term",
@@ -25,9 +25,11 @@ const STEPS = [
 export default function AdminReportCardsPage() {
   const [tab, setTab] = useState("pending"); // "pending" | "released"
   const [subjectsConfig, setSubjectsConfig] = useState(null);
+  const [observedValuesConfig, setObservedValuesConfig] = useState(null);
 
   useEffect(() => {
     getSubjectsConfig().then(setSubjectsConfig).catch(() => {});
+    getObservedValuesConfig().then(setObservedValuesConfig).catch(() => {});
   }, []);
 
   return (
@@ -57,9 +59,9 @@ export default function AdminReportCardsPage() {
       </div>
 
       {tab === "pending" ? (
-        <PendingWizard subjectsConfig={subjectsConfig} />
+        <PendingWizard subjectsConfig={subjectsConfig} observedValuesConfig={observedValuesConfig} />
       ) : (
-        <ReleasedView subjectsConfig={subjectsConfig} />
+        <ReleasedView subjectsConfig={subjectsConfig} observedValuesConfig={observedValuesConfig} />
       )}
     </div>
   );
@@ -69,7 +71,7 @@ export default function AdminReportCardsPage() {
 // Pending Release — the 5-step wizard
 // ---------------------------------------------------------------------------
 
-function PendingWizard({ subjectsConfig }) {
+function PendingWizard({ subjectsConfig, observedValuesConfig }) {
   const [step, setStep] = useState(1);
   const [term, setTerm] = useState("T1");
   const [termSetting, setTermSetting] = useState(null);
@@ -341,7 +343,7 @@ function PendingWizard({ subjectsConfig }) {
               students={students}
               term={term}
               onEdit={(s) => setEditingStudent(s)}
-              onDownload={(s) => downloadStudentPDF(s, term, subjectsConfig, termSetting?.schoolYearLabel)}
+              onDownload={(s) => downloadStudentPDF(s, term, subjectsConfig, termSetting?.schoolYearLabel, observedValuesConfig)}
               subjectsConfig={subjectsConfig}
             />
           )}
@@ -352,7 +354,7 @@ function PendingWizard({ subjectsConfig }) {
             <div className="rc-actions-right">
               <button
                 className="rc-btn rc-btn-secondary"
-                onClick={() => downloadSectionPDF(students, selectedSection, term, subjectsConfig, termSetting?.schoolYearLabel)}
+                onClick={() => downloadSectionPDF(students, selectedSection, term, subjectsConfig, termSetting?.schoolYearLabel, observedValuesConfig)}
                 disabled={students.length === 0}
               >
                 📄 Download section PDF
@@ -491,6 +493,7 @@ function PendingWizard({ subjectsConfig }) {
             refreshSection();
           }}
           subjectsConfig={subjectsConfig}
+          observedValuesConfig={observedValuesConfig}
         />
       )}
     </div>
@@ -561,7 +564,7 @@ function ReviewTable({ students, term, onEdit, onDownload, subjectsConfig }) {
 // Edit modal — admin can edit any subject
 // ---------------------------------------------------------------------------
 
-function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }) {
+function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, observedValuesConfig }) {
   const subjects = subjectsConfig?.entryByGrade?.[student.gradeLevel] || [];
   const [grades, setGrades] = useState(() => {
     const initial = {};
@@ -573,15 +576,29 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [values, setValues] = useState(() => {
+    const initial = {};
+    const existing = student.observedValues?.[term] || {};
+    Object.keys(observedValuesConfig?.coreValues || {}).forEach((code) => {
+      initial[code] = existing[code] || "";
+    });
+    return initial;
+  });
 
   function setGrade(code, value) {
     const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
     setGrades((g) => ({ ...g, [code]: sanitized }));
   }
 
+  function setValue(code, rating) {
+    setValues((v) => ({ ...v, [code]: rating }));
+  }
+
   async function save() {
     setSaving(true);
     setError("");
+
+    // 1. Save grades (existing behavior)
     const payload = { grades: {} };
     subjects.forEach((code) => {
       payload.grades[code] = { [term]: { grade: grades[code] === "" ? null : grades[code] } };
@@ -595,14 +612,40 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Unable to save.");
-      onSaved();
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "Unable to save grades.");
     } catch (e) {
       setError(e.message);
-    } finally {
       setSaving(false);
+      return;
     }
+
+    // 2. Save observed values
+    // Only send codes that have a rating or were previously set.
+    const valuesToSend = {};
+    Object.entries(values).forEach(([code, rating]) => {
+      if (rating) valuesToSend[code] = rating;
+    });
+
+    if (Object.keys(valuesToSend).length > 0) {
+      try {
+        const res = await fetch(`/api/students/${student.id}/observed-values`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ term, values: valuesToSend }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.message || "Unable to save observed values.");
+      } catch (e) {
+        setError(e.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    onSaved();
+    setSaving(false);
   }
 
   return (
@@ -653,6 +696,46 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }
             </tbody>
           </table>
 
+          {observedValuesConfig && (
+            <div className="rc-observed-section">
+              <h4 className="rc-observed-section-title">
+                Report on Learner&apos;s Observed Values ({term})
+              </h4>
+              <table className="rc-table">
+                <thead>
+                  <tr>
+                    <th>Core Values</th>
+                    <th style={{ width: "220px" }}>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(observedValuesConfig.coreValues || {}).map(([code, def]) => (
+                    <tr key={code}>
+                      <td>
+                        <span className="rc-observed-code">{code}</span>
+                        <span>{def.label}</span>
+                      </td>
+                      <td>
+                        <select
+                          value={values[code] || ""}
+                          onChange={(e) => setValue(code, e.target.value)}
+                          className="rc-modal-input"
+                        >
+                          <option value="">—</option>
+                          {Object.entries(observedValuesConfig.ratings || {}).map(([ratingCode, label]) => (
+                            <option key={ratingCode} value={ratingCode}>
+                              {ratingCode} — {label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <label className="rc-modal-note-label">
             Reason for this change
             <span className="rc-modal-note-hint">
@@ -684,7 +767,7 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig }
 // Released tab
 // ---------------------------------------------------------------------------
 
-function ReleasedView({ subjectsConfig }) {
+function ReleasedView({ subjectsConfig, observedValuesConfig }) {
   const [term, setTerm] = useState(null);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -936,6 +1019,7 @@ function ReleasedView({ subjectsConfig }) {
             refreshSection();
           }}
           subjectsConfig={subjectsConfig}
+          observedValuesConfig={observedValuesConfig}
         />
       )}
 
@@ -1144,7 +1228,99 @@ function drawDescriptorTable(doc, subjectsConfig, startY, pageWidth) {
   });
 }
 
-async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel) {
+function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+
+  // Title block (compact — no logos on the back side)
+  let y = margin + 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("REPORT ON LEARNER'S OBSERVED VALUES", pageWidth / 2, y, { align: "center" });
+
+  y += 20;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Name: ${student.fullName || ""}`, margin, y);
+  doc.text(`Grade & Section: ${student.gradeLevel || ""} - ${student.section || ""}`, pageWidth - margin, y, { align: "right" });
+  y += 16;
+  doc.text(`School Year: ${schoolYearLabel || "____________"}`, margin, y);
+
+  y += 20;
+
+  const coreValues = observedValuesConfig?.coreValues || {};
+  const values = student.observedValues || {};
+
+  // Build a table with rowSpans for the multi-statement core values.
+  // Each core value's "row count" = number of its behavior statements.
+  const body = [];
+  Object.entries(coreValues).forEach(([code, def]) => {
+    const statements = def.statements || [""];
+    const ratingT1 = values.T1?.[code] || "";
+    const ratingT2 = values.T2?.[code] || "";
+    const ratingT3 = values.T3?.[code] || "";
+
+    statements.forEach((stmt, idx) => {
+      const row = [];
+      if (idx === 0) {
+        row.push({ content: `${code} — ${def.label}`, rowSpan: statements.length, styles: { valign: "middle", fontStyle: "bold" } });
+      }
+      row.push({ content: stmt, styles: { valign: "top" } });
+      if (idx === 0) {
+        row.push({ content: ratingT1 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
+        row.push({ content: ratingT2 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
+        row.push({ content: ratingT3 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
+      }
+      body.push(row);
+    });
+  });
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [
+      [
+        { content: "CORE VALUES", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+        { content: "BEHAVIOR STATEMENT", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+        { content: "TERM", colSpan: 3, styles: { halign: "center" } },
+      ],
+      [
+        { content: "1", styles: { halign: "center" } },
+        { content: "2", styles: { halign: "center" } },
+        { content: "3", styles: { halign: "center" } },
+      ],
+    ],
+    body,
+    styles: { fontSize: 9, cellPadding: 4, lineColor: [180, 190, 205], lineWidth: 0.4 },
+    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 120 },
+      1: { cellWidth: 240 },
+      2: { cellWidth: 50 },
+      3: { cellWidth: 50 },
+      4: { cellWidth: 50 },
+    },
+  });
+
+  // Rating legend below the table.
+  const afterTable = doc.lastAutoTable?.finalY ?? y;
+  let legendY = afterTable + 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("MARKING", margin, legendY);
+  doc.setFont("helvetica", "normal");
+  legendY += 14;
+  const ratings = observedValuesConfig?.ratings || {};
+  const legendEntries = Object.entries(ratings);
+  legendEntries.forEach(([code, label], idx) => {
+    const col = idx % 2;
+    const row = Math.floor(idx / 2);
+    doc.text(`${code} — ${label}`, margin + col * 200, legendY + row * 13);
+  });
+}
+
+async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const logos = await loadLogos();
 
@@ -1180,15 +1356,21 @@ async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearL
 
   const afterTable = doc.lastAutoTable?.finalY ?? y;
   drawDescriptorTable(doc, subjectsConfig, afterTable + 20, pageWidth);
+
+  // Back page — Observed Values
+  if (observedValuesConfig) {
+    doc.addPage();
+    drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel);
+  }
 }
 
-async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel) {
+async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
   const doc = new jsPDF({ format: "a4", unit: "pt" });
-  await drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel);
+  await drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig);
   doc.save(`ReportCard_${student.studentId}_${term}.pdf`);
 }
 
-async function downloadSectionPDF(students, section, term, subjectsConfig, schoolYearLabel) {
+async function downloadSectionPDF(students, section, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
   const doc = new jsPDF({ format: "a4", unit: "pt" });
   const releasedAndReady = students.filter(
     (s) => s.reportCardSubmittedTerm || s.reportCardReleasedTerm
@@ -1196,7 +1378,7 @@ async function downloadSectionPDF(students, section, term, subjectsConfig, schoo
 
   for (let i = 0; i < releasedAndReady.length; i++) {
     if (i > 0) doc.addPage();
-    await drawReportCardPDF(doc, releasedAndReady[i], term, subjectsConfig, schoolYearLabel);
+    await drawReportCardPDF(doc, releasedAndReady[i], term, subjectsConfig, schoolYearLabel, observedValuesConfig);
   }
 
   doc.save(`ReportCards_${section.gradeLevel}_${section.section}_${term}.pdf`);

@@ -457,3 +457,30 @@
   margin: 0 auto;
   font-style: normal;
 }
+.rc-observed-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.rc-observed-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-observed-code {
+  display: inline-block;
+  min-width: 42px;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(27, 42, 74, 0.08);
+  color: #1b2a4a;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
