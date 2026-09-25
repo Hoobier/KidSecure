@@ -113,10 +113,6 @@ export default function TeacherForm({ mode, initial, teacherId }) {
     const cleanedHome = form.homeAssignments.filter((r) => r.gradeLevel && r.section);
     const cleanedVisiting = form.visitingAssignments.filter((r) => r.gradeLevel && r.section);
 
-    if (form.department === "preschool" && cleanedVisiting.length > 0) {
-      e.visitingAssignments = ["Preschool teachers do not have visiting classes."];
-    }
-
     // Each row must have at least one subject.
     cleanedHome.forEach((row, i) => {
       if (!row.subjects?.length) e[`home_${i}`] = "Pick at least one subject for this class.";
@@ -176,11 +172,9 @@ export default function TeacherForm({ mode, initial, teacherId }) {
       homeAssignments: form.homeAssignments
         .filter((r) => r.gradeLevel && r.section && r.subjects?.length)
         .map((r) => ({ gradeLevel: r.gradeLevel, section: r.section, subjects: r.subjects })),
-      visitingAssignments: form.department === "elementary"
-        ? form.visitingAssignments
-            .filter((r) => r.gradeLevel && r.section && r.subjects?.length)
-            .map((r) => ({ gradeLevel: r.gradeLevel, section: r.section, subjects: r.subjects }))
-        : [],
+      visitingAssignments: form.visitingAssignments
+        .filter((r) => r.gradeLevel && r.section && r.subjects?.length)
+        .map((r) => ({ gradeLevel: r.gradeLevel, section: r.section, subjects: r.subjects })),
     };
 
     try {
@@ -334,16 +328,14 @@ export default function TeacherForm({ mode, initial, teacherId }) {
         <button type="button" className="edit-btn edit-btn-secondary" onClick={() => addRow("homeAssignments")}>+ Add Home Class</button>
       </div>
 
-      {form.department === "elementary" && (
-        <div className="edit-card" style={{ marginTop: "1.5rem" }}>
-          <h2>Visiting Classes</h2>
-          <p className="enrollment-help-text" style={{ marginTop: 0 }}>
-            Classes where this teacher teaches as a visiting specialist.
-          </p>
-          {form.visitingAssignments.map((row, i) => renderAssignmentRow("visitingAssignments", row, i))}
-          <button type="button" className="edit-btn edit-btn-secondary" onClick={() => addRow("visitingAssignments")}>+ Add Visiting Class</button>
-        </div>
-      )}
+      <div className="edit-card" style={{ marginTop: "1.5rem" }}>
+        <h2>Visiting Classes</h2>
+        <p className="enrollment-help-text" style={{ marginTop: 0 }}>
+          Classes where this teacher teaches as a visiting specialist.
+        </p>
+        {form.visitingAssignments.map((row, i) => renderAssignmentRow("visitingAssignments", row, i))}
+        <button type="button" className="edit-btn edit-btn-secondary" onClick={() => addRow("visitingAssignments")}>+ Add Visiting Class</button>
+      </div>
 
       <div className="edit-actions" style={{ marginTop: "1.5rem" }}>
         <Link href={isCreate ? "/teachers" : `/teachers/${teacherId}`} className="edit-btn edit-btn-secondary">Cancel</Link>
