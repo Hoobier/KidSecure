@@ -1371,6 +1371,79 @@ function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
   return doc.lastAutoTable?.finalY ?? startY;
 }
 
+function drawTransferEligibilityBlock(doc, startY) {
+  const margin = 40;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const centerX = pageWidth / 2;
+  const colGap = 200;
+  const sigWidth = 150;
+  let y = startY;
+
+  // ===== TRANSFER ELIGIBILITY =====
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("TRANSFER ELIGIBILITY", centerX, y, { align: "center" });
+  y += 22;
+
+  // "Eligible for transfer and Admission to ____"
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const label1 = "Eligible for transfer and Admission to";
+  doc.text(label1, margin, y);
+  const label1Width = doc.getTextWidth(label1);
+  doc.line(margin + label1Width + 6, y + 2, pageWidth - margin, y + 2);
+  y += 36;
+
+  // Signature + date lines (line above label)
+  const sigY1 = y;
+  doc.line(margin, sigY1, margin + sigWidth, sigY1);
+  doc.line(margin + colGap, sigY1, margin + colGap + sigWidth, sigY1);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Principal's Signature", margin, sigY1 + 12);
+  doc.text("Date Signed", margin + colGap, sigY1 + 12);
+  y += 40;
+
+  // ===== CANCELLATION OF TRANSFER ELIGIBILITY =====
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("CANCELLATION OF TRANSFER ELIGIBILITY", centerX, y, { align: "center" });
+  y += 22;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const label2 = "Admitted to";
+  doc.text(label2, margin, y);
+  const label2Width = doc.getTextWidth(label2);
+  doc.line(margin + label2Width + 6, y + 2, pageWidth - margin, y + 2);
+  y += 36;
+
+  const sigY2 = y;
+  doc.line(margin, sigY2, margin + sigWidth, sigY2);
+  doc.line(margin + colGap, sigY2, margin + colGap + sigWidth, sigY2);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Principal's Signature", margin, sigY2 + 12);
+  doc.text("Date Signed", margin + colGap, sigY2 + 12);
+  y += 20;
+
+  return y;
+}
+
+function drawBackPageFooter(doc, student) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const footerY = pageHeight - 25;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`${student.fullName || ""} · ${student.studentId || ""}`, margin, footerY);
+  doc.text("Page 2", pageWidth - margin, footerY, { align: "right" });
+  doc.setTextColor(0, 0, 0); // reset for any later draws
+}
+
 function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -1390,7 +1463,9 @@ function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConf
     yy += 16;
     doc.text(`School Year: ${schoolYearLabel || "____________"}`, margin, yy);
     yy += 20;
-    drawAttendanceBlock(doc, student, subjectsConfig, yy);
+    const afterAttendance = drawAttendanceBlock(doc, student, subjectsConfig, yy);
+    drawTransferEligibilityBlock(doc, afterAttendance + 30);
+    drawBackPageFooter(doc, student);
     return;
   }
 
@@ -1482,7 +1557,9 @@ function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConf
 
   // Attendance table below the legend
   const legendEndY = legendY + Math.ceil(legendEntries.length / 2) * 13 + 20;
-  drawAttendanceBlock(doc, student, subjectsConfig, legendEndY);
+  const afterAttendance = drawAttendanceBlock(doc, student, subjectsConfig, legendEndY);
+  drawTransferEligibilityBlock(doc, afterAttendance + 30);
+  drawBackPageFooter(doc, student);
 }
 
 async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
