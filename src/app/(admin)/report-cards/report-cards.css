@@ -484,3 +484,22 @@
   font-weight: 700;
   text-align: center;
 }
+
+.rc-attendance-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.rc-attendance-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-attendance-section .rc-modal-input {
+  text-align: center;
+}

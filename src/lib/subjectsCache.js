@@ -25,6 +25,9 @@ async function loadOnce() {
           descriptors: d.descriptors || [],
           observedValues: d.observed_values || {},
           observedValueRatings: d.observed_value_ratings || {},
+          schoolMonths: d.school_months || [],
+          monthlySchoolDays: d.monthly_school_days || {},
+          tardyCutoff: d.tardy_cutoff || "08:00",
         };
         return cache;
       })

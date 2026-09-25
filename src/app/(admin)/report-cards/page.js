@@ -585,6 +585,20 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
     return initial;
   });
 
+  const [attendanceEdits, setAttendanceEdits] = useState(() => {
+    const initial = {};
+    const saved = student.attendanceByMonth || {};
+    const months = subjectsConfig?.schoolMonths || [];
+    months.forEach((month) => {
+      const entry = saved[month] || {};
+      initial[month] = {
+        present: entry.present === null || entry.present === undefined ? "" : String(entry.present),
+        tardy: entry.tardy === null || entry.tardy === undefined ? "" : String(entry.tardy),
+      };
+    });
+    return initial;
+  });
+
   function setGrade(code, value) {
     const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
     setGrades((g) => ({ ...g, [code]: sanitized }));
@@ -592,6 +606,14 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
 
   function setValue(code, rating) {
     setValues((v) => ({ ...v, [code]: rating }));
+  }
+
+  function setAttendance(month, field, value) {
+    const v = value.replace(/\D/g, "").slice(0, 2);
+    setAttendanceEdits((prev) => ({
+      ...prev,
+      [month]: { ...(prev[month] || {}), [field]: v },
+    }));
   }
 
   async function save() {
@@ -620,7 +642,36 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
       return;
     }
 
-    // 2. Save observed values
+    // 2. Save attendance
+    const attendanceMonths = {};
+    Object.entries(attendanceEdits).forEach(([month, entry]) => {
+      const present = entry.present === "" ? null : Number(entry.present);
+      const tardy = entry.tardy === "" ? null : Number(entry.tardy);
+      if (present === null && tardy === null) return;
+      attendanceMonths[month] = {
+        present: present === null ? 0 : present,
+        tardy: tardy === null ? 0 : tardy,
+      };
+    });
+
+    if (Object.keys(attendanceEdits).length > 0) {
+      try {
+        const res = await fetch(`/api/students/${student.id}/attendance`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ months: attendanceMonths }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.message || "Unable to save attendance.");
+      } catch (e) {
+        setError(e.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    // 3. Save observed values
     // Only send codes that have a rating or were previously set.
     const valuesToSend = {};
     Object.entries(values).forEach(([code, rating]) => {
@@ -695,6 +746,56 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
               })}
             </tbody>
           </table>
+
+          {subjectsConfig?.schoolMonths?.length > 0 && (
+            <div className="rc-attendance-section">
+              <h4 className="rc-attendance-section-title">Attendance</h4>
+              <table className="rc-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>School Days</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>Days Present</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>Days Tardy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(subjectsConfig.schoolMonths || []).map((month) => {
+                    const edit = attendanceEdits[month] || { present: "", tardy: "" };
+                    const schoolDays = subjectsConfig.monthlySchoolDays?.[month] ?? null;
+                    return (
+                      <tr key={month}>
+                        <td>{month}</td>
+                        <td style={{ textAlign: "center", color: "#55617a" }}>
+                          {schoolDays ?? "—"}
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            className="rc-modal-input"
+                            value={edit.present}
+                            onChange={(e) => setAttendance(month, "present", e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            className="rc-modal-input"
+                            value={edit.tardy}
+                            onChange={(e) => setAttendance(month, "tardy", e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {observedValuesConfig && (
             <div className="rc-observed-section">
@@ -1228,10 +1329,70 @@ function drawDescriptorTable(doc, subjectsConfig, startY, pageWidth) {
   });
 }
 
+function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
+  const margin = 40;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const months = subjectsConfig?.schoolMonths || [];
+  const schoolDaysMap = subjectsConfig?.monthlySchoolDays || {};
+  const saved = student.attendanceByMonth || {};
+
+  if (months.length === 0) return startY;
+
+  const shortName = (m) => m.slice(0, 3);
+  const head = [["ATTENDANCE", ...months.map(shortName)]];
+
+  const body = [
+    [
+      "Days of School",
+      ...months.map((m) => schoolDaysMap[m] ?? ""),
+    ],
+    [
+      "Days Present",
+      ...months.map((m) => (saved[m]?.present ?? saved[m]?.present === 0) ? saved[m].present : ""),
+    ],
+    [
+      "Days Tardy",
+      ...months.map((m) => (saved[m]?.tardy ?? saved[m]?.tardy === 0) ? saved[m].tardy : ""),
+    ],
+  ];
+
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    head,
+    body,
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [180, 190, 205], lineWidth: 0.4, halign: "center" },
+    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 90, halign: "left", fontStyle: "bold" },
+    },
+  });
+
+  return doc.lastAutoTable?.finalY ?? startY;
+}
+
 function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
+
+  if (!observedValuesConfig) {
+    // No observed values data — still render attendance if available.
+    let yy = margin + 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("ATTENDANCE", pageWidth / 2, yy, { align: "center" });
+    yy += 20;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Name: ${student.fullName || ""}`, margin, yy);
+    doc.text(`Grade & Section: ${student.gradeLevel || ""} - ${student.section || ""}`, pageWidth - margin, yy, { align: "right" });
+    yy += 16;
+    doc.text(`School Year: ${schoolYearLabel || "____________"}`, margin, yy);
+    yy += 20;
+    drawAttendanceBlock(doc, student, subjectsConfig, yy);
+    return;
+  }
 
   // Title block (compact — no logos on the back side)
   let y = margin + 20;
@@ -1318,6 +1479,10 @@ function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConf
     const row = Math.floor(idx / 2);
     doc.text(`${code} — ${label}`, margin + col * 200, legendY + row * 13);
   });
+
+  // Attendance table below the legend
+  const legendEndY = legendY + Math.ceil(legendEntries.length / 2) * 13 + 20;
+  drawAttendanceBlock(doc, student, subjectsConfig, legendEndY);
 }
 
 async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
@@ -1357,8 +1522,9 @@ async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearL
   const afterTable = doc.lastAutoTable?.finalY ?? y;
   drawDescriptorTable(doc, subjectsConfig, afterTable + 20, pageWidth);
 
-  // Back page — Observed Values
-  if (observedValuesConfig) {
+  // Back page — Observed Values + Attendance
+  const hasAttendance = Object.keys(student.attendanceByMonth || {}).length > 0;
+  if (observedValuesConfig || hasAttendance) {
     doc.addPage();
     drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel);
   }
