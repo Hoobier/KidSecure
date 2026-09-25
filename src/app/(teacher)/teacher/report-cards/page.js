@@ -458,6 +458,12 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
   const [valuesSaving, setValuesSaving] = useState(false);
   const [valuesStatus, setValuesStatus] = useState(null);  // 'ok' | 'error' | null
 
+  const [attendanceMonths, setAttendanceMonths] = useState({});
+  const [attendanceEdits, setAttendanceEdits] = useState({});
+  const [attendanceLocked, setAttendanceLocked] = useState(false);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [attendanceStatus, setAttendanceStatus] = useState(null);
+
   useEffect(() => {
     setEdits({});
     setRowStates({});
@@ -469,6 +475,40 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     if (!student || !term) return;
     const current = (student.observedValues && student.observedValues[term]) || {};
     setValuesEdits({ ...current });
+  }, [student?.id, term]);
+
+  useEffect(() => {
+    if (!student || !term) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/teacher/students/${student.id}/attendance`, {
+          credentials: "include",
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        if (cancelled) return;
+        const data = json.data || {};
+        const months = data.months || {};
+        setAttendanceMonths(months);
+        setAttendanceLocked(Boolean(data.locked));
+
+        // Seed the editable values from the response.
+        const edits = {};
+        Object.entries(months).forEach(([month, entry]) => {
+          edits[month] = {
+            present: entry.present === null || entry.present === undefined ? "" : String(entry.present),
+            tardy: entry.tardy === null || entry.tardy === undefined ? "" : String(entry.tardy),
+          };
+        });
+        setAttendanceEdits(edits);
+        setAttendanceStatus(null);
+      } catch {
+        // silent — page still renders, just no attendance section
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, term]);
 
   if (!student) {
@@ -629,6 +669,44 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       setValuesStatus("error");
     } finally {
       setValuesSaving(false);
+    }
+  }
+
+  async function saveAttendance() {
+    setAttendanceSaving(true);
+    setAttendanceStatus(null);
+    try {
+      const months = {};
+      Object.entries(attendanceEdits).forEach(([month, entry]) => {
+        const present = entry.present === "" ? null : Number(entry.present);
+        const tardy = entry.tardy === "" ? null : Number(entry.tardy);
+        if (present === null && tardy === null) return;
+        months[month] = {
+          present: present === null ? 0 : present,
+          tardy: tardy === null ? 0 : tardy,
+        };
+      });
+
+      const res = await fetch(`/api/teacher/students/${student.id}/attendance`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ months }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFeedback({ type: "error", message: json.message || "Unable to save attendance." });
+        setAttendanceStatus("error");
+        return;
+      }
+      setAttendanceStatus("ok");
+      onRefresh();
+      setTimeout(() => setAttendanceStatus(null), 1500);
+    } catch {
+      setFeedback({ type: "error", message: "Unable to reach the server." });
+      setAttendanceStatus("error");
+    } finally {
+      setAttendanceSaving(false);
     }
   }
 
@@ -826,7 +904,104 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         </tbody>
       </table>
 
-      {observedValuesConfig && (
+      {Object.keys(attendanceMonths).length > 0 && (
+  <div className="trc-attendance">
+    <h3 className="trc-attendance-title">Attendance</h3>
+    <div className="trc-attendance-table-wrap">
+      <table className="trc-table trc-attendance-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th className="trc-attendance-number-col">School Days</th>
+            <th className="trc-attendance-number-col">Days Present</th>
+            <th className="trc-attendance-number-col">Days Tardy</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(attendanceMonths).map(([month, entry]) => {
+            const edit = attendanceEdits[month] || { present: "", tardy: "" };
+            const isEditable = !attendanceLocked;
+            return (
+              <tr key={month}>
+                <td>{month}</td>
+                <td className="trc-attendance-number">
+                  {entry.schoolDays ?? "—"}
+                </td>
+                <td>
+                  {isEditable ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="trc-attendance-input"
+                      value={edit.present}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        setAttendanceEdits((prev) => ({
+                          ...prev,
+                          [month]: { ...(prev[month] || {}), present: v },
+                        }));
+                      }}
+                      placeholder="0"
+                    />
+                  ) : (
+                    <span className="trc-readonly-value">{edit.present || "—"}</span>
+                  )}
+                </td>
+                <td>
+                  {isEditable ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="trc-attendance-input"
+                      value={edit.tardy}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        setAttendanceEdits((prev) => ({
+                          ...prev,
+                          [month]: { ...(prev[month] || {}), tardy: v },
+                        }));
+                      }}
+                      placeholder="0"
+                    />
+                  ) : (
+                    <span className="trc-readonly-value">{edit.tardy || "—"}</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    {!attendanceLocked && (
+      <div className="trc-observed-actions">
+        <button
+          type="button"
+          className="trc-btn trc-btn-secondary"
+          onClick={saveAttendance}
+          disabled={attendanceSaving}
+        >
+          {attendanceSaving ? "Saving…" : "Save Attendance"}
+        </button>
+        {attendanceStatus === "ok" && (
+          <span className="trc-row-state trc-row-state-ok">✓ Saved</span>
+        )}
+        {attendanceStatus === "error" && (
+          <span className="trc-row-state trc-row-state-err">⚠ Save failed</span>
+        )}
+      </div>
+    )}
+
+    {attendanceLocked && (
+      <p className="trc-hint">
+        🔒 Attendance is locked — all three terms have been released.
+      </p>
+    )}
+  </div>
+)}
+
+          {observedValuesConfig && (
         <div className="trc-observed-values">
           <h3 className="trc-observed-title">Report on Learner&apos;s Observed Values</h3>
 

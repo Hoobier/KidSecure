@@ -6,6 +6,20 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./term-settings.css";
 
+const SCHOOL_MONTHS = [
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+  "January",
+  "February",
+  "March",
+  "April",
+];
+
 function getMinTermDate() {
   const d = new Date();
   d.setFullYear(d.getFullYear() - 3);
@@ -70,6 +84,9 @@ export default function TermSettingsPage() {
   const [rolloverCompletedAt, setRolloverCompletedAt] = useState(null);
   const [needsRollover, setNeedsRollover] = useState(false);
 
+  const [monthlySchoolDays, setMonthlySchoolDays] = useState({});
+  const [tardyCutoff, setTardyCutoff] = useState("08:00");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -94,6 +111,8 @@ export default function TermSettingsPage() {
           setRolloverStatus(d.rolloverStatus || "not_started");
           setRolloverCompletedAt(d.rolloverCompletedAt || null);
           setNeedsRollover(Boolean(d.needsRollover));
+          setMonthlySchoolDays(d.monthlySchoolDays || {});
+          setTardyCutoff(d.tardyCutoff || "08:00");
         }
       } catch (err) {
         if (!cancelled) setError(err.message || "Unable to reach the server.");
@@ -129,6 +148,16 @@ export default function TermSettingsPage() {
       }
     }
 
+    // Filter out empty strings before sending — the backend's validation
+    // rule is nullable|integer, which rejects "" but accepts missing keys.
+    const cleanedMonths = {};
+    SCHOOL_MONTHS.forEach((month) => {
+      const v = monthlySchoolDays[month];
+      if (v !== "" && v !== null && v !== undefined) {
+        cleanedMonths[month] = Number(v);
+      }
+    });
+
     try {
       const res = await fetch("/api/term-settings", {
         method: "PATCH",
@@ -141,6 +170,8 @@ export default function TermSettingsPage() {
             startDate: t.startDate || null,
             endDate: t.endDate || null,
           })),
+          monthlySchoolDays: cleanedMonths,
+          tardyCutoff,
         }),
       });
       const data = await res.json();
@@ -248,6 +279,59 @@ export default function TermSettingsPage() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="oe-card ts-attendance-card">
+            <div className="ts-attendance-header">
+              <div className="ts-attendance-title">Attendance Configuration</div>
+              <div className="ts-attendance-note">
+                Set the number of school days for each month. These values drive the
+                attendance table on the back of the report card. Leave a month blank
+                if its calendar hasn&apos;t been finalized yet.
+              </div>
+            </div>
+
+            <div className="ts-months-grid">
+              {SCHOOL_MONTHS.map((month) => (
+                <div key={month} className="ts-month-row">
+                  <label className="ts-month-label" htmlFor={`month-${month}`}>{month}</label>
+                  <input
+                    id={`month-${month}`}
+                    type="number"
+                    min="0"
+                    max="31"
+                    className="ts-month-input"
+                    value={monthlySchoolDays[month] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setMonthlySchoolDays((prev) => ({
+                        ...prev,
+                        [month]: v === "" ? "" : Number(v),
+                      }));
+                      setSuccess("");
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="ts-tardy-row">
+              <label className="ts-tardy-label" htmlFor="tardyCutoff">Tardy cutoff</label>
+              <input
+                id="tardyCutoff"
+                type="time"
+                className="ts-tardy-input"
+                value={tardyCutoff}
+                onChange={(e) => {
+                  setTardyCutoff(e.target.value);
+                  setSuccess("");
+                }}
+              />
+              <span className="ts-tardy-hint">
+                A student&apos;s first tap after this time is counted as tardy for the day.
+              </span>
+            </div>
           </div>
 
           <div className="oe-card ts-rollover-card">

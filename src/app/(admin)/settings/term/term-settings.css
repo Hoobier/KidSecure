@@ -310,3 +310,101 @@
     align-self: flex-start;
   }
 }
+
+.ts-attendance-card {
+  margin-top: 1.5rem;
+}
+
+.ts-attendance-header {
+  margin-bottom: 1.25rem;
+}
+
+.ts-attendance-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin-bottom: 0.35rem;
+}
+
+.ts-attendance-note {
+  font-size: 0.85rem;
+  color: #8a94a6;
+  line-height: 1.5;
+}
+
+.ts-months-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.ts-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #e6eaf1;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.ts-month-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #33415c;
+}
+
+.ts-month-input {
+  width: 72px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d5dae2;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+  color: #1b2a4a;
+}
+
+.ts-month-input:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.ts-tardy-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.ts-tardy-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #33415c;
+  min-width: 100px;
+}
+
+.ts-tardy-input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1b2a4a;
+  font-family: inherit;
+}
+
+.ts-tardy-input:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
+
+.ts-tardy-hint {
+  font-size: 0.8rem;
+  color: #8a94a6;
+}

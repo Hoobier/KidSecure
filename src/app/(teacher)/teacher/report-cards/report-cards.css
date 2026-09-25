@@ -408,3 +408,48 @@
   gap: 0.75rem;
   margin-top: 1rem;
 }
+
+.trc-attendance {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.trc-attendance-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1b2a4a;
+  margin: 0 0 0.75rem 0;
+}
+
+.trc-attendance-table-wrap {
+  overflow-x: auto;
+}
+
+.trc-attendance-number-col {
+  width: 120px;
+  text-align: center;
+}
+
+.trc-attendance-number {
+  text-align: center;
+  color: #55617a;
+  font-weight: 500;
+}
+
+.trc-attendance-input {
+  width: 72px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d5dae2;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1b2a4a;
+  text-align: center;
+  background: #fff;
+}
+
+.trc-attendance-input:focus {
+  outline: none;
+  border-color: #1b2a4a;
+  box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
+}
