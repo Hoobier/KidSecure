@@ -1,40 +1,124 @@
 "use client";
 // src/app/(teacher)/teacher/students/page.js
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import "./teacher-students.css";
 
 export default function TeacherStudentsPage() {
+  const [classes, setClasses] = useState([]);
+  const [selectedKey, setSelectedKey] = useState("");
   const [students, setStudents] = useState([]);
-  const [gradeLevel, setGradeLevel] = useState("");
-  const [returnedGradeLevel, setReturnedGradeLevel] = useState("");
   const [access, setAccess] = useState("home");
   const [loading, setLoading] = useState(true);
+  const [classesLoading, setClassesLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Load the teacher's classes once.
   useEffect(() => {
-    const query = gradeLevel ? `?gradeLevel=${encodeURIComponent(gradeLevel)}` : "";
-    fetch(`/api/teacher/students${query}`, { credentials: "include" }).then(async (response) => {
+    fetch("/api/teacher/classes", { credentials: "include" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Unable to load classes.");
+        const list = data.data || [];
+        setClasses(list);
+        // Default to the first home class, else the first class.
+        const firstHome = list.find((c) => c.role === "home");
+        const first = firstHome || list[0];
+        if (first) {
+          setSelectedKey(`${first.gradeLevel}|${first.section}|${first.role}`);
+        }
+      })
+      .catch((reason) => setError(reason.message))
+      .finally(() => setClassesLoading(false));
+  }, []);
+
+  const selectedClass = classes.find(
+    (c) => `${c.gradeLevel}|${c.section}|${c.role}` === selectedKey
+  );
+
+  const fetchStudents = useCallback(async () => {
+    if (!selectedClass) return;
+    setLoading(true);
+    setError("");
+    const query = `?gradeLevel=${encodeURIComponent(selectedClass.gradeLevel)}&section=${encodeURIComponent(selectedClass.section)}`;
+    try {
+      const response = await fetch(`/api/teacher/students${query}`, { credentials: "include" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to load students.");
-      setStudents(data.data || []); setReturnedGradeLevel(data.gradeLevel || gradeLevel); setAccess(data.access || "home");
-    }).catch((reason) => { setError(reason.message); setStudents([]); }).finally(() => setLoading(false));
-  }, [gradeLevel]);
+      setStudents(data.data || []);
+      setAccess(data.access?.role || "home");
+    } catch (reason) {
+      setError(reason.message);
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedClass]);
 
-    return (
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  const hasAnyClass = classes.length > 0;
+
+  return (
     <div className="teacher-students-page">
       <header className="teacher-list-header">
         <div>
           <h1>My Students</h1>
           <p>
-            {returnedGradeLevel || "Home grade"} ·{" "}
-            {access === "visiting" ? "Visiting subject roster" : "Adviser roster"}
+            {selectedClass
+              ? `${selectedClass.gradeLevel} - ${selectedClass.section} · ${
+                  access === "visiting" ? "Visiting subject roster" : "Adviser roster"
+                }`
+              : "No class selected"}
           </p>
         </div>
         <Link className="teacher-list-back" href="/teacher/dashboard">
           Back to Dashboard
         </Link>
       </header>
+
+      {hasAnyClass && (
+        <div className="teacher-class-selector">
+          <label htmlFor="class-select">Class</label>
+          <select
+            id="class-select"
+            value={selectedKey}
+            onChange={(e) => setSelectedKey(e.target.value)}
+          >
+            {classes.filter((c) => c.role === "home").length > 0 && (
+              <optgroup label="My Homeroom">
+                {classes
+                  .filter((c) => c.role === "home")
+                  .map((c) => (
+                    <option
+                      key={`home-${c.gradeLevel}-${c.section}`}
+                      value={`${c.gradeLevel}|${c.section}|${c.role}`}
+                    >
+                      {c.gradeLevel} - {c.section}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+            {classes.filter((c) => c.role === "visiting").length > 0 && (
+              <optgroup label="Visiting">
+                {classes
+                  .filter((c) => c.role === "visiting")
+                  .map((c) => (
+                    <option
+                      key={`visiting-${c.gradeLevel}-${c.section}`}
+                      value={`${c.gradeLevel}|${c.section}|${c.role}`}
+                    >
+                      {c.gradeLevel} - {c.section} · {(c.subjects || []).join(", ")}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
+      )}
+
       <div className="teacher-list-card">
         <table className="teacher-table">
           <thead>
@@ -47,12 +131,24 @@ export default function TeacherStudentsPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={access === "home" ? 5 : 4}>Loading students...</td></tr>
+            {classesLoading || loading ? (
+              <tr>
+                <td colSpan={access === "home" ? 5 : 4}>Loading students...</td>
+              </tr>
             ) : error ? (
-              <tr><td colSpan={5} className="teacher-error">{error}</td></tr>
+              <tr>
+                <td colSpan={access === "home" ? 5 : 4} className="teacher-error">
+                  {error}
+                </td>
+              </tr>
+            ) : !hasAnyClass ? (
+              <tr>
+                <td colSpan={5}>No classes assigned yet.</td>
+              </tr>
             ) : students.length === 0 ? (
-              <tr><td colSpan={5}>No students found.</td></tr>
+              <tr>
+                <td colSpan={access === "home" ? 5 : 4}>No students in this class.</td>
+              </tr>
             ) : (
               students.map((student) => (
                 <tr key={student.id}>
