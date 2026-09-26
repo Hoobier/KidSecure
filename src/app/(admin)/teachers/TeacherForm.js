@@ -16,6 +16,8 @@ const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 export default function TeacherForm({ mode, initial, teacherId }) {
   const router = useRouter();
   const isCreate = mode === "create";
+  const takenHomeSections      = (!isCreate && initial?.takenHomeSections)      ? initial.takenHomeSections      : {};
+  const takenSubjectsBySection = (!isCreate && initial?.takenSubjectsBySection) ? initial.takenSubjectsBySection : {};
 
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({
@@ -217,7 +219,24 @@ export default function TeacherForm({ mode, initial, teacherId }) {
             <label>Section</label>
             <select value={row.section} onChange={(e) => updateRow(kind, i, "section", e.target.value)}>
               <option value="">Select</option>
-              {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {SECTION_OPTIONS.map((s) => {
+                const sectionKey = row.gradeLevel ? `${row.gradeLevel}|${s}` : "";
+                const taken = kind === "homeAssignments" && sectionKey
+                  ? takenHomeSections[sectionKey]
+                  : null;
+                const isCurrentValue = row.section === s;
+                const disable = Boolean(taken) && !isCurrentValue;
+                return (
+                  <option
+                    key={s}
+                    value={s}
+                    disabled={disable}
+                    title={taken ? `Already assigned to ${taken.teacherName}` : undefined}
+                  >
+                    {s}{taken ? ` (taken by ${taken.teacherName})` : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="edit-form-group">
@@ -236,15 +255,34 @@ export default function TeacherForm({ mode, initial, teacherId }) {
               {offered.map((code) => {
                 const checked = (row.subjects || []).includes(code);
                 const name = config?.subjects?.[code] || code;
+                const sectionKey = row.gradeLevel && row.section
+                  ? `${row.gradeLevel}|${row.section}`
+                  : "";
+                const taken = sectionKey
+                  ? takenSubjectsBySection[sectionKey]?.[code]
+                  : null;
+                // Allow the teacher to keep their own current selection
+                // even if the map says it's taken (data drift case).
+                const disable = Boolean(taken) && !checked;
                 return (
-                  <label key={code} className={`edit-assignment-subject ${checked ? "is-checked" : ""}`}>
+                  <label
+                    key={code}
+                    className={`edit-assignment-subject ${checked ? "is-checked" : ""} ${taken && !checked ? "is-taken" : ""}`}
+                    title={taken && !checked ? `Already assigned to ${taken.teacherName}` : undefined}
+                  >
                     <input
                       type="checkbox"
                       checked={checked}
-                      onChange={() => toggleRowSubject(kind, i, code)}
+                      disabled={disable}
+                      onChange={() => !disable && toggleRowSubject(kind, i, code)}
                     />
                     <span className="edit-assignment-subject-code">{code}</span>
                     <span className="edit-assignment-subject-name">{name}</span>
+                    {taken && !checked && (
+                      <span className="edit-assignment-subject-taken">
+                        taken by {taken.teacherName}
+                      </span>
+                    )}
                   </label>
                 );
               })}
