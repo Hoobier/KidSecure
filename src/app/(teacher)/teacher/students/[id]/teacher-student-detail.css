@@ -148,3 +148,176 @@
   transition: background 0.15s ease;
 }
 .teacher-report-card-link-btn:hover { background: #2c4066; }
+/* Attendance today card */
+.teacher-attendance-today-card {
+  background: #fff;
+  border: 1px solid #e6eaf1;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.teacher-attendance-today-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.teacher-attendance-today-header h2 {
+  margin: 0;
+  color: #1b2a4a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.teacher-attendance-today-date {
+  color: #8a94a6;
+  font-size: 0.85rem;
+}
+
+.teacher-attendance-today-body {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.teacher-attendance-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.teacher-attendance-status-present {
+  background: #e6f4ea;
+  color: #1e7a3a;
+}
+
+.teacher-attendance-status-absent {
+  background: #fdecea;
+  color: #a83224;
+}
+
+.teacher-attendance-times {
+  display: flex;
+  gap: 1rem;
+  color: #33415c;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.teacher-attendance-times b {
+  color: #55617a;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+/* Report card status table */
+.teacher-detail-section {
+  background: #fff;
+  border: 1px solid #e6eaf1;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.teacher-detail-section h2 {
+  margin: 0 0 1rem 0;
+  color: #1b2a4a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.teacher-term-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.teacher-term-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: #f7f9fc;
+  color: #55617a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.teacher-term-table td {
+  padding: 0.7rem 0.75rem;
+  color: #33415c;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.teacher-term-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Pills — shared with status table */
+.teacher-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.teacher-pill-compiled    { background: #e6f4ea; color: #1e7a3a; }
+.teacher-pill-submitted   { background: #eef3ff; color: #1e40af; }
+.teacher-pill-in_progress { background: #fff7e0; color: #8a6b14; }
+.teacher-pill-not_started { background: #f0f3fa; color: #55617a; }
+.teacher-pill-ready       { background: #e6f4ea; color: #1e7a3a; }
+.teacher-pill-pending     { background: #fff7e0; color: #8a6b14; }
+.teacher-pill-locked      { background: #fdecea; color: #a83224; }
+.teacher-pill-released    { background: #eef3ff; color: #1e40af; }
+.teacher-pill-neutral     { background: #f5f7fa; color: #8a94a6; }
+
+/* Parent contact links */
+.teacher-parent-grid a {
+  color: #1b2a4a;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.teacher-parent-grid a:hover {
+  color: #2c4066;
+}
+
+/* Quick links */
+.teacher-quick-links {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.teacher-quick-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.1rem;
+  background: #fff;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  color: #1b2a4a;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.teacher-quick-link:hover {
+  background: #f5f7fa;
+  border-color: #1b2a4a;
+}
