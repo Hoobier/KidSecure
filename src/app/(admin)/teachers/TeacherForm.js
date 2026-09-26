@@ -1,6 +1,6 @@
 "use client";
 // src/app/(admin)/teachers/TeacherForm.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSubjectsConfig } from "@/lib/subjectsCache";
@@ -13,11 +13,34 @@ export const SECTION_OPTIONS = ["A", "B", "C"];
 
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
+function formToCanonical(f) {
+  const norm = (v) => (v == null ? "" : String(v).trim());
+  const normAssignments = (rows) =>
+    (rows || []).map((a) => ({
+      gradeLevel: norm(a?.gradeLevel),
+      section: norm(a?.section),
+      subjects: [...(a?.subjects || [])].sort(),
+    }));
+  return JSON.stringify({
+    firstName: norm(f?.firstName),
+    middleName: norm(f?.middleName),
+    lastName: norm(f?.lastName),
+    email: norm(f?.email),
+    department: norm(f?.department),
+    homeAssignments: normAssignments(f?.homeAssignments),
+    visitingAssignments: normAssignments(f?.visitingAssignments),
+  });
+}
+
 export default function TeacherForm({ mode, initial, teacherId }) {
   const router = useRouter();
   const isCreate = mode === "create";
   const takenHomeSections      = (!isCreate && initial?.takenHomeSections)      ? initial.takenHomeSections      : {};
   const takenSubjectsBySection = (!isCreate && initial?.takenSubjectsBySection) ? initial.takenSubjectsBySection : {};
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const formRef = useRef(null);
+  
 
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({
@@ -38,6 +61,8 @@ export default function TeacherForm({ mode, initial, teacherId }) {
     })),
   });
 
+  formRef.current = form;
+
   const [errors, setErrors] = useState({});
   const [feedback, setFeedback] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -46,6 +71,31 @@ export default function TeacherForm({ mode, initial, teacherId }) {
   useEffect(() => {
     getSubjectsConfig().then(setConfig).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (isCreate || !initial) return;
+
+    function handleClick(e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = e.target.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || !href.startsWith("/")) return;
+      if (anchor.target === "_blank") return;
+
+      const currentForm = formRef.current;
+      if (!currentForm) return;
+      if (formToCanonical(currentForm) === formToCanonical(initial)) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingNavigation(href);
+      setShowUnsavedWarning(true);
+    }
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isCreate, initial]);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -194,12 +244,38 @@ export default function TeacherForm({ mode, initial, teacherId }) {
         setFeedback({ type: "error", message: json.message || "⚠️ Unable to save." });
         return;
       }
-      router.push(isCreate ? `/teachers/${json.teacherId}` : `/teachers/${teacherId}`);
+      const fallback = isCreate ? `/teachers/${json.teacherId}` : `/teachers/${teacherId}`;
+      router.push(pendingNavigation || fallback);
     } catch {
       setFeedback({ type: "error", message: "⚠️ Unable to reach the server." });
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleCancelNavigation() {
+    setShowUnsavedWarning(false);
+    setPendingNavigation(null);
+  }
+
+  function handleDiscardChanges() {
+    const target = pendingNavigation;
+    setShowUnsavedWarning(false);
+    setPendingNavigation(null);
+    if (target) router.push(target);
+  }
+
+  function handleSaveAndNavigate() {
+    const clientErrors = validate();
+    if (Object.keys(clientErrors).length > 0) {
+      setShowUnsavedWarning(false);
+      setPendingNavigation(null);
+      setErrors(clientErrors);
+      setFeedback({ type: "error", message: "⚠️ Please fix the errors below before saving." });
+      return;
+    }
+    setShowUnsavedWarning(false);
+    performSave();
   }
 
   function renderAssignmentRow(kind, row, i) {
@@ -395,6 +471,45 @@ export default function TeacherForm({ mode, initial, teacherId }) {
               <button className="edit-modal-btn-cancel" onClick={() => setShowSaveConfirm(false)} disabled={saving}>Cancel</button>
               <button className="edit-modal-btn-confirm" onClick={performSave} disabled={saving}>
                 {saving ? "Saving…" : isCreate ? "Create" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnsavedWarning && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <h3>You have unsaved changes</h3>
+            <p>
+              You edited this teacher&apos;s information but didn&apos;t save.
+              What would you like to do?
+            </p>
+            <div className="edit-modal-actions">
+              <button
+                type="button"
+                className="edit-modal-btn-cancel"
+                onClick={handleCancelNavigation}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="edit-modal-btn-cancel"
+                onClick={handleDiscardChanges}
+                disabled={saving}
+                style={{ color: "#c0392b" }}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                className="edit-modal-btn-confirm"
+                onClick={handleSaveAndNavigate}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
