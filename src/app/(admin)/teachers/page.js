@@ -190,7 +190,6 @@ export default function TeachersPage() {
               <th>Name</th>
               <th>Email</th>
               <th>Department</th>
-              <th>Forte Subject</th>
               <th>Home Classes</th>
               <th>Visiting Classes</th>
               <th>Status</th>
@@ -199,14 +198,14 @@ export default function TeachersPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={7}>
                   <div className="teachers-empty">Loading…</div>
                 </td>
               </tr>
             )}
             {!loading && teachers.length === 0 && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={7}>
                   <div className="teachers-empty">No teachers found.</div>
                 </td>
               </tr>
@@ -224,7 +223,6 @@ export default function TeachersPage() {
                   </td>
                   <td>{t.email || "—"}</td>
                   <td style={{ textTransform: "capitalize" }}>{t.department || "—"}</td>
-                  <td>{(t.subjects || []).join(", ") || "—"}</td>
                   <td>{t.homeAssignmentsCount ?? 0}</td>
                   <td>{t.visitingAssignmentsCount ?? 0}</td>
                   <td>

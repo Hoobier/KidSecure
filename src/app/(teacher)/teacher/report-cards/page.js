@@ -297,26 +297,63 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
     setSaving(true);
     setFeedback(null);
     try {
+      let saved = 0;
+      let failed = 0;
+      let firstError = "";
+
       for (const s of students) {
         if (isTermLocked(s, term)) continue;
+
         const grades = {};
+        let anyPending = false;
         for (const code of subjectCodes) {
+          // Skip compiled entries — nothing to save there.
+          if (s.reportCard?.[code]?.[term]?.status === "compiled") continue;
+
           const grade = values[s.id]?.[code];
           if (grade === "" || grade === undefined) continue;
+
           grades[code] = { [term]: { grade } };
+          anyPending = true;
         }
-        if (Object.keys(grades).length === 0) continue;
-        await fetch(`/api/teacher/students/${s.id}/report-card`, {
+
+        if (!anyPending || Object.keys(grades).length === 0) continue;
+
+        const res = await fetch(`/api/teacher/students/${s.id}/report-card`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ grades }),
         });
+
+        if (res.ok) {
+          saved++;
+        } else {
+          failed++;
+          if (!firstError) {
+            const json = await res.json().catch(() => ({}));
+            firstError = json.message || `HTTP ${res.status}`;
+          }
+        }
       }
-      setFeedback({ type: "success", message: "Grades saved." });
+
+      if (failed === 0 && saved === 0) {
+        setFeedback({ type: "success", message: "Nothing to save." });
+      } else if (failed === 0) {
+        setFeedback({
+          type: "success",
+          message: `Grades saved for ${saved} ${saved === 1 ? "student" : "students"}.`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: `${saved} saved, ${failed} failed. ${firstError}`,
+        });
+      }
+
       onRefresh();
     } catch {
-      setFeedback({ type: "error", message: "Unable to save grades." });
+      setFeedback({ type: "error", message: "Unable to reach the server." });
     } finally {
       setSaving(false);
     }
@@ -326,44 +363,81 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
     if (!window.confirm(`Submit your ${subjectCodes.join(", ")} ${term} grades to the adviser?`)) return;
     setSaving(true);
     setFeedback(null);
+
     try {
       let submitted = 0;
+      let failed = 0;
+      let firstError = "";
+
       for (const s of students) {
         if (isTermLocked(s, term)) continue;
-        // Save first (bulk, one request per student).
+
+        // Step 1 — save pending grades (skip compiled entries entirely).
         const grades = {};
         for (const code of subjectCodes) {
+          if (s.reportCard?.[code]?.[term]?.status === "compiled") continue;
           const grade = values[s.id]?.[code];
           if (grade !== "" && grade !== undefined) {
             grades[code] = { [term]: { grade } };
           }
         }
+
         if (Object.keys(grades).length > 0) {
-          await fetch(`/api/teacher/students/${s.id}/report-card`, {
+          const saveRes = await fetch(`/api/teacher/students/${s.id}/report-card`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ grades }),
           });
+          if (!saveRes.ok) {
+            failed++;
+            if (!firstError) {
+              const json = await saveRes.json().catch(() => ({}));
+              firstError = json.message || `HTTP ${saveRes.status}`;
+            }
+            continue;
+          }
         }
-        // Then submit each subject individually.
+
+        // Step 2 — submit each non-compiled subject individually.
         for (const code of subjectCodes) {
+          if (s.reportCard?.[code]?.[term]?.status === "compiled") continue;
           const res = await fetch(`/api/teacher/students/${s.id}/report-card/submit`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ term, subjectCode: code }),
           });
-          if (res.ok) submitted++;
+          if (res.ok) {
+            submitted++;
+          } else {
+            failed++;
+            if (!firstError) {
+              const json = await res.json().catch(() => ({}));
+              firstError = json.message || `HTTP ${res.status}`;
+            }
+          }
         }
       }
-      setFeedback({
-        type: "success",
-        message: `Submitted ${submitted} of ${students.length * subjectCodes.length} subject entries to the adviser.`,
-      });
+
+      if (failed === 0) {
+        setFeedback({
+          type: "success",
+          message:
+            submitted === 0
+              ? "Nothing to submit — all entries already compiled or empty."
+              : `Submitted ${submitted} subject ${submitted === 1 ? "entry" : "entries"} to the adviser.`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: `${submitted} submitted, ${failed} failed. ${firstError}`,
+        });
+      }
+
       onRefresh();
     } catch {
-      setFeedback({ type: "error", message: "Unable to submit." });
+      setFeedback({ type: "error", message: "Unable to reach the server." });
     } finally {
       setSaving(false);
     }
@@ -399,7 +473,7 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
                         inputMode="decimal"
                         value={values[s.id]?.[code] ?? ""}
                         onChange={(e) => handleChange(s.id, code, e.target.value)}
-                        disabled={locked}
+                        disabled={locked || s.reportCard?.[code]?.[term]?.status === "compiled"}
                         placeholder="—"
                       />
                     </td>
