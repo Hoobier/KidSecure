@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-
+// src/app/api/teacher/attendance-logs/route.js
 export async function GET(request) {
   const token = (await cookies()).get("kidsecure_teacher_token")?.value;
   if (!token) return Response.json({ message: "You must be signed in." }, { status: 401 });

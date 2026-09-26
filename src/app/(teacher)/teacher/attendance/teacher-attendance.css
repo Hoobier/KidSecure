@@ -1,1 +1,121 @@
 .teacher-attendance-page { padding: 8px 0 32px; color: #1b2a4a; }.teacher-attendance-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }.teacher-attendance-header h1 { font-size: 28px; }.teacher-attendance-header p, .teacher-attendance-header a { color: #8a94a6; margin-top: 6px; }.teacher-attendance-header a { color: #1b2a4a; font-weight: 600; text-decoration: underline; }.teacher-attendance-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: #33415c; font-weight: 600; }.teacher-attendance-toolbar input { padding: 9px 12px; border: 1px solid #d5dae2; border-radius: 8px; }.teacher-attendance-card { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }.teacher-attendance-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: .9rem; }.teacher-attendance-table th { padding: 14px 16px; text-align: left; background: #f5f7fa; color: #8a94a6; font-size: .75rem; text-transform: uppercase; }.teacher-attendance-table td { padding: 14px 16px; border-top: 1px solid #eef0f4; color: #33415c; vertical-align: top; }.teacher-status { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: .75rem; font-weight: 600; text-transform: capitalize; }.teacher-status-present { background: rgba(30,130,76,.1); color: #1e824c; }.teacher-status-absent { background: rgba(192,57,43,.1); color: #c0392b; }.teacher-extra-taps-button { border: 0; background: transparent; color: #c0392b; cursor: pointer; font-weight: 600; }.teacher-extra-taps { display: flex; gap: 8px; margin-top: 8px; color: #8a94a6; font-size: 12px; }.teacher-no-extra-taps { color: #8a94a6; }.teacher-error { color: #c0392b !important; }@media (max-width: 620px) { .teacher-attendance-header { align-items: flex-start; flex-direction: column; } }
+
+/* Class selector */
+.teacher-attendance-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid #e6eaf1;
+  border-radius: 12px;
+}
+
+.teacher-attendance-selector label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #55617a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.teacher-attendance-selector select {
+  flex: 1;
+  max-width: 420px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #1b2a4a;
+  font-family: inherit;
+}
+
+/* Date navigation bar */
+.teacher-attendance-datebar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.teacher-date-btn {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #d5dae2;
+  background: #fff;
+  border-radius: 8px;
+  color: #1b2a4a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.teacher-date-btn:hover:not(:disabled) {
+  background: #f5f7fa;
+  border-color: #1b2a4a;
+}
+
+.teacher-date-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.teacher-date-btn-today {
+  background: #1b2a4a;
+  color: #fff;
+  border-color: #1b2a4a;
+}
+
+.teacher-date-btn-today:hover:not(:disabled) {
+  background: #2c4066;
+  border-color: #2c4066;
+}
+
+.teacher-date-input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #d5dae2;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #1b2a4a;
+  font-family: inherit;
+}
+
+/* Summary bar */
+.teacher-attendance-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1.1rem;
+  background: #f7f9fc;
+  border: 1px solid #eef1f6;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #33415c;
+  flex-wrap: wrap;
+}
+
+.teacher-summary-item strong {
+  color: #1b2a4a;
+  font-weight: 700;
+  margin-right: 0.15rem;
+}
+
+.teacher-summary-divider {
+  color: #8a94a6;
+}
+
+.teacher-summary-muted {
+  color: #8a94a6;
+}
+
+.teacher-attendance-empty {
+  text-align: center;
+  color: #8a94a6;
+  font-style: italic;
+  padding: 2rem 1rem;
+}
