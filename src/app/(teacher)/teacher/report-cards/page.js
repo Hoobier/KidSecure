@@ -1,6 +1,6 @@
 "use client";
 // src/app/(teacher)/teacher/report-cards/page.js
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import "./report-cards.css";
 
 const TERMS = [
@@ -134,6 +134,12 @@ export default function TeacherReportCardsPage() {
     }
   }, [selectedClass]);
 
+  const updateStudent = useCallback((updatedStudent) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+    );
+  }, []);
+
   useEffect(() => {
     fetchStudents();
     setSelectedStudentId(null);
@@ -251,6 +257,7 @@ if (term === null) {
                 term={term}
                 activeTerm={activeTerm}
                 onRefresh={fetchStudents}
+                onStudentUpdate={updateStudent}
                 setFeedback={setFeedback}
                 subjectsConfig={subjectsConfig}
                 observedValuesConfig={observedValuesConfig}
@@ -271,6 +278,7 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
   // values: { [studentId]: { [subjectCode]: "grade" } }
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   useEffect(() => {
     const initial = {};
@@ -359,8 +367,16 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
     }
   }
 
+  function handleSubmitClick() {
+    setShowSubmitConfirm(true);
+  }
+
+  async function handleConfirmSubmit() {
+    setShowSubmitConfirm(false);
+    await submitAll();
+  }
+
   async function submitAll() {
-    if (!window.confirm(`Submit your ${subjectCodes.join(", ")} ${term} grades to the adviser?`)) return;
     setSaving(true);
     setFeedback(null);
 
@@ -509,10 +525,27 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
         <button type="button" className="trc-btn trc-btn-secondary" onClick={saveAll} disabled={saving}>
           {saving ? "Saving…" : "Save All"}
         </button>
-        <button type="button" className="trc-btn trc-btn-primary" onClick={submitAll} disabled={saving}>
+        <button type="button" className="trc-btn trc-btn-primary" onClick={handleSubmitClick} disabled={saving}>
           {saving ? "Submitting…" : "Submit to Adviser"}
         </button>
       </div>
+
+      {showSubmitConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Submit to Adviser</h3>
+            <p>Submit your {subjectCodes.join(", ")} {term} grades to the adviser?</p>
+            <div className="logout-modal-actions">
+              <button className="logout-modal-btn-cancel" onClick={() => setShowSubmitConfirm(false)} disabled={saving}>
+                Cancel
+              </button>
+              <button className="logout-modal-btn-confirm" style={{ background: "#1b2a4a" }} onClick={handleConfirmSubmit} disabled={saving}>
+                {saving ? "Submitting…" : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -523,12 +556,13 @@ function VisitingGradeEntry({ students, term, selectedClass, onRefresh, setFeedb
 // Every other subject is read-only UNLESS it has a 'submitted' status from a
 // visiting teacher — in which case the adviser gets a "Compile" button.
 // ----------------------------------------------------------------------------
-function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh, setFeedback, subjectsConfig, observedValuesConfig }) {
+function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh, onStudentUpdate, setFeedback, subjectsConfig, observedValuesConfig }) {
   const student = students.find((s) => s.id === studentId);
   const [busy, setBusy] = useState(false);
   const [rowStates, setRowStates] = useState({}); // { [code]: 'idle' | 'saving' | 'ok' | 'error' }
   const [edits, setEdits] = useState({});         // { [code]: string }
   const [valuesEdits, setValuesEdits] = useState({});      // { [coreValueCode]: 'AO' | 'SO' | 'RO' | 'NO' | '' }
+  const valuesEditsRef = useRef({});
   const [valuesSaving, setValuesSaving] = useState(false);
   const [valuesStatus, setValuesStatus] = useState(null);  // 'ok' | 'error' | null
 
@@ -538,18 +572,27 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState(null);
 
-  useEffect(() => {
-    setEdits({});
-    setRowStates({});
-    setValuesEdits({});
-    setValuesStatus(null);
-  }, [studentId, term]);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [showRecallConfirm, setShowRecallConfirm] = useState(false);
 
+  // Seed valuesEdits from the server on student/term change.
+  // Deps are [student?.id, term, observedValuesConfig] — NOT [student] —
+  // so an onStudentUpdate refresh doesn't reset the local map.
   useEffect(() => {
     if (!student || !term) return;
-    const current = (student.observedValues && student.observedValues[term]) || {};
-    setValuesEdits({ ...current });
-  }, [student?.id, term]);
+    if (!observedValuesConfig) return;
+
+    const serverValues = student?.observedValues?.[term] || {};
+    const seeded = {};
+    Object.keys(observedValuesConfig.coreValues || {}).forEach((code) => {
+      const v = serverValues[code];
+      seeded[code] = v === undefined || v === null ? "" : v;
+    });
+    valuesEditsRef.current = seeded;
+    setValuesEdits(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, term, observedValuesConfig]);
 
   useEffect(() => {
     if (!student || !term) return;
@@ -643,7 +686,20 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         delete next[code];
         return next;
       });
-      onRefresh();
+      onStudentUpdate({
+        ...student,
+        reportCard: {
+          ...student.reportCard,
+          [code]: {
+            ...student.reportCard?.[code],
+            [term]: {
+              ...student.reportCard?.[code]?.[term],
+              grade: nextValue === "" ? null : nextValue,
+              status: "compiled",
+            },
+          },
+        },
+      });
       setTimeout(() => {
         setRowStates((s) => (s[code] === "ok" ? { ...s, [code]: "idle" } : s));
       }, 1500);
@@ -670,7 +726,19 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       }
       setFeedback({ type: "success", message: `${code} ${term} compiled.` });
       setRowStates((s) => ({ ...s, [code]: "ok" }));
-      onRefresh();
+      onStudentUpdate({
+        ...student,
+        reportCard: {
+          ...student.reportCard,
+          [code]: {
+            ...student.reportCard?.[code],
+            [term]: {
+              ...student.reportCard?.[code]?.[term],
+              status: "compiled",
+            },
+          },
+        },
+      });
       setTimeout(() => {
         setRowStates((s) => (s[code] === "ok" ? { ...s, [code]: "idle" } : s));
       }, 1500);
@@ -680,8 +748,18 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     }
   }
 
+  function handleSubmitClick() {
+    setShowSubmitConfirm(true);
+  }
+
+  async function handleConfirmSubmit() {
+    setShowSubmitConfirm(false);
+    await submitToAdmin();
+  }
+
   async function submitToAdmin() {
     setBusy(true);
+    setFeedback(null);
     try {
       const res = await fetch(`/api/teacher/students/${student.id}/report-card/submit-to-admin`, {
         method: "POST",
@@ -691,8 +769,13 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Unable to submit.");
+      onStudentUpdate({
+        ...student,
+        reportCardSubmittedTerm: term,
+        reportCardSubmittedAt: new Date().toISOString(),
+      });
       setFeedback({ type: "success", message: "Submitted to admin." });
-      onRefresh();
+      setEdits({});
     } catch (e) {
       setFeedback({ type: "error", message: e.message });
     } finally {
@@ -700,8 +783,16 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     }
   }
 
+  function handleRecallClick() {
+    setShowRecallConfirm(true);
+  }
+
+  async function handleConfirmRecall() {
+    setShowRecallConfirm(false);
+    await recall();
+  }
+
   async function recall() {
-    if (!window.confirm("Recall this submission? Admin will no longer see it in their queue.")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/teacher/students/${student.id}/report-card/recall`, {
@@ -719,7 +810,14 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     }
   }
 
-  async function saveObservedValues() {
+  async function handleObservedValueChange(code, value) {
+    const next = { ...valuesEditsRef.current, [code]: value };
+    valuesEditsRef.current = next;
+    setValuesEdits(next);
+    await saveObservedValuesWith(next);
+  }
+
+  async function saveObservedValuesWith(nextValues) {
     setValuesSaving(true);
     setValuesStatus(null);
     try {
@@ -727,20 +825,30 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term, values: valuesEdits }),
+        body: JSON.stringify({ term, values: nextValues }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setFeedback({ type: "error", message: json.message || "Unable to save observed values." });
         setValuesStatus("error");
-        return;
+        return false;
       }
       setValuesStatus("ok");
-      onRefresh();
+      valuesEditsRef.current = nextValues;
+      // Do NOT clear valuesEdits — keep it in sync with server
+      onStudentUpdate({
+        ...student,
+        observedValues: {
+          ...student.observedValues,
+          [term]: { ...nextValues },
+        },
+      });
       setTimeout(() => setValuesStatus(null), 1500);
+      return true;
     } catch {
       setFeedback({ type: "error", message: "Unable to reach the server." });
       setValuesStatus("error");
+      return false;
     } finally {
       setValuesSaving(false);
     }
@@ -761,24 +869,43 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         };
       });
 
+      if (Object.keys(months).length === 0) {
+        setAttendanceStatus(null);
+        return true;
+      }
+
       const res = await fetch(`/api/teacher/students/${student.id}/attendance`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ months }),
+        body: JSON.stringify({ months, term }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setFeedback({ type: "error", message: json.message || "Unable to save attendance." });
         setAttendanceStatus("error");
-        return;
+        return false;
       }
       setAttendanceStatus("ok");
-      onRefresh();
+      // Update local attendance state
+      const updatedMonths = { ...attendanceMonths };
+      Object.entries(months).forEach(([month, entry]) => {
+        updatedMonths[month] = { ...updatedMonths[month], ...entry };
+      });
+      setAttendanceMonths(updatedMonths);
+      onStudentUpdate({
+        ...student,
+        attendanceByMonth: {
+          ...student.attendanceByMonth,
+          ...months,
+        },
+      });
       setTimeout(() => setAttendanceStatus(null), 1500);
+      return true;
     } catch {
       setFeedback({ type: "error", message: "Unable to reach the server." });
       setAttendanceStatus("error");
+      return false;
     } finally {
       setAttendanceSaving(false);
     }
@@ -788,11 +915,25 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     (code) => (card[code]?.[term]?.status) === "compiled" || (isComputedInConfig(code, subjectsConfig) && card[code]?.[term]?.status !== "submitted")
   );
 
+  const allObservedValuesSet = observedValuesConfig && Object.keys(observedValuesConfig.coreValues || {}).every(
+    (code) => {
+      const editValue = valuesEdits[code];
+      const serverValue = student?.observedValues?.[term]?.[code];
+      return (editValue && editValue !== "") || (serverValue && serverValue !== "");
+    }
+  );
+
   return (
     <div className="trc-card-viewer">
       <h2 className="trc-panel-title">
         {student.fullName} — {term}
       </h2>
+
+      {autoSaving && (
+        <div className="trc-auto-saving">
+          <span className="trc-auto-saving-spinner">⟳</span> Saving…
+        </div>
+      )}
 
       <table className="trc-table">
         <thead>
@@ -993,8 +1134,16 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         </thead>
         <tbody>
           {Object.entries(attendanceMonths).map(([month, entry]) => {
-            const edit = attendanceEdits[month] || { present: "", tardy: "" };
-            const isEditable = !attendanceLocked;
+            const serverEntry = attendanceMonths[month] || {};
+            const edit = attendanceEdits[month] || {
+              present: serverEntry.present !== null && serverEntry.present !== undefined
+                ? String(serverEntry.present)
+                : "",
+              tardy: serverEntry.tardy !== null && serverEntry.tardy !== undefined
+                ? String(serverEntry.tardy)
+                : "",
+            };
+            const isEditable = !locked;
             return (
               <tr key={month}>
                 <td>{month}</td>
@@ -1014,6 +1163,13 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                           ...prev,
                           [month]: { ...(prev[month] || {}), present: v },
                         }));
+                      }}
+                      onBlur={() => saveAttendance()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          e.target.blur();
+                        }
                       }}
                       placeholder="0"
                     />
@@ -1035,6 +1191,13 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                           [month]: { ...(prev[month] || {}), tardy: v },
                         }));
                       }}
+                      onBlur={() => saveAttendance()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          e.target.blur();
+                        }
+                      }}
                       placeholder="0"
                     />
                   ) : (
@@ -1047,25 +1210,6 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         </tbody>
       </table>
     </div>
-
-    {!attendanceLocked && (
-      <div className="trc-observed-actions">
-        <button
-          type="button"
-          className="trc-btn trc-btn-secondary"
-          onClick={saveAttendance}
-          disabled={attendanceSaving}
-        >
-          {attendanceSaving ? "Saving…" : "Save Attendance"}
-        </button>
-        {attendanceStatus === "ok" && (
-          <span className="trc-row-state trc-row-state-ok">✓ Saved</span>
-        )}
-        {attendanceStatus === "error" && (
-          <span className="trc-row-state trc-row-state-err">⚠ Save failed</span>
-        )}
-      </div>
-    )}
 
     {attendanceLocked && (
       <p className="trc-hint">
@@ -1088,8 +1232,8 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             </thead>
             <tbody>
               {Object.entries(observedValuesConfig.coreValues || {}).map(([code, def]) => {
-                const current = valuesEdits[code] ?? "";
-                const isValuesEditable = !locked && term === activeTerm;
+                const current = valuesEdits[code] ?? student?.observedValues?.[term]?.[code] ?? "";
+                const isValuesEditable = !locked;
                 return (
                   <tr key={code}>
                     <td>
@@ -1100,10 +1244,10 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                       {isValuesEditable ? (
                         <select
                           value={current}
-                          onChange={(e) => setValuesEdits((v) => ({ ...v, [code]: e.target.value }))}
+                          onChange={(e) => handleObservedValueChange(code, e.target.value)}
                           className="trc-observed-select"
                         >
-                          <option value="">—</option>
+                          <option value="" hidden></option>
                           {Object.entries(observedValuesConfig.ratings || {}).map(([ratingCode, label]) => (
                             <option key={ratingCode} value={ratingCode}>
                               {ratingCode} — {label}
@@ -1122,31 +1266,6 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             </tbody>
           </table>
 
-          {!locked && term === activeTerm && (
-            <div className="trc-observed-actions">
-              <button
-                type="button"
-                className="trc-btn trc-btn-secondary"
-                onClick={saveObservedValues}
-                disabled={valuesSaving}
-              >
-                {valuesSaving ? "Saving…" : "Save Values"}
-              </button>
-              {valuesStatus === "ok" && (
-                <span className="trc-row-state trc-row-state-ok">✓ Saved</span>
-              )}
-              {valuesStatus === "error" && (
-                <span className="trc-row-state trc-row-state-err">⚠️ Save failed</span>
-              )}
-            </div>
-          )}
-
-          {term !== activeTerm && !locked && (
-            <p className="trc-hint">
-              Only the current active term can be edited. Switch to {activeTerm} to enter values.
-            </p>
-          )}
-
           {locked && (
             <p className="trc-hint">
               🔒 Values for {term} are locked because the card has been released.
@@ -1161,6 +1280,12 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             </p>
         )}
 
+        {allCompiled && !allObservedValuesSet && !isTermSubmittedToAdmin(student, term) && (
+            <p className="trc-hint">
+            All observed values must be set before submitting to admin.
+            </p>
+        )}
+
         <div className="trc-actions">
             {locked ? (
             <span className="trc-locked-note">
@@ -1170,7 +1295,7 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             <button
                 type="button"
                 className="trc-btn trc-btn-secondary"
-                onClick={recall}
+                onClick={handleRecallClick}
                 disabled={busy}
             >
                 {busy ? "Recalling…" : "Recall Submission"}
@@ -1179,14 +1304,63 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             <button
                 type="button"
                 className="trc-btn trc-btn-primary"
-                onClick={submitToAdmin}
-                disabled={busy || !allCompiled}
-                title={!allCompiled ? "All subjects must be compiled first." : ""}
+                onClick={handleSubmitClick}
+                disabled={busy || !allCompiled || !allObservedValuesSet}
+                title={!allCompiled ? "All subjects must be compiled first." : !allObservedValuesSet ? "All observed values must be set." : ""}
             >
                 {busy ? "Submitting…" : "Submit to Admin"}
             </button>
         )}
       </div>
+
+      {showSubmitConfirm && (
+        <div className="trc-modal-overlay" onClick={() => setShowSubmitConfirm(false)}>
+          <div className="trc-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Submit to Admin</h3>
+            <p>
+              You are about to submit <strong>{student.fullName}</strong>&apos;s report card for <strong>{term}</strong> to the school office.
+            </p>
+            <p className="trc-modal-warning">
+              Make sure all grades, attendance, and observed values are correct before proceeding.
+            </p>
+            <div className="trc-modal-actions">
+              <button
+                type="button"
+                className="trc-btn trc-btn-secondary"
+                onClick={() => setShowSubmitConfirm(false)}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="trc-btn trc-btn-primary"
+                onClick={handleConfirmSubmit}
+                disabled={busy}
+              >
+                {busy ? "Submitting…" : "Confirm Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRecallConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Recall Submission</h3>
+            <p>Recall this submission? Admin will no longer see it in their queue.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-modal-btn-cancel" onClick={() => setShowRecallConfirm(false)} disabled={busy}>
+                Cancel
+              </button>
+              <button className="logout-modal-btn-confirm" style={{ background: "#1b2a4a" }} onClick={handleConfirmRecall} disabled={busy}>
+                {busy ? "Recalling…" : "Recall"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

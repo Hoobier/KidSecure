@@ -68,6 +68,12 @@ export default function StudentDetailPage({ params }) {
   const [reEnrollForm, setReEnrollForm] = useState({ gradeLevel: "", section: "", previousSchool: "" });
   const [reEnrollErrors, setReEnrollErrors] = useState({});
 
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [showUnarchiveConfirm, setShowUnarchiveConfirm] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+
   useEffect(() => {
     async function fetchStudent() {
       setLoading(true);
@@ -455,18 +461,9 @@ export default function StudentDetailPage({ params }) {
             </button>
             <button
               className="detail-btn-secondary"
-              onClick={async () => {
-                if (!window.confirm(`Archive ${fullName}? They'll be removed from the active list and appear on the Archived Students page.`)) return;
-                try {
-                  const res = await fetch(`/api/students/${id}/archive`, { method: "POST", credentials: "include" });
-                  if (!res.ok) throw new Error();
-                  setStudent((prev) => ({ ...prev, archivedAt: new Date().toISOString() }));
-                  setFeedback({ type: "success", message: "✅ Student archived." });
-                } catch {
-                  setFeedback({ type: "error", message: "⚠️ Unable to archive. Please try again." });
-                } finally {
-                  setTimeout(() => setFeedback(null), 5000);
-                }
+              onClick={() => {
+                setPendingAction("archive");
+                setShowArchiveConfirm(true);
               }}
             >
               Archive Student
@@ -497,18 +494,9 @@ export default function StudentDetailPage({ params }) {
               <button
                 type="button"
                 className="detail-btn-secondary"
-                onClick={async () => {
-                  if (!window.confirm(`Unarchive ${fullName}? This keeps their status as Transferred Out.`)) return;
-                  try {
-                    const res = await fetch(`/api/students/${id}/unarchive`, { method: "POST", credentials: "include" });
-                    if (!res.ok) throw new Error();
-                    setStudent((prev) => ({ ...prev, archivedAt: null }));
-                    setFeedback({ type: "success", message: "✅ Student unarchived." });
-                  } catch {
-                    setFeedback({ type: "error", message: "⚠️ Unable to unarchive. Please try again." });
-                  } finally {
-                    setTimeout(() => setFeedback(null), 5000);
-                  }
+                onClick={() => {
+                  setPendingAction("unarchive_transferred");
+                  setShowUnarchiveConfirm(true);
                 }}
               >
                 Unarchive Student
@@ -528,18 +516,9 @@ export default function StudentDetailPage({ params }) {
             <button
               type="button"
               className="detail-btn-secondary"
-              onClick={async () => {
-                if (!window.confirm(`Unarchive ${fullName}? This keeps their status as Graduated.`)) return;
-                try {
-                  const res = await fetch(`/api/students/${id}/unarchive`, { method: "POST", credentials: "include" });
-                  if (!res.ok) throw new Error();
-                  setStudent((prev) => ({ ...prev, archivedAt: null }));
-                  setFeedback({ type: "success", message: "✅ Student unarchived." });
-                } catch {
-                  setFeedback({ type: "error", message: "⚠️ Unable to unarchive. Please try again." });
-                } finally {
-                  setTimeout(() => setFeedback(null), 5000);
-                }
+              onClick={() => {
+                setPendingAction("unarchive_graduated");
+                setShowUnarchiveConfirm(true);
               }}
             >
               Unarchive Student
@@ -548,18 +527,9 @@ export default function StudentDetailPage({ params }) {
             <button
               type="button"
               className="detail-btn-secondary"
-              onClick={async () => {
-                if (!window.confirm(`Archive ${fullName}?`)) return;
-                try {
-                  const res = await fetch(`/api/students/${id}/archive`, { method: "POST", credentials: "include" });
-                  if (!res.ok) throw new Error();
-                  setStudent((prev) => ({ ...prev, archivedAt: new Date().toISOString() }));
-                  setFeedback({ type: "success", message: "✅ Student archived." });
-                } catch {
-                  setFeedback({ type: "error", message: "⚠️ Unable to archive. Please try again." });
-                } finally {
-                  setTimeout(() => setFeedback(null), 5000);
-                }
+              onClick={() => {
+                setPendingAction("archive");
+                setShowArchiveConfirm(true);
               }}
             >
               Archive Student
@@ -777,6 +747,68 @@ export default function StudentDetailPage({ params }) {
             <div className="detail-modal-actions detail-report-card-actions">
               <button className="detail-modal-btn-cancel" onClick={() => setShowReportCard(false)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showArchiveConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Archive Student</h3>
+            <p>Archive {fullName}? They&apos;ll be removed from the active list and appear on the Archived Students page.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-modal-btn-cancel" onClick={() => setShowArchiveConfirm(false)} disabled={archiving}>
+                Cancel
+              </button>
+              <button className="logout-modal-btn-confirm" style={{ background: "#8a6b14" }} onClick={async () => {
+                setShowArchiveConfirm(false);
+                setArchiving(true);
+                try {
+                  const res = await fetch(`/api/students/${id}/archive`, { method: "POST", credentials: "include" });
+                  if (!res.ok) throw new Error();
+                  setStudent((prev) => ({ ...prev, archivedAt: new Date().toISOString() }));
+                  setFeedback({ type: "success", message: "✅ Student archived." });
+                } catch {
+                  setFeedback({ type: "error", message: "⚠️ Unable to archive. Please try again." });
+                } finally {
+                  setArchiving(false);
+                  setTimeout(() => setFeedback(null), 5000);
+                }
+              }} disabled={archiving}>
+                {archiving ? "Archiving…" : "Archive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnarchiveConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Unarchive Student</h3>
+            <p>Unarchive {fullName}? This keeps their status as {pendingAction === "unarchive_transferred" ? "Transferred Out" : "Graduated"}.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-modal-btn-cancel" onClick={() => setShowUnarchiveConfirm(false)} disabled={unarchiving}>
+                Cancel
+              </button>
+              <button className="logout-modal-btn-confirm" style={{ background: "#1b2a4a" }} onClick={async () => {
+                setShowUnarchiveConfirm(false);
+                setUnarchiving(true);
+                try {
+                  const res = await fetch(`/api/students/${id}/unarchive`, { method: "POST", credentials: "include" });
+                  if (!res.ok) throw new Error();
+                  setStudent((prev) => ({ ...prev, archivedAt: null }));
+                  setFeedback({ type: "success", message: "✅ Student unarchived." });
+                } catch {
+                  setFeedback({ type: "error", message: "⚠️ Unable to unarchive. Please try again." });
+                } finally {
+                  setUnarchiving(false);
+                  setTimeout(() => setFeedback(null), 5000);
+                }
+              }} disabled={unarchiving}>
+                {unarchiving ? "Unarchiving…" : "Unarchive"}
               </button>
             </div>
           </div>

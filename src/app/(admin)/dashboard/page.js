@@ -54,6 +54,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [deletingRejected, setDeletingRejected] = useState(false);
   const [attentionMessage, setAttentionMessage] = useState(null);
+  const [showDeleteRejectedConfirm, setShowDeleteRejectedConfirm] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [loyaltyStudents, setLoyaltyStudents] = useState([]);
   const [loadingLoyalty, setLoadingLoyalty] = useState(false);
@@ -132,10 +133,17 @@ export default function AdminPage() {
   }).filter(Boolean);
 
   
-  async function handleDeleteRejected() {
+  function handleDeleteRejectedClick() {
     if (deletingRejected || rejectedCount === 0) return;
-    if (!window.confirm(`Delete all ${rejectedCount} rejected applications? This cannot be undone.`)) return;
+    setShowDeleteRejectedConfirm(true);
+  }
 
+  async function handleConfirmDeleteRejected() {
+    setShowDeleteRejectedConfirm(false);
+    await handleDeleteRejected();
+  }
+
+  async function handleDeleteRejected() {
     setDeletingRejected(true);
     setAttentionMessage(null);
     try {
@@ -294,7 +302,7 @@ export default function AdminPage() {
                 <button
                   type="button"
                   className="rejected-delete-btn"
-                  onClick={handleDeleteRejected}
+                  onClick={handleDeleteRejectedClick}
                   disabled={deletingRejected}
                 >
                   {deletingRejected ? "Deleting…" : "Delete All"}
@@ -371,8 +379,25 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {showDeleteRejectedConfirm && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h3>Delete Rejected Applications</h3>
+            <p>Delete all {rejectedCount} rejected applications? This cannot be undone.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-modal-btn-cancel" onClick={() => setShowDeleteRejectedConfirm(false)} disabled={deletingRejected}>
+                Cancel
+              </button>
+              <button className="logout-modal-btn-confirm" onClick={handleConfirmDeleteRejected} disabled={deletingRejected}>
+                {deletingRejected ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
 
-    
+
   );
 }
