@@ -1130,6 +1130,7 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
             <th className="trc-attendance-number-col">School Days</th>
             <th className="trc-attendance-number-col">Days Present</th>
             <th className="trc-attendance-number-col">Days Tardy</th>
+            <th className="trc-attendance-number-col">Days Absent</th>
           </tr>
         </thead>
         <tbody>
@@ -1204,6 +1205,15 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                     <span className="trc-readonly-value">{edit.tardy || "—"}</span>
                   )}
                 </td>
+                <td className="trc-attendance-number">
+                  {(() => {
+                    const sd = entry.schoolDays;
+                    const p = edit.present === "" || edit.present === undefined ? null : Number(edit.present);
+                    const t = edit.tardy === "" || edit.tardy === undefined ? null : Number(edit.tardy);
+                    if (sd === null || sd === undefined || p === null || t === null) return "—";
+                    return Math.max(0, sd - p - t);
+                  })()}
+                </td>
               </tr>
             );
           })}
@@ -1211,7 +1221,11 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       </table>
     </div>
 
-    {attendanceLocked && (
+      <p className="trc-hint">
+        Days Absent is calculated as School Days − Present − Tardy. Adjust Present or Tardy above to change it.
+      </p>
+
+      {attendanceLocked && (
       <p className="trc-hint">
         🔒 Attendance is locked — all three terms have been released.
       </p>

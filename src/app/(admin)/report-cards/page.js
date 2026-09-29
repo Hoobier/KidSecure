@@ -757,6 +757,7 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
                     <th style={{ width: "110px", textAlign: "center" }}>School Days</th>
                     <th style={{ width: "110px", textAlign: "center" }}>Days Present</th>
                     <th style={{ width: "110px", textAlign: "center" }}>Days Tardy</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>Days Absent</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -788,6 +789,19 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
                             onChange={(e) => setAttendance(month, "tardy", e.target.value)}
                             placeholder="0"
                           />
+                        </td>
+                        <td style={{ textAlign: "center", color: "#55617a" }}>
+                          {(() => {
+                            const sd = subjectsConfig?.monthlySchoolDays?.[month] ?? null;
+                            const p = attendanceEdits[month]?.present === "" || attendanceEdits[month]?.present === undefined
+                              ? null
+                              : Number(attendanceEdits[month].present);
+                            const t = attendanceEdits[month]?.tardy === "" || attendanceEdits[month]?.tardy === undefined
+                              ? null
+                              : Number(attendanceEdits[month].tardy);
+                            if (sd === null || p === null || t === null) return "—";
+                            return Math.max(0, sd - p - t);
+                          })()}
                         </td>
                       </tr>
                     );
@@ -1353,6 +1367,16 @@ function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
     [
       "Days Tardy",
       ...months.map((m) => (saved[m]?.tardy ?? saved[m]?.tardy === 0) ? saved[m].tardy : ""),
+    ],
+    [
+      "Days Absent",
+      ...months.map((m) => {
+        const schoolDays = schoolDaysMap[m] ?? null;
+        const present = saved[m]?.present ?? null;
+        const tardy = saved[m]?.tardy ?? null;
+        if (schoolDays === null || present === null || tardy === null) return "";
+        return Math.max(0, schoolDays - present - tardy);
+      }),
     ],
   ];
 
