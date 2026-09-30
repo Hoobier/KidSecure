@@ -10,9 +10,10 @@ async function proxy(request, params) {
   }
   const method = request.method;
   const body = method === "POST" ? await request.text() : undefined;
+  const { search } = new URL(request.url);
   try {
     const laravelResponse = await fetch(
-      `${process.env.LARAVEL_API_URL}/api/teacher/students/${id}/attendance`,
+      `${process.env.LARAVEL_API_URL}/api/teacher/students/${id}/attendance${search}`,
       {
         method,
         headers: {

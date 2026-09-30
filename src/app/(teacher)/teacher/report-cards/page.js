@@ -599,9 +599,10 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/teacher/students/${student.id}/attendance`, {
-          credentials: "include",
-        });
+        const res = await fetch(
+          `/api/teacher/students/${student.id}/attendance?term=${encodeURIComponent(term)}`,
+          { credentials: "include" }
+        );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) return;
         if (cancelled) return;
