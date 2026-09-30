@@ -454,6 +454,48 @@
   box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.1);
 }
 
+.trc-attendance-banner {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+  background: #fff7e0;
+  border-left: 4px solid #c9a227;
+  border-radius: 8px;
+  color: #5c4810;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.trc-attendance-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.trc-attendance-badge-unset {
+  background: #fff7e0;
+  color: #8a6b14;
+  border: 1px solid #e4c875;
+}
+
+.trc-attendance-badge-partial {
+  background: transparent;
+  color: #8a94a6;
+  padding: 0;
+  margin-left: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.trc-attendance-future {
+  opacity: 0.65;
+}
+
 /* Auto-saving indicator */
 .trc-auto-saving {
   display: flex;

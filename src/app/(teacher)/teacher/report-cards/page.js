@@ -1122,6 +1122,13 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       {Object.keys(attendanceMonths).length > 0 && (
   <div className="trc-attendance">
     <h3 className="trc-attendance-title">Attendance</h3>
+
+    {Object.values(attendanceMonths).some((m) => m.source === "manual") && (
+      <div className="trc-attendance-banner">
+        ⚠️ No RFID tag assigned — attendance for this student is entered manually.
+      </div>
+    )}
+
     <div className="trc-attendance-table-wrap">
       <table className="trc-table trc-attendance-table">
         <thead>
@@ -1137,19 +1144,39 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
           {Object.entries(attendanceMonths).map(([month, entry]) => {
             const serverEntry = attendanceMonths[month] || {};
             const edit = attendanceEdits[month] || {
-              present: serverEntry.present !== null && serverEntry.present !== undefined
-                ? String(serverEntry.present)
-                : "",
-              tardy: serverEntry.tardy !== null && serverEntry.tardy !== undefined
-                ? String(serverEntry.tardy)
-                : "",
+              present:
+                serverEntry.present !== null && serverEntry.present !== undefined
+                  ? String(serverEntry.present)
+                  : "",
+              tardy:
+                serverEntry.tardy !== null && serverEntry.tardy !== undefined
+                  ? String(serverEntry.tardy)
+                  : "",
             };
-            const isEditable = !locked;
+            const isFuture = entry.source === "future";
+            const isUnconfigured = entry.source === "unconfigured";
+            const isEditable = !locked && !isFuture && !isUnconfigured;
+            const isPartial = Boolean(entry.partial);
+
             return (
-              <tr key={month}>
-                <td>{month}</td>
+              <tr key={month} className={isFuture ? "trc-attendance-future" : ""}>
+                <td>
+                  <span>{month}</span>
+                  {isUnconfigured && (
+                    <span className="trc-attendance-badge trc-attendance-badge-unset">
+                      UNSET
+                    </span>
+                  )}
+                  {isPartial && (
+                    <span className="trc-attendance-badge trc-attendance-badge-partial" title="Partial month">
+                      *
+                    </span>
+                  )}
+                </td>
                 <td className="trc-attendance-number">
-                  {entry.schoolDays ?? "—"}
+                  {isPartial
+                    ? `${entry.schoolDaysUpTo} / ${entry.schoolDays}`
+                    : entry.schoolDays ?? "—"}
                 </td>
                 <td>
                   {isEditable ? (
@@ -1175,7 +1202,9 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                       placeholder="0"
                     />
                   ) : (
-                    <span className="trc-readonly-value">{edit.present || "—"}</span>
+                    <span className="trc-readonly-value">
+                      {edit.present === "" ? "—" : edit.present}
+                    </span>
                   )}
                 </td>
                 <td>
@@ -1202,17 +1231,15 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
                       placeholder="0"
                     />
                   ) : (
-                    <span className="trc-readonly-value">{edit.tardy || "—"}</span>
+                    <span className="trc-readonly-value">
+                      {edit.tardy === "" ? "—" : edit.tardy}
+                    </span>
                   )}
                 </td>
                 <td className="trc-attendance-number">
-                  {(() => {
-                    const sd = entry.schoolDays;
-                    const p = edit.present === "" || edit.present === undefined ? null : Number(edit.present);
-                    const t = edit.tardy === "" || edit.tardy === undefined ? null : Number(edit.tardy);
-                    if (sd === null || sd === undefined || p === null || t === null) return "—";
-                    return Math.max(0, sd - p - t);
-                  })()}
+                  {entry.absent === null || entry.absent === undefined
+                    ? "—"
+                    : entry.absent}
                 </td>
               </tr>
             );
@@ -1221,11 +1248,13 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       </table>
     </div>
 
+    {Object.values(attendanceMonths).some((m) => m.partial) && (
       <p className="trc-hint">
-        Days Absent is calculated as School Days − Present − Tardy. Adjust Present or Tardy above to change it.
+        * Partial month — counts include only school days up to the end of the current view. Absent is not yet computable.
       </p>
+    )}
 
-      {attendanceLocked && (
+    {attendanceLocked && (
       <p className="trc-hint">
         🔒 Attendance is locked — all three terms have been released.
       </p>
