@@ -588,12 +588,21 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
   const [attendanceEdits, setAttendanceEdits] = useState(() => {
     const initial = {};
     const saved = student.attendanceByMonth || {};
+    const enriched = student.attendance || {};
     const months = subjectsConfig?.schoolMonths || [];
     months.forEach((month) => {
       const entry = saved[month] || {};
+      const e = enriched[month] || {};
+      // Only prefill inputs with the teacher's override values (if any).
+      // Otherwise show the derived values so the admin sees what the card will display.
+      const hasOverride = e.source === "overridden";
       initial[month] = {
-        present: entry.present === null || entry.present === undefined ? "" : String(entry.present),
-        tardy: entry.tardy === null || entry.tardy === undefined ? "" : String(entry.tardy),
+        present: hasOverride && entry.present !== null && entry.present !== undefined
+          ? String(entry.present)
+          : "",
+        tardy: hasOverride && entry.tardy !== null && entry.tardy !== undefined
+          ? String(entry.tardy)
+          : "",
       };
     });
     return initial;
@@ -750,6 +759,11 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
           {subjectsConfig?.schoolMonths?.length > 0 && (
             <div className="rc-attendance-section">
               <h4 className="rc-attendance-section-title">Attendance</h4>
+              {Object.values(student.attendance || {}).some((m) => m.source === "manual") && (
+                <div className="rc-attendance-banner">
+                  ⚠️ No RFID tag assigned — attendance is entered manually.
+                </div>
+              )}
               <table className="rc-table">
                 <thead>
                   <tr>
@@ -762,52 +776,85 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
                 </thead>
                 <tbody>
                   {(subjectsConfig.schoolMonths || []).map((month) => {
+                    const e = (student.attendance || {})[month] || {};
                     const edit = attendanceEdits[month] || { present: "", tardy: "" };
-                    const schoolDays = subjectsConfig.monthlySchoolDays?.[month] ?? null;
+                    const isFuture = e.source === "future";
+                    const isUnconfigured = e.source === "unconfigured";
+                    const isEditable = !isFuture && !isUnconfigured;
+                    const isPartial = Boolean(e.partial);
+
+                    // Displayed values: prefer the input edit if the user is typing,
+                    // else the derived value from the backend.
+                    const presentDisplay =
+                      edit.present !== "" ? edit.present : (e.present ?? "");
+                    const tardyDisplay =
+                      edit.tardy !== "" ? edit.tardy : (e.tardy ?? "");
+
                     return (
-                      <tr key={month}>
-                        <td>{month}</td>
-                        <td style={{ textAlign: "center", color: "#55617a" }}>
-                          {schoolDays ?? "—"}
-                        </td>
+                      <tr key={month} className={isFuture ? "rc-attendance-future" : ""}>
                         <td>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className="rc-modal-input"
-                            value={edit.present}
-                            onChange={(e) => setAttendance(month, "present", e.target.value)}
-                            placeholder="0"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className="rc-modal-input"
-                            value={edit.tardy}
-                            onChange={(e) => setAttendance(month, "tardy", e.target.value)}
-                            placeholder="0"
-                          />
+                          <span>{month}</span>
+                          {isUnconfigured && (
+                            <span className="rc-attendance-badge rc-attendance-badge-unset">
+                              UNSET
+                            </span>
+                          )}
+                          {isPartial && (
+                            <span className="rc-attendance-badge rc-attendance-badge-partial" title="Partial month">
+                              *
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center", color: "#55617a" }}>
-                          {(() => {
-                            const sd = subjectsConfig?.monthlySchoolDays?.[month] ?? null;
-                            const p = attendanceEdits[month]?.present === "" || attendanceEdits[month]?.present === undefined
-                              ? null
-                              : Number(attendanceEdits[month].present);
-                            const t = attendanceEdits[month]?.tardy === "" || attendanceEdits[month]?.tardy === undefined
-                              ? null
-                              : Number(attendanceEdits[month].tardy);
-                            if (sd === null || p === null || t === null) return "—";
-                            return Math.max(0, sd - p - t);
-                          })()}
+                          {isPartial
+                            ? `${e.schoolDaysUpTo} / ${e.schoolDays}`
+                            : e.schoolDays ?? "—"}
+                        </td>
+                        <td>
+                          {isEditable ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className="rc-modal-input"
+                              value={edit.present}
+                              onChange={(ev) => setAttendance(month, "present", ev.target.value)}
+                              placeholder={presentDisplay === "" ? "0" : String(presentDisplay)}
+                            />
+                          ) : (
+                            <span className="rc-readonly-value">
+                              {presentDisplay === "" ? "—" : presentDisplay}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {isEditable ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className="rc-modal-input"
+                              value={edit.tardy}
+                              onChange={(ev) => setAttendance(month, "tardy", ev.target.value)}
+                              placeholder={tardyDisplay === "" ? "0" : String(tardyDisplay)}
+                            />
+                          ) : (
+                            <span className="rc-readonly-value">
+                              {tardyDisplay === "" ? "—" : tardyDisplay}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "center", color: "#55617a" }}>
+                          {e.absent === null || e.absent === undefined ? "—" : e.absent}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+              {Object.values(student.attendance || {}).some((m) => m.partial) && (
+                <p className="rc-attendance-hint">
+                  * Partial month — counts include only school days up to the end of the current view. Absent is not yet computable.
+                </p>
+              )}
             </div>
           )}
 
@@ -1345,37 +1392,51 @@ function drawDescriptorTable(doc, subjectsConfig, startY, pageWidth) {
 
 function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
   const margin = 40;
-  const pageWidth = doc.internal.pageSize.getWidth();
   const months = subjectsConfig?.schoolMonths || [];
-  const schoolDaysMap = subjectsConfig?.monthlySchoolDays || {};
-  const saved = student.attendanceByMonth || {};
+  const attendance = student.attendance || {};
 
   if (months.length === 0) return startY;
 
   const shortName = (m) => m.slice(0, 3);
-  const head = [["ATTENDANCE", ...months.map(shortName)]];
+  const anyPartial = months.some((m) => attendance[m]?.partial);
+
+  const head = [[
+    "ATTENDANCE",
+    ...months.map((m) => {
+      const short = shortName(m);
+      return attendance[m]?.partial ? `${short}*` : short;
+    }),
+  ]];
 
   const body = [
     [
       "Days of School",
-      ...months.map((m) => schoolDaysMap[m] ?? ""),
+      ...months.map((m) => {
+        const a = attendance[m];
+        if (!a || a.schoolDays === null || a.schoolDays === undefined) return "";
+        if (a.partial) return `${a.schoolDaysUpTo}/${a.schoolDays}`;
+        return a.schoolDays;
+      }),
     ],
     [
       "Days Present",
-      ...months.map((m) => (saved[m]?.present ?? saved[m]?.present === 0) ? saved[m].present : ""),
+      ...months.map((m) => {
+        const a = attendance[m];
+        return a?.present === null || a?.present === undefined ? "" : a.present;
+      }),
     ],
     [
       "Days Tardy",
-      ...months.map((m) => (saved[m]?.tardy ?? saved[m]?.tardy === 0) ? saved[m].tardy : ""),
+      ...months.map((m) => {
+        const a = attendance[m];
+        return a?.tardy === null || a?.tardy === undefined ? "" : a.tardy;
+      }),
     ],
     [
       "Days Absent",
       ...months.map((m) => {
-        const schoolDays = schoolDaysMap[m] ?? null;
-        const present = saved[m]?.present ?? null;
-        const tardy = saved[m]?.tardy ?? null;
-        if (schoolDays === null || present === null || tardy === null) return "";
-        return Math.max(0, schoolDays - present - tardy);
+        const a = attendance[m];
+        return a?.absent === null || a?.absent === undefined ? "" : a.absent;
       }),
     ],
   ];
@@ -1392,7 +1453,21 @@ function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
     },
   });
 
-  return doc.lastAutoTable?.finalY ?? startY;
+  const finalY = doc.lastAutoTable?.finalY ?? startY;
+
+  if (anyPartial) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7);
+    doc.text(
+      "* Partial month — the term ended mid-month. Absent is not yet computable for partial months.",
+      margin,
+      finalY + 12
+    );
+    return finalY + 22;
+  }
+
+  return finalY;
 }
 
 function drawTransferEligibilityBlock(doc, startY) {
