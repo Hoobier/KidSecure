@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 import "./term-settings.css";
 
 const SCHOOL_MONTHS = [
@@ -67,6 +69,63 @@ const STATUS_LABELS = {
   "not-set": "Not Set",
 };
 
+const MONTH_TO_INDEX = {
+  June: 5, July: 6, August: 7, September: 8, October: 9, November: 10,
+  December: 11, January: 0, February: 1, March: 2, April: 3,
+};
+
+function dateToStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function MonthCalendarCard({ monthName, dates, onToggle, schoolYearLabel }) {
+  // Parse the school year label like "2026-2027" to extract both years.
+  let startYear = new Date().getFullYear();
+  let endYear = startYear + 1;
+  if (schoolYearLabel && /^(\d{4})-(\d{4})$/.test(schoolYearLabel)) {
+    const m = schoolYearLabel.match(/^(\d{4})-(\d{4})$/);
+    startYear = parseInt(m[1], 10);
+    endYear = parseInt(m[2], 10);
+  }
+
+  const monthIndex = MONTH_TO_INDEX[monthName];
+  const isSecondHalfOfYear = ["January", "February", "March", "April"].includes(monthName);
+  const year = isSecondHalfOfYear ? endYear : startYear;
+  const activeStart = new Date(year, monthIndex, 1);
+
+  const selectedSet = new Set(dates);
+
+  return (
+    <div className="ts-month-card">
+      <div className="ts-month-card-header">
+        <span className="ts-month-card-name">{monthName}</span>
+        <span className="ts-month-card-count">
+          {dates.length} {dates.length === 1 ? "school day" : "school days"}
+        </span>
+      </div>
+      <div className="ts-month-calendar-wrap">
+        <Calendar
+          activeStartDate={activeStart}
+          onActiveStartDateChange={() => {}}
+          showNavigation={false}
+          showNeighboringMonth={true}
+          onClickDay={(date) => {
+            if (date.getMonth() !== monthIndex) return;
+            onToggle(dateToStr(date));
+          }}
+          tileClassName={({ date, view }) => {
+            if (view !== "month") return null;
+            return selectedSet.has(dateToStr(date)) ? "ts-day-selected" : null;
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function TermSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,7 +143,7 @@ export default function TermSettingsPage() {
   const [rolloverCompletedAt, setRolloverCompletedAt] = useState(null);
   const [needsRollover, setNeedsRollover] = useState(false);
 
-  const [monthlySchoolDays, setMonthlySchoolDays] = useState({});
+  const [schoolDayCalendar, setSchoolDayCalendar] = useState({});
   const [tardyCutoff, setTardyCutoff] = useState("08:00");
 
   useEffect(() => {
@@ -111,7 +170,7 @@ export default function TermSettingsPage() {
           setRolloverStatus(d.rolloverStatus || "not_started");
           setRolloverCompletedAt(d.rolloverCompletedAt || null);
           setNeedsRollover(Boolean(d.needsRollover));
-          setMonthlySchoolDays(d.monthlySchoolDays || {});
+          setSchoolDayCalendar(d.schoolDayCalendar || {});
           setTardyCutoff(d.tardyCutoff || "08:00");
         }
       } catch (err) {
@@ -148,16 +207,6 @@ export default function TermSettingsPage() {
       }
     }
 
-    // Filter out empty strings before sending — the backend's validation
-    // rule is nullable|integer, which rejects "" but accepts missing keys.
-    const cleanedMonths = {};
-    SCHOOL_MONTHS.forEach((month) => {
-      const v = monthlySchoolDays[month];
-      if (v !== "" && v !== null && v !== undefined) {
-        cleanedMonths[month] = Number(v);
-      }
-    });
-
     try {
       const res = await fetch("/api/term-settings", {
         method: "PATCH",
@@ -170,7 +219,7 @@ export default function TermSettingsPage() {
             startDate: t.startDate || null,
             endDate: t.endDate || null,
           })),
-          monthlySchoolDays: cleanedMonths,
+          schoolDayCalendar,
           tardyCutoff,
         }),
       });
@@ -285,34 +334,30 @@ export default function TermSettingsPage() {
             <div className="ts-attendance-header">
               <div className="ts-attendance-title">Attendance Configuration</div>
               <div className="ts-attendance-note">
-                Set the number of school days for each month. These values drive the
-                attendance table on the back of the report card. Leave a month blank
-                if its calendar hasn&apos;t been finalized yet.
+                Click each school day on the calendar below. The number of school days
+                is counted automatically. Leave a month blank if its calendar
+                hasn&apos;t been finalized yet.
               </div>
             </div>
 
-            <div className="ts-months-grid">
+            <div className="ts-calendar-grid">
               {SCHOOL_MONTHS.map((month) => (
-                <div key={month} className="ts-month-row">
-                  <label className="ts-month-label" htmlFor={`month-${month}`}>{month}</label>
-                  <input
-                    id={`month-${month}`}
-                    type="number"
-                    min="0"
-                    max="31"
-                    className="ts-month-input"
-                    value={monthlySchoolDays[month] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setMonthlySchoolDays((prev) => ({
-                        ...prev,
-                        [month]: v === "" ? "" : Number(v),
-                      }));
-                      setSuccess("");
-                    }}
-                    placeholder="0"
-                  />
-                </div>
+                <MonthCalendarCard
+                  key={month}
+                  monthName={month}
+                  dates={schoolDayCalendar[month] || []}
+                  schoolYearLabel={schoolYearLabel}
+                  onToggle={(dateStr) => {
+                    setSchoolDayCalendar((prev) => {
+                      const current = prev[month] || [];
+                      const next = current.includes(dateStr)
+                        ? current.filter((d) => d !== dateStr)
+                        : [...current, dateStr].sort();
+                      return { ...prev, [month]: next };
+                    });
+                    setSuccess("");
+                  }}
+                />
               ))}
             </div>
 
