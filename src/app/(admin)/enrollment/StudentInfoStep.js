@@ -5,7 +5,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 const GRADE_LEVELS = [
+  "Nursery",
   "Kindergarten",
+  "Preparatory",
   "Grade 1",
   "Grade 2",
   "Grade 3",
@@ -298,7 +300,7 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
             onChange={(e) => handleGradeChange(e.target.value)}
             className={errors.gradeLevel ? "input-invalid" : ""}
           >
-            <option value="">Select grade level</option>
+            <option value="" hidden>Select grade level</option>
             {GRADE_LEVELS.map((grade) => (
               <option key={grade} value={grade}>
                 {grade}
@@ -318,7 +320,7 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
             onChange={(e) => handleFieldChange("section", e.target.value)}
             className={errors.section ? "input-invalid" : ""}
           >
-            <option value="">Select section</option>
+            <option value="" hidden>Select section</option>
             {SECTIONS.map((section) => (
               <option key={section} value={section}>
                 {section}
