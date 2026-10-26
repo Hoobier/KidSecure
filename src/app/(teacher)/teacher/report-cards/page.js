@@ -1,6 +1,9 @@
 "use client";
 // src/app/(teacher)/teacher/report-cards/page.js
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { drawReportCardPDF } from "@/lib/pdf-generator";
 import "./report-cards.css";
 
 const TERMS = [
@@ -55,6 +58,9 @@ export default function TeacherReportCardsPage() {
   const [activeTerm, setActiveTerm] = useState(null); // the term currently active in TermSetting
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [viewMode, setViewMode] = useState("individual"); // "individual" | "gradebook"
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
   const [subjectsConfig, setSubjectsConfig] = useState(null);
   const [observedValuesConfig, setObservedValuesConfig] = useState(null);
 
@@ -140,9 +146,43 @@ export default function TeacherReportCardsPage() {
     );
   }, []);
 
+  async function runBulkAction(endpoint, actionLabel) {
+    if (selectedIds.size === 0 || bulkProcessing) return;
+
+    setBulkProcessing(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentIds: Array.from(selectedIds), term }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || `Unable to ${actionLabel}.`);
+      }
+
+      setFeedback({
+        type: Number(data.failed ?? 0) > 0 ? "error" : "success",
+        message: data.message || `${actionLabel} completed.`,
+      });
+      setSelectedIds(new Set());
+      await fetchStudents();
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error.message || "Unable to reach the server.",
+      });
+    } finally {
+      setBulkProcessing(false);
+    }
+  }
+
   useEffect(() => {
     fetchStudents();
     setSelectedStudentId(null);
+    setSelectedIds(new Set());
     setFeedback(null);
   }, [fetchStudents]);
 
@@ -168,7 +208,11 @@ if (term === null) {
             <button
               key={t.key}
               className={term === t.key ? "trc-term-btn trc-term-btn-active" : "trc-term-btn"}
-              onClick={() => setTerm(t.key)}
+              onClick={() => {
+                setTerm(t.key);
+                // Selections belong to one term; clear them on a term change.
+                setSelectedIds(new Set());
+              }}
             >
               {t.label}
             </button>
@@ -214,6 +258,41 @@ if (term === null) {
         <div className={`trc-feedback trc-feedback-${feedback.type}`}>{feedback.message}</div>
       )}
 
+      {mode === "home" && selectedIds.size > 0 && (
+        <div
+          className="trc-bulk-bar"
+          style={{
+            background: "#1b2a4a",
+            color: "white",
+            padding: "10px",
+            borderRadius: "8px",
+            marginBottom: "10px",
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{selectedIds.size} selected</span>
+          <button
+            type="button"
+            className="trc-btn trc-btn-secondary"
+            onClick={() => runBulkAction("/api/teacher/students/bulk-submit", "Bulk submit")}
+            disabled={bulkProcessing}
+          >
+            {bulkProcessing ? "Processing…" : "Bulk Submit to Admin"}
+          </button>
+          <button
+            type="button"
+            className="trc-btn trc-btn-secondary"
+            onClick={() => runBulkAction("/api/teacher/students/bulk-distribute", "Bulk distribute")}
+            disabled={bulkProcessing}
+          >
+            {bulkProcessing ? "Processing…" : "Bulk Distribute to Parents"}
+          </button>
+        </div>
+      )}
+
       {loading && <p className="trc-empty">Loading students…</p>}
       {!loading && students.length === 0 && (
         <p className="trc-empty">No students in this class.</p>
@@ -222,13 +301,62 @@ if (term === null) {
       {!loading && students.length > 0 && (
         <div className="trc-layout">
           <div className="trc-student-list">
-              {students.map((s) => (
+            {mode === "home" && (
+              <div
+                style={{
+                  padding: "0.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === students.length && students.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(students.map((s) => s.id)));
+                    else setSelectedIds(new Set());
+                  }}
+                  aria-label="Select all students"
+                />
+                <span style={{ fontSize: "0.85rem", fontWeight: "bold" }}>Select All</span>
+              </div>
+            )}
+
+            {students.map((s) => (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.15rem 0",
+                }}
+              >
+                {mode === "home" && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(s.id)}
+                    onChange={(e) => {
+                      setSelectedIds((current) => {
+                        const next = new Set(current);
+                        if (e.target.checked) next.add(s.id);
+                        else next.delete(s.id);
+                        return next;
+                      });
+                    }}
+                    aria-label={`Select ${s.fullName}`}
+                    style={{ flexShrink: 0 }}
+                  />
+                )}
                 <button
-                  key={s.id}
+                  type="button"
                   className={`trc-student-row ${
                     selectedStudentId === s.id ? "trc-student-row-active" : ""
                   }`}
                   onClick={() => setSelectedStudentId(s.id)}
+                  style={{ flex: 1, minWidth: 0 }}
                 >
                   <span className="trc-student-name">{s.fullName}</span>
                   <StudentRowBadge
@@ -238,12 +366,49 @@ if (term === null) {
                     subjectsConfig={subjectsConfig}
                   />
                 </button>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
           <div className="trc-panel">
+            {mode === "home" && (
+              <div
+                className="trc-term-switch"
+                role="tablist"
+                aria-label="Report card view"
+                style={{ width: "fit-content", marginBottom: "1rem" }}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "individual"}
+                  className={`trc-term-btn ${viewMode === "individual" ? "trc-term-btn-active" : ""}`}
+                  onClick={() => setViewMode("individual")}
+                >
+                  Individual View
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "gradebook"}
+                  className={`trc-term-btn ${viewMode === "gradebook" ? "trc-term-btn-active" : ""}`}
+                  onClick={() => setViewMode("gradebook")}
+                >
+                  Class Gradebook
+                </button>
+              </div>
+            )}
+
             {mode === "visiting" ? (
               <VisitingGradeEntry
+                students={students}
+                term={term}
+                selectedClass={selectedClass}
+                onRefresh={fetchStudents}
+                setFeedback={setFeedback}
+              />
+            ) : viewMode === "gradebook" ? (
+              <HomeGradebook
                 students={students}
                 term={term}
                 selectedClass={selectedClass}
@@ -575,6 +740,38 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [showRecallConfirm, setShowRecallConfirm] = useState(false);
+  const [distributing, setDistributing] = useState(false);
+  const [schoolYear, setSchoolYear] = useState("");
+
+  useEffect(() => {
+    fetch("/api/term-settings", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        const data = json.data || json;
+        if (data.schoolYearLabel) setSchoolYear(data.schoolYearLabel);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Refresh the selected student from the detail endpoint so late changes
+  // (e.g. approval fields) are reflected without reloading the whole class.
+  useEffect(() => {
+    if (!student?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/teacher/students/${student.id}`, { credentials: "include" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled || !json.data) return;
+        onStudentUpdate({ ...student, ...json.data });
+      } catch {
+        // silent — fall back to the list data
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id]);
 
   // Seed valuesEdits from the server on student/term change.
   // Deps are [student?.id, term, observedValuesConfig] — NOT [student] —
@@ -781,6 +978,49 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
       setFeedback({ type: "error", message: e.message });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function distributeReportCard() {
+    setDistributing(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/teacher/students/${student.id}/report-card/distribute`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Unable to mark as distributed.");
+      
+      onStudentUpdate({
+        ...student,
+        reportCardReleasedTerm: term,
+        reportCardReleasedAt: new Date().toISOString(),
+      });
+      setFeedback({ type: "success", message: "Report card marked as distributed to parent." });
+    } catch (e) {
+      setFeedback({ type: "error", message: e.message });
+    } finally {
+      setDistributing(false);
+    }
+  }
+
+  async function downloadPDF() {
+    try {
+      const doc = new jsPDF({ format: "a4", unit: "pt" });
+      await drawReportCardPDF(
+        doc, 
+        student, 
+        term, 
+        subjectsConfig, 
+        schoolYear || "____________", 
+        observedValuesConfig
+      );
+      doc.save(`${student.fullName.replace(/\s+/g, "_")}_${term}_Report_Card.pdf`);
+    } catch (e) {
+      setFeedback({ type: "error", message: "Failed to generate PDF." });
     }
   }
 
@@ -1331,31 +1571,58 @@ function HomeReportCardViewer({ studentId, students, term, activeTerm, onRefresh
         )}
 
         <div className="trc-actions">
-            {locked ? (
-            <span className="trc-locked-note">
+            {isTermLocked(student, term) && !student.reportCardApprovedTerm && student.reportCardReleasedTerm !== term ? (
+              <span className="trc-locked-note">
                 🔒 This {term} card is managed by the school office.
-            </span>
+              </span>
+            ) : student.reportCardReleasedTerm === term ? (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span className="trc-pill trc-pill-released" style={{ padding: "8px 16px", fontSize: "0.9rem" }}>
+                  ✅ Distributed to Parent
+                </span>
+                <button type="button" className="trc-btn trc-btn-secondary" onClick={downloadPDF}>
+                  📄 Download PDF
+                </button>
+              </div>
+            ) : student.reportCardApprovedTerm === term ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="button" className="trc-btn trc-btn-secondary" onClick={downloadPDF}>
+                  📄 Download PDF
+                </button>
+                <button 
+                  type="button" 
+                  className="trc-btn trc-btn-primary" 
+                  onClick={distributeReportCard}
+                  disabled={distributing}
+                >
+                  {distributing ? "Processing..." : "Mark as Distributed"}
+                </button>
+              </div>
             ) : isTermSubmittedToAdmin(student, term) ? (
-            <button
-                type="button"
-                className="trc-btn trc-btn-secondary"
-                onClick={handleRecallClick}
-                disabled={busy}
-            >
-                {busy ? "Recalling…" : "Recall Submission"}
-            </button>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span className="trc-pill trc-pill-pending" style={{ padding: '8px 16px' }}>
+                  ⏳ Pending Admin Review
+                </span>
+                <button
+                    type="button"
+                    className="trc-btn trc-btn-secondary"
+                    onClick={handleRecallClick}
+                    disabled={busy}
+                >
+                    {busy ? "Recalling…" : "Recall Submission"}
+                </button>
+              </div>
             ) : (
-            <button
+              <button
                 type="button"
                 className="trc-btn trc-btn-primary"
                 onClick={handleSubmitClick}
                 disabled={busy || !allCompiled || !allObservedValuesSet}
-                title={!allCompiled ? "All subjects must be compiled first." : !allObservedValuesSet ? "All observed values must be set." : ""}
-            >
+              >
                 {busy ? "Submitting…" : "Submit to Admin"}
-            </button>
-        )}
-      </div>
+              </button>
+            )}
+        </div>
 
       {showSubmitConfirm && (
         <div className="trc-modal-overlay" onClick={() => setShowSubmitConfirm(false)}>
@@ -1425,37 +1692,33 @@ function StatusPill({ status, locked }) {
 }
 
 function StudentRowBadge({ student, term, isHomeMode, subjectsConfig }) {
-  // Locked for THIS term → show the lock.
-  if (isTermLocked(student, term)) {
-    return <span className="trc-row-badge trc-row-badge-locked" title={`${term} is managed by admin`}>🔒</span>;
-  }
-
-  // Visiting mode: check every subject this teacher grades for this student.
+  // Visiting mode (unchanged): locked terms are read-only for subject teachers.
   if (!isHomeMode) {
+    if (isTermLocked(student, term)) {
+      return <span className="trc-row-badge trc-row-badge-locked" title={`${term} is managed by admin`}>🔒</span>;
+    }
+
     const subjectCodes = student.subjects || [];
-    const statuses = subjectCodes
-      .map((code) => student.reportCard?.[code]?.[term]?.status)
-      .filter(Boolean);
-
+    const statuses = subjectCodes.map((code) => student.reportCard?.[code]?.[term]?.status).filter(Boolean);
     if (statuses.length === 0) return null;
-
-    if (statuses.every((s) => s === "compiled")) {
-      return <span className="trc-row-badge trc-row-badge-ready">Ready</span>;
-    }
-    if (statuses.some((s) => s === "submitted" || s === "compiled")) {
-      return <span className="trc-row-badge trc-row-badge-submitted">In progress</span>;
-    }
+    if (statuses.every((s) => s === "compiled")) return <span className="trc-row-badge trc-row-badge-ready">Ready</span>;
+    if (statuses.some((s) => s === "submitted" || s === "compiled")) return <span className="trc-row-badge trc-row-badge-submitted">In progress</span>;
     return null;
   }
 
-  // Home mode: count compiled vs. total for this term.
+  // Home mode (updated)
+  if (student.reportCardReleasedTerm === term) {
+    return <span className="trc-row-badge trc-row-badge-released" style={{ background: "#e0f2fe", color: "#0369a1" }}>Released</span>;
+  }
+  if (student.reportCardApprovedTerm === term || isTermLocked(student, term)) {
+    return <span className="trc-row-badge trc-row-badge-approved" style={{ background: "#dcfce7", color: "#166534" }}>Approved</span>;
+  }
   if (isTermSubmittedToAdmin(student, term)) {
-    return <span className="trc-row-badge trc-row-badge-submitted">Submitted</span>;
+    return <span className="trc-row-badge trc-row-badge-submitted">Pending Admin</span>;
   }
 
   const subjects = subjectsConfig?.entryByGrade?.[student.gradeLevel] || [];
   if (subjects.length === 0) return null;
-
   const card = student.reportCard || {};
   const missing = subjects.filter((code) => (card[code]?.[term]?.status) !== "compiled");
 
@@ -1463,4 +1726,169 @@ function StudentRowBadge({ student, term, isHomeMode, subjectsConfig }) {
     return <span className="trc-row-badge trc-row-badge-ready">Ready</span>;
   }
   return <span className="trc-row-badge trc-row-badge-missing">{missing.length} missing</span>;
+}
+
+// ----------------------------------------------------------------------------
+// Home: class-wide grade entry for the adviser's own subjects.
+// One row per student, one column per assigned entry subject.
+// ----------------------------------------------------------------------------
+function HomeGradebook({ students, term, selectedClass, onRefresh, setFeedback }) {
+  // Preschool homeroom assignments may not carry an explicit subjects array,
+  // so fall back to the subjects resolved for the student rows.
+  const subjectCodes =
+    selectedClass?.subjects?.length > 0
+      ? selectedClass.subjects
+      : students[0]?.subjects || [];
+  // values: { [studentId]: { [subjectCode]: "grade" } }
+  const [values, setValues] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const initial = {};
+    students.forEach((s) => {
+      const perSubject = {};
+      subjectCodes.forEach((code) => {
+        perSubject[code] = s.reportCard?.[code]?.[term]?.grade ?? "";
+      });
+      initial[s.id] = perSubject;
+    });
+    // Seed editable inputs from the latest server snapshot.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setValues(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, term, subjectCodes.join(",")]);
+
+  function handleChange(studentId, code, value) {
+    const sanitized = value === "" ? "" : value.replace(/[^\d.]/g, "").slice(0, 6);
+    setValues((v) => ({
+      ...v,
+      [studentId]: { ...(v[studentId] || {}), [code]: sanitized },
+    }));
+  }
+
+  async function saveAll() {
+    if (saving) return;
+
+    setSaving(true);
+    setFeedback(null);
+
+    let saved = 0;
+    let failed = 0;
+    let firstError = "";
+
+    try {
+      for (const s of students) {
+        if (isTermLocked(s, term)) continue;
+
+        // Only send entries that actually changed. Advisers may update their
+        // own compiled subjects; the backend keeps them compiled.
+        const grades = {};
+        for (const code of subjectCodes) {
+          const grade = values[s.id]?.[code];
+          if (grade === "" || grade === undefined) continue;
+
+          const current = s.reportCard?.[code]?.[term]?.grade ?? "";
+          if (String(current) === String(grade)) continue;
+
+          grades[code] = { [term]: { grade } };
+        }
+
+        if (Object.keys(grades).length === 0) continue;
+
+        const res = await fetch(`/api/teacher/students/${s.id}/report-card`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grades }),
+        });
+
+        if (res.ok) {
+          saved++;
+        } else {
+          failed++;
+          if (!firstError) {
+            const json = await res.json().catch(() => ({}));
+            firstError = json.message || `HTTP ${res.status}`;
+          }
+        }
+      }
+
+      if (failed === 0 && saved === 0) {
+        setFeedback({ type: "success", message: "Nothing to save." });
+      } else if (failed === 0) {
+        setFeedback({
+          type: "success",
+          message: `Grades saved for ${saved} ${saved === 1 ? "student" : "students"}.`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: `${saved} saved, ${failed} failed. ${firstError}`,
+        });
+      }
+
+      onRefresh();
+    } catch {
+      setFeedback({ type: "error", message: "Unable to reach the server." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="trc-table-wrap">
+      <h2 className="trc-panel-title">Class Gradebook — {term}</h2>
+
+      {subjectCodes.length === 0 ? (
+        <p className="trc-empty">No gradeable subjects are assigned to this homeroom.</p>
+      ) : (
+        <>
+          <table className="trc-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                {subjectCodes.map((code) => (
+                  <th key={code} style={{ width: "120px" }}>{code}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s) => {
+                const locked = isTermLocked(s, term);
+                return (
+                  <tr key={s.id}>
+                    <td>{s.fullName}</td>
+                    {subjectCodes.map((code) => (
+                      <td key={code}>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={values[s.id]?.[code] ?? ""}
+                          onChange={(e) => handleChange(s.id, code, e.target.value)}
+                          disabled={locked || saving}
+                          placeholder="—"
+                          aria-label={`${s.fullName} ${code} ${term} grade`}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div className="trc-actions">
+            <button
+              type="button"
+              className="trc-btn trc-btn-primary"
+              onClick={saveAll}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save All Grades"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

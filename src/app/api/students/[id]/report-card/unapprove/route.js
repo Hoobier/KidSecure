@@ -10,14 +10,14 @@ export async function POST(request, { params }) {
   }
 
   try {
-    const laravelResponse = await fetch(`${process.env.LARAVEL_API_URL}/api/students/${id}/report-card/unrelease`, {
+    const laravelResponse = await fetch(`${process.env.LARAVEL_API_URL}/api/students/${id}/report-card/unapprove`, {
       method: "POST",
       headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     });
     const data = await laravelResponse.json();
     return Response.json(data, { status: laravelResponse.status });
   } catch (error) {
-    console.error("Report card unrelease error:", error);
+    console.error("Report card unapprove error:", error);
     return Response.json({ message: "Unable to reach the server. Please try again." }, { status: 500 });
   }
 }

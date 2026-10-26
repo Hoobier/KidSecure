@@ -109,9 +109,12 @@ export default function EditStudentPage({ params }) {
     middleName: "",
     lastName: "",
     dateOfBirth: "",
+    gender: "",
     address: "",
     gradeLevel: "",
     section: "",
+    isTransferee: false,
+    previousSchool: "",
   });
 
   const [student, setStudent] = useState(null); // full record incl. rfidTag + parent info
@@ -151,9 +154,12 @@ export default function EditStudentPage({ params }) {
           middleName: json.data.middleName || "",
           lastName: json.data.lastName || "",
           dateOfBirth: json.data.dateOfBirth || "",
+          gender: json.data.gender || "",
           address: json.data.address || "",
           gradeLevel: json.data.gradeLevel || "",
           section: json.data.section || "",
+          isTransferee: json.data.isTransferee || false,
+          previousSchool: json.data.previousSchool || "",
         });
         setStudent(json.data);
         setRfidValue(json.data.rfidTag || "");
@@ -455,12 +461,23 @@ export default function EditStudentPage({ params }) {
             {errors.dateOfBirth && <div className="edit-field-error">{errors.dateOfBirth[0]}</div>}
           </div>
           <div className="edit-form-group">
+            <label>Gender<span className="required">*</span></label>
+            <select value={form.gender || ""} onChange={(e) => updateField("gender", e.target.value)}>
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div className="edit-form-group">
             <label>Grade Level<span className="required">*</span></label>
             <select value={form.gradeLevel} onChange={(e) => updateField("gradeLevel", e.target.value)}>
               <option value="">Select Grade Level</option>
               {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
+        </div>
+
+        <div className="edit-form-row">
           <div className="edit-form-group">
             <label>Section<span className="required">*</span></label>
             <select value={form.section} onChange={(e) => updateField("section", e.target.value)}>
@@ -468,18 +485,42 @@ export default function EditStudentPage({ params }) {
               {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          <div className="edit-form-group">
+            <label>Address<span className="required">*</span></label>
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => updateField("address", e.target.value)}
+              className={errors.address ? "input-invalid" : ""}
+            />
+            {errors.address && <div className="edit-field-error">{errors.address[0]}</div>}
+          </div>
         </div>
 
-        <div className="edit-form-group">
-          <label>Address<span className="required">*</span></label>
-          <input
-            type="text"
-            value={form.address}
-            onChange={(e) => updateField("address", e.target.value)}
-            className={errors.address ? "input-invalid" : ""}
-          />
-          {errors.address && <div className="edit-field-error">{errors.address[0]}</div>}
+        <div className="edit-form-group" style={{ marginTop: "1rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={form.isTransferee || false}
+              onChange={(e) => updateField("isTransferee", e.target.checked)}
+              style={{ width: "auto" }}
+            />
+            This student is a transferee (from another school)
+          </label>
         </div>
+
+        {form.isTransferee && (
+          <div className="edit-form-group">
+            <label>Previous School Name<span className="required">*</span></label>
+            <input
+              type="text"
+              value={form.previousSchool || ""}
+              onChange={(e) => updateField("previousSchool", e.target.value)}
+              className={errors.previousSchool ? "input-invalid" : ""}
+            />
+            {errors.previousSchool && <div className="edit-field-error">{errors.previousSchool[0]}</div>}
+          </div>
+        )}
 
         <div className="edit-actions">
           <Link href={`/students/${id}`} className="edit-btn edit-btn-secondary">Cancel</Link>

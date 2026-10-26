@@ -364,6 +364,7 @@ export default function StudentDetailPage({ params }) {
           <div className="detail-field"><dt>Date of Birth</dt><dd>{student.dateOfBirth || "—"}</dd></div>
           <div className="detail-field"><dt>Grade &amp; Section</dt><dd>{student.gradeLevel} - {student.section}</dd></div>
           <div className="detail-field"><dt>Age</dt><dd>{student.dateOfBirth ? calculateAge(student.dateOfBirth) + " yrs" : "—"}</dd></div>
+          <div className="detail-field"><dt>Gender</dt><dd>{student.gender || "—"}</dd></div>
           <div className="detail-field"><dt>Full Name</dt><dd>{fullName}</dd></div>
           <div className="detail-field"><dt>Address</dt><dd>{student.address || "—"}</dd></div>
           <div className="detail-field">

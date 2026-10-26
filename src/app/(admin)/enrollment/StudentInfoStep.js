@@ -154,6 +154,8 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
     // No need to re-check the age range here — the calendar itself
     // only allows selecting dates within the valid 3–15 age window.
 
+    if (!data.gender) newErrors.gender = "Please select a gender.";
+
     if (!data.gradeLevel) newErrors.gradeLevel = "Please select a grade level.";
     if (!data.section) newErrors.section = "Please select a section.";
 
@@ -288,6 +290,23 @@ export default function StudentInfoStep({ data, onChange, onNext, draftId, docum
             wrapperClassName="enrollment-datepicker-wrapper"
           />
           {errors.dateOfBirth && <p className="enrollment-field-error">{errors.dateOfBirth}</p>}
+        </div>
+
+        <div className="enrollment-form-group">
+          <label htmlFor="gender">
+            Gender<span className="required">*</span>
+          </label>
+          <select
+            id="gender"
+            value={data.gender || ""}
+            onChange={(e) => handleFieldChange("gender", e.target.value)}
+            className={errors.gender ? "input-invalid" : ""}
+          >
+            <option value="" hidden>Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+          {errors.gender && <p className="enrollment-field-error">{errors.gender}</p>}
         </div>
 
         <div className="enrollment-form-group">

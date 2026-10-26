@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import "./report-cards.css";
 
 const TERMS = [
@@ -13,6 +12,7 @@ const TERMS = [
 ];
 
 import { getSubjectsConfig, getEntrySubjectsForGrade, getDisplaySubjectsForGrade, getSubjectNameFromConfig, isComputedInConfig, computeDisplayGrade, computeDisplayFinal, computeFinalGrade, computeTermAverage, computeGeneralAverage, getDescriptorFor, getObservedValuesConfig } from "@/lib/subjectsCache";
+import { drawReportCardPDF } from "@/lib/pdf-generator";
 
 const STEPS = [
   "Term",
@@ -38,7 +38,7 @@ export default function AdminReportCardsPage() {
         <div>
           <h1>Report Cards</h1>
           <p className="rc-page-sub">
-            Review adviser submissions, release to parents, and manage released cards.
+            Review adviser submissions, approve for printing, and manage approved cards.
           </p>
         </div>
       </header>
@@ -48,13 +48,13 @@ export default function AdminReportCardsPage() {
           className={tab === "pending" ? "rc-tab rc-tab-active" : "rc-tab"}
           onClick={() => setTab("pending")}
         >
-          Pending Release
+          Pending Approval
         </button>
         <button
           className={tab === "released" ? "rc-tab rc-tab-active" : "rc-tab"}
           onClick={() => setTab("released")}
         >
-          Released
+          Approved for Printing
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export default function AdminReportCardsPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Pending Release — the 5-step wizard
+// Pending Approval — the 5-step wizard
 // ---------------------------------------------------------------------------
 
 function PendingWizard({ subjectsConfig, observedValuesConfig }) {
@@ -123,13 +123,13 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
       .then((json) => {
         setStudents(json.data || []);
         // Auto-select only students whose card is submitted for the
-        // CURRENT term and not yet released for it.
+        // CURRENT term and not yet approved for it.
         const defaultSelected = new Set(
           (json.data || [])
             .filter(
               (s) =>
                 s.reportCardSubmittedTerm === term &&
-                s.reportCardReleasedTerm !== term
+                s.reportCardApprovedTerm !== term
             )
             .map((s) => s.id)
         );
@@ -165,11 +165,11 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
   };
 
   const releasableCount = students.filter(
-    (s) => s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term
+    (s) => s.reportCardSubmittedTerm === term && s.reportCardApprovedTerm !== term
   ).length;
 
   const allSelected = students.length > 0 && selectedIds.size === students.filter(
-    (s) => s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term
+    (s) => s.reportCardSubmittedTerm === term && s.reportCardApprovedTerm !== term
   ).length;
 
   function toggleSelectAll() {
@@ -177,7 +177,7 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(
-        students.filter((s) => s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term).map((s) => s.id)
+        students.filter((s) => s.reportCardSubmittedTerm === term && s.reportCardApprovedTerm !== term).map((s) => s.id)
       ));
     }
   }
@@ -191,22 +191,22 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
     });
   }
 
-  async function handleRelease() {
+  async function handleApprove() {
     setReleasing(true);
     setError("");
     const ids = Array.from(selectedIds);
     setProgress({ done: 0, total: ids.length });
 
-    let released = 0;
+    let approved = 0;
     for (const id of ids) {
       try {
-        const res = await fetch(`/api/students/${id}/report-card/release`, {
+        const res = await fetch(`/api/students/${id}/report-card/approve`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ term }),
         });
-        if (res.ok) released++;
+        if (res.ok) approved++;
       } catch {
         // continue
       }
@@ -216,7 +216,7 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
     setReleasing(false);
     setFeedback({
       type: "success",
-      message: `${released} of ${ids.length} report cards released.`,
+      message: `${approved} of ${ids.length} report cards approved for printing.`,
     });
 
     setTimeout(() => {
@@ -326,7 +326,7 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
             Review: {selectedSection.gradeLevel} - {selectedSection.section}
           </h2>
           <p className="rc-card-sub">
-            {students.length} students · {releasableCount} ready to release · {term}
+            {students.length} students · {releasableCount} ready to approve · {term}
           </p>
           {loading ? (
             <div className="rc-empty">Loading students…</div>
@@ -369,7 +369,7 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
 
       {step === 4 && selectedSection && (
         <div className="rc-card">
-          <h2 className="rc-card-title">Select Students to Release</h2>
+          <h2 className="rc-card-title">Select Students to Approve</h2>
           <p className="rc-card-sub">
             Uncheck anyone who should be held back.
           </p>
@@ -385,7 +385,7 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
             </thead>
             <tbody>
               {students.map((s) => {
-                const ready = s.reportCardSubmittedTerm === term && s.reportCardReleasedTerm !== term;
+                const ready = s.reportCardSubmittedTerm === term && s.reportCardApprovedTerm !== term;
                 const compiled = totalCompiledSubjects(s);
                 const totalSubjects = (subjectsConfig?.entryByGrade?.[s.gradeLevel] || []).length;
                 return (
@@ -403,8 +403,8 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
                       <span className="rc-row-sub"> · {s.studentId}</span>
                     </td>
                     <td>
-                      {s.reportCardReleasedTerm === term ? (
-                        <span className="rc-pill rc-pill-released">Already released</span>
+                      {s.reportCardApprovedTerm === term ? (
+                        <span className="rc-pill rc-pill-released">Already approved</span>
                       ) : ready ? (
                         <span className="rc-pill rc-pill-ready">
                           {compiled} of {totalSubjects} subjects compiled
@@ -439,17 +439,14 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
 
       {step === 5 && selectedSection && (
         <div className="rc-card">
-          <h2 className="rc-card-title">Confirm Release</h2>
+          <h2 className="rc-card-title">Confirm Approval</h2>
           <p className="rc-card-sub">
-            You are about to release <strong>{selectedIds.size}</strong> report card
+            You are about to approve <strong>{selectedIds.size}</strong> report card
             {selectedIds.size === 1 ? "" : "s"} for{" "}
             <strong>{selectedSection.gradeLevel} - {selectedSection.section}</strong> ({term}).
           </p>
           <div className="rc-warning">
-            ⚠️ Once released, these report cards will be visible to parents in the
-            mobile app, and teachers will be permanently locked out of editing them.
-            You can still unrelease and edit as admin, but advisers and subject
-            teachers cannot.
+            ⚠️ Once approved, grades are locked. The adviser will be able to download the PDF for printing and mark it as distributed to the parent.
           </div>
           {releasing && (
             <div className="rc-progress">
@@ -474,10 +471,10 @@ function PendingWizard({ subjectsConfig, observedValuesConfig }) {
             </button>
             <button
               className="rc-btn rc-btn-primary"
-              onClick={handleRelease}
+              onClick={handleApprove}
               disabled={releasing || selectedIds.size === 0}
             >
-              {releasing ? "Releasing…" : `Release ${selectedIds.size} Report Card${selectedIds.size === 1 ? "" : "s"}`}
+              {releasing ? "Approving…" : `Approve ${selectedIds.size} Report Card${selectedIds.size === 1 ? "" : "s"}`}
             </button>
           </div>
         </div>
@@ -535,8 +532,8 @@ function ReviewTable({ students, term, onEdit, onDownload, subjectsConfig }) {
                 </td>
                 <td>{compiled} / {subjects.length}</td>
                 <td>
-                  {s.reportCardReleasedTerm === term ? (
-                <span className="rc-pill rc-pill-released">Released for {term}</span>
+                  {s.reportCardApprovedTerm === term ? (
+                <span className="rc-pill rc-pill-released">Approved for {term}</span>
                  ) : submitted > 0 ? (
                     <span className="rc-pill rc-pill-pending">{submitted} awaiting compile</span>
                   ) : compiled === subjects.length && subjects.length > 0 ? (
@@ -926,7 +923,7 @@ function EditReportCardModal({ student, term, onClose, onSaved, subjectsConfig, 
 }
 
 // ---------------------------------------------------------------------------
-// Released tab
+// Approved for printing tab
 // ---------------------------------------------------------------------------
 
 function ReleasedView({ subjectsConfig, observedValuesConfig }) {
@@ -961,7 +958,7 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Load the released sections once we know the term.
+  // Load the approved sections once we know the term.
   useEffect(() => {
     if (!term) return;
     setLoading(true);
@@ -969,7 +966,7 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
     fetch(`/api/report-cards/released-sections?term=${term}`, { credentials: "include" })
       .then((r) => r.json())
       .then((json) => setSections(json.data || []))
-      .catch(() => setError("Unable to load released sections."))
+      .catch(() => setError("Unable to load approved sections."))
       .finally(() => setLoading(false));
   }, [term]);
 
@@ -983,17 +980,14 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
     })
       .then((r) => r.json())
       .then((json) => {
-        // Include anyone whose card has been through release for THIS term
-        // — either currently released, or pulled back and awaiting re-release.
+        // Include anyone whose card has been approved for THIS term.
         setStudents(
           (json.data || []).filter(
-            (s) =>
-              s.reportCardReleasedTerm === term ||
-              (s.reportCardLockedTerms ?? []).includes(term) && !s.reportCardReleasedTerm
+            (s) => s.reportCardApprovedTerm === term
           )
         );
       })
-      .catch(() => setError("Unable to load released students."))
+      .catch(() => setError("Unable to load approved students."))
       .finally(() => setLoading(false));
   }, [selectedSection, term]);
 
@@ -1007,26 +1001,24 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
       .then((json) =>
         setStudents(
           (json.data || []).filter(
-            (s) =>
-              s.reportCardReleasedTerm === term ||
-              (s.reportCardLockedTerms ?? []).includes(term) && !s.reportCardReleasedTerm
+            (s) => s.reportCardApprovedTerm === term
           )
         )
       );
   }
 
-  async function unrelease(id) {
+  async function unapprove(id) {
     setConfirmUnrelease(null);
     try {
-      const res = await fetch(`/api/students/${id}/report-card/unrelease`, {
+      const res = await fetch(`/api/students/${id}/report-card/unapprove`, {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) throw new Error();
-      setFeedback({ type: "success", message: "Report card unreleased." });
+      setFeedback({ type: "success", message: "Report card approval revoked." });
       refreshSection();
     } catch {
-      setFeedback({ type: "error", message: "Unable to unrelease." });
+      setFeedback({ type: "error", message: "Unable to revoke approval." });
     }
   }
 
@@ -1034,17 +1026,17 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
     return <div className="rc-empty">Loading…</div>;
   }
 
-  async function reRelease(id) {
+  async function reApprove(id) {
     try {
-      const res = await fetch(`/api/students/${id}/report-card/release`, {
+      const res = await fetch(`/api/students/${id}/report-card/approve`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ term }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.message || "Unable to re-release.");
-      setFeedback({ type: "success", message: "Report card re-released." });
+      if (!res.ok) throw new Error(json.message || "Unable to re-approve.");
+      setFeedback({ type: "success", message: "Report card re-approved." });
       refreshSection();
     } catch (e) {
       setFeedback({ type: "error", message: e.message });
@@ -1053,10 +1045,23 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
 
   return (
     <div className="rc-card">
-      <h2 className="rc-card-title">Released Report Cards ({term})</h2>
-      <p className="rc-card-sub">
-        Select a section to view released cards. You can edit and re-release at any time.
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div>
+          <h2 className="rc-card-title" style={{ margin: 0 }}>Approved Report Cards</h2>
+          <p className="rc-card-sub">Select a section to view approved cards.</p>
+        </div>
+        <div className="rc-term-switch" style={{ display: 'flex', gap: '0.5rem' }}>
+          {['T1', 'T2', 'T3'].map((t) => (
+            <button
+              key={t}
+              className={term === t ? "rc-tab rc-tab-active" : "rc-tab"}
+              onClick={() => setTerm(t)}
+            >
+              Term {t.replace('T', '')}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {feedback && (
         <div className={`rc-banner rc-banner-${feedback.type}`}>
@@ -1069,11 +1074,11 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
       {sections.length === 0 && !loading ? (
         <div className="rc-empty">
           <div className="rc-empty-title">
-            No report cards have been released for {term} yet.
+            No report cards have been approved for {term} yet.
           </div>
           <div className="rc-empty-hint">
-            Once you release a student's report card from the Pending Release tab,
-            their section will appear here. You can edit or re-release at any time.
+            Once you approve a student's report card from the Pending Approval tab,
+            their section will appear here. You can edit or revoke approval at any time.
           </div>
         </div>
       ) : (
@@ -1104,7 +1109,7 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
           ) : students.length === 0 ? (
             <div className="rc-empty">
               <div className="rc-empty-title">
-                No released cards in this section for {term}.
+                No approved cards in this section for {term}.
               </div>
               <div className="rc-empty-hint">
                 Everyone in this section is still pending or in draft.
@@ -1116,13 +1121,13 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
                 <tr>
                   <th>Student</th>
                   <th style={{ width: "180px" }}>Status</th>
-                  <th style={{ width: "160px" }}>Released</th>
+                  <th style={{ width: "160px" }}>Approved</th>
                   <th style={{ width: "300px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((s) => {
-                  const isLive = s.reportCardReleasedTerm === term;
+                  const isLive = s.reportCardApprovedTerm === term;
                   return (
                     <tr key={s.id}>
                       <td>
@@ -1130,14 +1135,14 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
                       </td>
                       <td>
                         {isLive ? (
-                          <span className="rc-pill rc-pill-released">Released</span>
+                          <span className="rc-pill rc-pill-released">Approved</span>
                         ) : (
-                          <span className="rc-pill rc-pill-pending">Unreleased</span>
+                          <span className="rc-pill rc-pill-pending">Not approved</span>
                         )}
                       </td>
                       <td>
-                        {s.reportCardReleasedAt
-                          ? new Date(s.reportCardReleasedAt).toLocaleDateString()
+                        {s.reportCardApprovedAt
+                          ? new Date(s.reportCardApprovedAt).toLocaleDateString()
                           : "—"}
                       </td>
                       <td>
@@ -1145,19 +1150,19 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
                           <button className="rc-btn-small" onClick={() => setEditingStudent(s)}>
                             Edit
                           </button>
-                          {isLive ? (
+                          {s.reportCardApprovedTerm === term ? (
                             <button
                               className="rc-btn-small rc-btn-small-danger"
                               onClick={() => setConfirmUnrelease(s)}
                             >
-                              Unrelease
+                              Unapprove
                             </button>
                           ) : (
                             <button
                               className="rc-btn-small"
-                              onClick={() => reRelease(s.id)}
+                              onClick={() => reApprove(s.id)}
                             >
-                              Re-release
+                              Re-approve
                             </button>
                           )}
                         </div>
@@ -1188,10 +1193,10 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
       {confirmUnrelease && (
         <div className="rc-modal-overlay" onClick={() => setConfirmUnrelease(null)}>
           <div className="rc-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Unrelease this report card?</h3>
+            <h3>Revoke approval for this report card?</h3>
             <p>
-              This will remove the {term} report card from the parent app immediately.
-              Teachers remain locked out — only admin can edit and re-release.
+              This will unlock the grades and return the card to the adviser. 
+              If the adviser has already distributed it, it will be removed from the parent app.
             </p>
             <div className="rc-modal-actions">
               <button
@@ -1202,9 +1207,9 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
               </button>
               <button
                 className="rc-btn rc-btn-danger"
-                onClick={() => unrelease(confirmUnrelease.id)}
+                onClick={() => unapprove(confirmUnrelease.id)}
               >
-                Unrelease
+                Unapprove
               </button>
             </div>
           </div>
@@ -1218,494 +1223,6 @@ function ReleasedView({ subjectsConfig, observedValuesConfig }) {
 // PDF helpers
 // ---------------------------------------------------------------------------
 
-// Cache logos as data URLs after first load.
-let logoCachePromise = null;
-async function loadLogos() {
-  if (logoCachePromise) return logoCachePromise;
-  logoCachePromise = (async () => {
-    try {
-      const [deped, rcac] = await Promise.all([
-        fetch("/pictures/deped.png").then((r) => r.blob()).then(blobToDataURL),
-        fetch("/pictures/rcac.png").then((r) => r.blob()).then(blobToDataURL),
-      ]);
-      return { deped, rcac };
-    } catch {
-      return { deped: null, rcac: null };
-    }
-  })();
-  return logoCachePromise;
-}
-
-function blobToDataURL(blob) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
-  });
-}
-
-function drawHeader(doc, logos, pageWidth, schoolYearLabel) {
-  const marginX = 40;
-  const logoSize = 60;
-  const centerX = pageWidth / 2;
-  let y = 40;
-
-  // Logos in the top corners
-  if (logos?.deped) {
-    try { doc.addImage(logos.deped, "PNG", marginX, y, logoSize, logoSize); } catch {}
-  }
-  if (logos?.rcac) {
-    try { doc.addImage(logos.rcac, "PNG", pageWidth - marginX - logoSize, y, logoSize, logoSize); } catch {}
-  }
-
-  // Header text sits below the logo band
-  y += logoSize + 24;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Republic of the Philippines", centerX, y, { align: "center" });
-  y += 11;
-  doc.text("DEPARTMENT OF EDUCATION", centerX, y, { align: "center" });
-  y += 11;
-  doc.text("National Capital Region", centerX, y, { align: "center" });
-  y += 11;
-  doc.text("Schools Division of Caloocan", centerX, y, { align: "center" });
-  y += 11;
-  doc.text("District III", centerX, y, { align: "center" });
-
-  y += 20;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("RAINBOW 5 CHRISTIAN ACADEMY OF CALOOCAN, INC.", centerX, y, { align: "center" });
-  y += 13;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.text("Blk. 31 Lot 43-44 Acacia St., Rainbow Village 5, Bagumbayan, Caloocan City", centerX, y, { align: "center" });
-
-  y += 22;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("ELEMENTARY", centerX, y, { align: "center" });
-  y += 16;
-  doc.text("PROGRESS REPORT CARD", centerX, y, { align: "center" });
-
-  y += 18;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`School Year: ${schoolYearLabel || "____________"}`, centerX, y, { align: "center" });
-
-  return y + 20;
-}
-
-function drawStudentInfo(doc, student, y) {
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  const leftX = 40;
-  const rightX = 320;
-
-  doc.text(`Name: ${student.fullName || ""}`, leftX, y);
-  doc.text("LRN: ____________________", rightX, y);
-  y += 14;
-  doc.text(`Level: ${student.gradeLevel || ""}`, leftX, y);
-  doc.text("Age: ____________________", rightX, y);
-  y += 14;
-  doc.text("Gender: __________________", leftX, y);
-
-  return y + 10;
-}
-
-function buildReportCardRows(student, term, subjectsConfig) {
-  const card = student.reportCard || {};
-  const subjects = subjectsConfig?.displayByGrade?.[student.gradeLevel] || [];
-
-  const rows = subjects.map((code) => {
-    const isComputed = isComputedInConfig(code, subjectsConfig);
-    const label = subjectsConfig?.subjects?.[code] || code;
-
-    const t1 = isComputed
-      ? (computeDisplayGrade(card, code, "T1", subjectsConfig) ?? "—")
-      : (card[code]?.T1?.grade ?? "—");
-    const t2 = isComputed
-      ? (computeDisplayGrade(card, code, "T2", subjectsConfig) ?? "—")
-      : (card[code]?.T2?.grade ?? "—");
-    const t3 = isComputed
-      ? (computeDisplayGrade(card, code, "T3", subjectsConfig) ?? "—")
-      : (card[code]?.T3?.grade ?? "—");
-
-    const final = computeFinalGrade(card, code, subjectsConfig);
-    const descriptor = getDescriptorFor(final, subjectsConfig);
-    const remark = descriptor ? descriptor.remark : "—";
-
-    return [label, t1, t2, t3, final ?? "—", remark];
-  });
-
-  // Average per Term
-  const avgT1 = computeTermAverage(card, student.gradeLevel, "T1", subjectsConfig);
-  const avgT2 = computeTermAverage(card, student.gradeLevel, "T2", subjectsConfig);
-  const avgT3 = computeTermAverage(card, student.gradeLevel, "T3", subjectsConfig);
-  rows.push([
-    { content: "Average per Term", styles: { fontStyle: "bold" } },
-    avgT1 ?? "—",
-    avgT2 ?? "—",
-    avgT3 ?? "—",
-    "",
-    "",
-  ]);
-
-  // General Average row (merged across cols 0-4, value in last cell)
-  const general = computeGeneralAverage(card, student.gradeLevel, subjectsConfig);
-  rows.push([
-    { content: "GENERAL AVERAGE", colSpan: 5, styles: { halign: "right", fontStyle: "bold" } },
-    { content: general ?? "—", styles: { fontStyle: "bold" } },
-  ]);
-
-  // Penmanship (placeholder row for manual writing)
-  rows.push(["PENMANSHIP", "", "", "", "", ""]);
-
-  return rows;
-}
-
-function drawDescriptorTable(doc, subjectsConfig, startY, pageWidth) {
-  const descriptors = subjectsConfig?.descriptors || [];
-  const body = descriptors.map((d) => [
-    `${d.label} (${d.letter})`,
-    `${d.max} - ${d.min}`,
-    d.remark,
-  ]);
-
-  autoTable(doc, {
-    startY,
-    margin: { left: 40, right: 40 },
-    head: [["Descriptors", "Grading Scale", "Remarks"]],
-    body,
-    styles: { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 160 },
-      1: { cellWidth: 120, halign: "center" },
-      2: { cellWidth: 120, halign: "center" },
-    },
-  });
-}
-
-function drawAttendanceBlock(doc, student, subjectsConfig, startY) {
-  const margin = 40;
-  const months = subjectsConfig?.schoolMonths || [];
-  const attendance = student.attendance || {};
-
-  if (months.length === 0) return startY;
-
-  const shortName = (m) => m.slice(0, 3);
-  const anyPartial = months.some((m) => attendance[m]?.partial);
-
-  const head = [[
-    "ATTENDANCE",
-    ...months.map((m) => {
-      const short = shortName(m);
-      return attendance[m]?.partial ? `${short}*` : short;
-    }),
-  ]];
-
-  const body = [
-    [
-      "Days of School",
-      ...months.map((m) => {
-        const a = attendance[m];
-        if (!a || a.schoolDays === null || a.schoolDays === undefined) return "";
-        if (a.partial) return `${a.schoolDaysUpTo}/${a.schoolDays}`;
-        return a.schoolDays;
-      }),
-    ],
-    [
-      "Days Present",
-      ...months.map((m) => {
-        const a = attendance[m];
-        return a?.present === null || a?.present === undefined ? "" : a.present;
-      }),
-    ],
-    [
-      "Days Tardy",
-      ...months.map((m) => {
-        const a = attendance[m];
-        return a?.tardy === null || a?.tardy === undefined ? "" : a.tardy;
-      }),
-    ],
-    [
-      "Days Absent",
-      ...months.map((m) => {
-        const a = attendance[m];
-        return a?.absent === null || a?.absent === undefined ? "" : a.absent;
-      }),
-    ],
-  ];
-
-  autoTable(doc, {
-    startY,
-    margin: { left: margin, right: margin },
-    head,
-    body,
-    styles: { fontSize: 8, cellPadding: 3, lineColor: [180, 190, 205], lineWidth: 0.4, halign: "center" },
-    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 90, halign: "left", fontStyle: "bold" },
-    },
-  });
-
-  const finalY = doc.lastAutoTable?.finalY ?? startY;
-
-  if (anyPartial) {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(7);
-    doc.text(
-      "* Partial month — the term ended mid-month. Absent is not yet computable for partial months.",
-      margin,
-      finalY + 12
-    );
-    return finalY + 22;
-  }
-
-  return finalY;
-}
-
-function drawTransferEligibilityBlock(doc, startY) {
-  const margin = 40;
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const centerX = pageWidth / 2;
-  const colGap = 200;
-  const sigWidth = 150;
-  let y = startY;
-
-  // ===== TRANSFER ELIGIBILITY =====
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("TRANSFER ELIGIBILITY", centerX, y, { align: "center" });
-  y += 22;
-
-  // "Eligible for transfer and Admission to ____"
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  const label1 = "Eligible for transfer and Admission to";
-  doc.text(label1, margin, y);
-  const label1Width = doc.getTextWidth(label1);
-  doc.line(margin + label1Width + 6, y + 2, pageWidth - margin, y + 2);
-  y += 36;
-
-  // Signature + date lines (line above label)
-  const sigY1 = y;
-  doc.line(margin, sigY1, margin + sigWidth, sigY1);
-  doc.line(margin + colGap, sigY1, margin + colGap + sigWidth, sigY1);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Principal's Signature", margin, sigY1 + 12);
-  doc.text("Date Signed", margin + colGap, sigY1 + 12);
-  y += 40;
-
-  // ===== CANCELLATION OF TRANSFER ELIGIBILITY =====
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("CANCELLATION OF TRANSFER ELIGIBILITY", centerX, y, { align: "center" });
-  y += 22;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  const label2 = "Admitted to";
-  doc.text(label2, margin, y);
-  const label2Width = doc.getTextWidth(label2);
-  doc.line(margin + label2Width + 6, y + 2, pageWidth - margin, y + 2);
-  y += 36;
-
-  const sigY2 = y;
-  doc.line(margin, sigY2, margin + sigWidth, sigY2);
-  doc.line(margin + colGap, sigY2, margin + colGap + sigWidth, sigY2);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Principal's Signature", margin, sigY2 + 12);
-  doc.text("Date Signed", margin + colGap, sigY2 + 12);
-  y += 20;
-
-  return y;
-}
-
-function drawBackPageFooter(doc, student) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 40;
-  const footerY = pageHeight - 25;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.text(`${student.fullName || ""} · ${student.studentId || ""}`, margin, footerY);
-  doc.text("Page 2", pageWidth - margin, footerY, { align: "right" });
-  doc.setTextColor(0, 0, 0); // reset for any later draws
-}
-
-function drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 40;
-
-  if (!observedValuesConfig) {
-    // No observed values data — still render attendance if available.
-    let yy = margin + 20;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("ATTENDANCE", pageWidth / 2, yy, { align: "center" });
-    yy += 20;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Name: ${student.fullName || ""}`, margin, yy);
-    doc.text(`Grade & Section: ${student.gradeLevel || ""} - ${student.section || ""}`, pageWidth - margin, yy, { align: "right" });
-    yy += 16;
-    doc.text(`School Year: ${schoolYearLabel || "____________"}`, margin, yy);
-    yy += 20;
-    const afterAttendance = drawAttendanceBlock(doc, student, subjectsConfig, yy);
-    drawTransferEligibilityBlock(doc, afterAttendance + 30);
-    drawBackPageFooter(doc, student);
-    return;
-  }
-
-  // Title block (compact — no logos on the back side)
-  let y = margin + 20;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("REPORT ON LEARNER'S OBSERVED VALUES", pageWidth / 2, y, { align: "center" });
-
-  y += 20;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`Name: ${student.fullName || ""}`, margin, y);
-  doc.text(`Grade & Section: ${student.gradeLevel || ""} - ${student.section || ""}`, pageWidth - margin, y, { align: "right" });
-  y += 16;
-  doc.text(`School Year: ${schoolYearLabel || "____________"}`, margin, y);
-
-  y += 20;
-
-  const coreValues = observedValuesConfig?.coreValues || {};
-  const values = student.observedValues || {};
-
-  // Build a table with rowSpans for the multi-statement core values.
-  // Each core value's "row count" = number of its behavior statements.
-  const body = [];
-  Object.entries(coreValues).forEach(([code, def]) => {
-    const statements = def.statements || [""];
-    const ratingT1 = values.T1?.[code] || "";
-    const ratingT2 = values.T2?.[code] || "";
-    const ratingT3 = values.T3?.[code] || "";
-
-    statements.forEach((stmt, idx) => {
-      const row = [];
-      if (idx === 0) {
-        row.push({ content: `${code} — ${def.label}`, rowSpan: statements.length, styles: { valign: "middle", fontStyle: "bold" } });
-      }
-      row.push({ content: stmt, styles: { valign: "top" } });
-      if (idx === 0) {
-        row.push({ content: ratingT1 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
-        row.push({ content: ratingT2 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
-        row.push({ content: ratingT3 || "", rowSpan: statements.length, styles: { valign: "middle", halign: "center" } });
-      }
-      body.push(row);
-    });
-  });
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [
-      [
-        { content: "CORE VALUES", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
-        { content: "BEHAVIOR STATEMENT", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
-        { content: "TERM", colSpan: 3, styles: { halign: "center" } },
-      ],
-      [
-        { content: "1", styles: { halign: "center" } },
-        { content: "2", styles: { halign: "center" } },
-        { content: "3", styles: { halign: "center" } },
-      ],
-    ],
-    body,
-    styles: { fontSize: 9, cellPadding: 4, lineColor: [180, 190, 205], lineWidth: 0.4 },
-    headStyles: { fillColor: [27, 42, 74], textColor: 255, fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 240 },
-      2: { cellWidth: 50 },
-      3: { cellWidth: 50 },
-      4: { cellWidth: 50 },
-    },
-  });
-
-  // Rating legend below the table.
-  const afterTable = doc.lastAutoTable?.finalY ?? y;
-  let legendY = afterTable + 20;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("MARKING", margin, legendY);
-  doc.setFont("helvetica", "normal");
-  legendY += 14;
-  const ratings = observedValuesConfig?.ratings || {};
-  const legendEntries = Object.entries(ratings);
-  legendEntries.forEach(([code, label], idx) => {
-    const col = idx % 2;
-    const row = Math.floor(idx / 2);
-    doc.text(`${code} — ${label}`, margin + col * 200, legendY + row * 13);
-  });
-
-  // Attendance table below the legend
-  const legendEndY = legendY + Math.ceil(legendEntries.length / 2) * 13 + 20;
-  const afterAttendance = drawAttendanceBlock(doc, student, subjectsConfig, legendEndY);
-  drawTransferEligibilityBlock(doc, afterAttendance + 30);
-  drawBackPageFooter(doc, student);
-}
-
-async function drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const logos = await loadLogos();
-
-  let y = drawHeader(doc, logos, pageWidth, schoolYearLabel);
-  y = drawStudentInfo(doc, student, y);
-  y += 6;
-
-  const rows = buildReportCardRows(student, term, subjectsConfig);
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: 40, right: 40 },
-    head: [[
-      "SUBJECTS",
-      "TERM 1",
-      "TERM 2",
-      "TERM 3",
-      "FINAL GRADE",
-      "REMARKS",
-    ]],
-    body: rows,
-    styles: { fontSize: 9, cellPadding: 5 },
-    headStyles: { fillColor: [27, 42, 74], textColor: 255, halign: "center" },
-    columnStyles: {
-      0: { cellWidth: 180, halign: "left" },
-      1: { cellWidth: 55, halign: "center" },
-      2: { cellWidth: 55, halign: "center" },
-      3: { cellWidth: 55, halign: "center" },
-      4: { cellWidth: 85, halign: "center" },
-      5: { cellWidth: 85, halign: "center" },
-    },
-  });
-
-  const afterTable = doc.lastAutoTable?.finalY ?? y;
-  drawDescriptorTable(doc, subjectsConfig, afterTable + 20, pageWidth);
-
-  // Back page — Observed Values + Attendance
-  const hasAttendance = Object.keys(student.attendanceByMonth || {}).length > 0;
-  if (observedValuesConfig || hasAttendance) {
-    doc.addPage();
-    drawObservedValuesPage(doc, student, subjectsConfig, observedValuesConfig, schoolYearLabel);
-  }
-}
-
 async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
   const doc = new jsPDF({ format: "a4", unit: "pt" });
   await drawReportCardPDF(doc, student, term, subjectsConfig, schoolYearLabel, observedValuesConfig);
@@ -1715,7 +1232,7 @@ async function downloadStudentPDF(student, term, subjectsConfig, schoolYearLabel
 async function downloadSectionPDF(students, section, term, subjectsConfig, schoolYearLabel, observedValuesConfig) {
   const doc = new jsPDF({ format: "a4", unit: "pt" });
   const releasedAndReady = students.filter(
-    (s) => s.reportCardSubmittedTerm || s.reportCardReleasedTerm
+    (s) => s.reportCardSubmittedTerm || s.reportCardApprovedTerm || s.reportCardReleasedTerm
   );
 
   for (let i = 0; i < releasedAndReady.length; i++) {

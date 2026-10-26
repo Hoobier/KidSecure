@@ -101,6 +101,16 @@ export default function TeacherStudentDetailPage({ params }) {
     not_started: "Not started",
   };
 
+  function calculateAge(dobString) {
+    if (!dobString) return "—";
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age;
+  }
+
   return (
     <div className="teacher-detail-page">
       <header className="teacher-detail-header">
@@ -111,6 +121,8 @@ export default function TeacherStudentDetailPage({ params }) {
           </h1>
           <p>
             {student.studentId} · {student.gradeLevel} · Section {student.section || "-"}
+            {student.gender ? ` · ${student.gender}` : ""}
+            {student.dateOfBirth ? ` · ${calculateAge(student.dateOfBirth)} yrs old` : ""}
           </p>
         </div>
         <span className="teacher-access-chip">
