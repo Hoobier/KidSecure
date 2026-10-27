@@ -8,7 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./edit-student.css";
 import "../../../enrollment/enrollment.css";
 
-const GRADE_OPTIONS = ["Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
+const GRADE_OPTIONS = ["Nursery", "Kindergarten", "Preparatory", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"];
 const SECTION_OPTIONS = ["A", "B", "C"];
 const NAME_REGEX = /^[A-Za-z\s\-'.]{2,50}$/;
 
@@ -463,7 +463,7 @@ export default function EditStudentPage({ params }) {
           <div className="edit-form-group">
             <label>Gender<span className="required">*</span></label>
             <select value={form.gender || ""} onChange={(e) => updateField("gender", e.target.value)}>
-              <option value="">Select Gender</option>
+              <option value="" hidden>Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
@@ -471,7 +471,7 @@ export default function EditStudentPage({ params }) {
           <div className="edit-form-group">
             <label>Grade Level<span className="required">*</span></label>
             <select value={form.gradeLevel} onChange={(e) => updateField("gradeLevel", e.target.value)}>
-              <option value="">Select Grade Level</option>
+              <option value="" hidden>Select Grade Level</option>
               {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
